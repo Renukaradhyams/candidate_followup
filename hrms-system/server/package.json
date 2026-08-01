@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "build": "echo 'No build step required for Node.js Express Server'",
     "dev": "node --watch index.js",
     "seed": "node scripts/seed.js"
   },
