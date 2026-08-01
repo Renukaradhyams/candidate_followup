@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const pool = require('./config/db');
 const v1Routes = require('./routes/v1');
 const legacyRoutes = require('./routes/api');
 const { errorRes } = require('./utils/response');
@@ -42,6 +43,44 @@ const uploadsDir = fs.existsSync(path.join(__dirname, '../../uploads'))
 
 app.use('/uploads', express.static(uploadsDir));
 app.use('/public', express.static(path.join(__dirname, '../public')));
+
+// Database Diagnostics Endpoint (/api/db-status)
+app.get('/api/db-status', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [tables] = await conn.query('SHOW TABLES');
+    conn.release();
+    return res.json({
+      connected: true,
+      config: {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || 'root',
+        database: process.env.DB_NAME || 'hrms_db'
+      },
+      tablesCount: tables.length,
+      tables: tables.map(t => Object.values(t)[0]),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('[DB Diagnostics API Error]:', err.message);
+    return res.status(500).json({
+      connected: false,
+      config: {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 3306,
+        user: process.env.DB_USER || 'root',
+        database: process.env.DB_NAME || 'hrms_db'
+      },
+      error: {
+        code: err.code || 'UNKNOWN',
+        message: err.message,
+        sqlState: err.sqlState || null
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Versioned API Routes (/api/v1/)
 app.use('/api/v1', v1Routes);
@@ -117,6 +156,7 @@ app.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`  BSC Enterprise HRMS Unified Server running on port ${PORT}`);
   console.log(`  REST API v1: http://localhost:${PORT}/api/v1`);
+  console.log(`  DB Diagnostics: http://localhost:${PORT}/api/db-status`);
   console.log(`  Frontend Served From: ${clientBuildPath}`);
   console.log(`  Health Check: http://localhost:${PORT}/health`);
   console.log(`====================================================`);
