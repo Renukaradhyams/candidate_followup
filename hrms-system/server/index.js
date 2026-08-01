@@ -7,6 +7,7 @@ const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const pool = require('./config/db');
+const { autoInitializeDatabase } = require('./config/dbInitializer');
 const v1Routes = require('./routes/v1');
 const legacyRoutes = require('./routes/api');
 const { errorRes } = require('./utils/response');
@@ -151,8 +152,8 @@ app.use((err, req, res, next) => {
   return errorRes(res, err.message || 'Internal Server Error', [err.message], status);
 });
 
-// Start Server
-app.listen(PORT, () => {
+// Start Server and Initialize Database
+app.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(`  BSC Enterprise HRMS Unified Server running on port ${PORT}`);
   console.log(`  REST API v1: http://localhost:${PORT}/api/v1`);
@@ -160,4 +161,7 @@ app.listen(PORT, () => {
   console.log(`  Frontend Served From: ${clientBuildPath}`);
   console.log(`  Health Check: http://localhost:${PORT}/health`);
   console.log(`====================================================`);
+
+  // Run Auto Database Initializer & Migration
+  await autoInitializeDatabase(pool);
 });
