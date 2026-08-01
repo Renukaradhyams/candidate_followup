@@ -2,20 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 
+const DEBUG_LOG_PATH = path.join(process.cwd(), 'init-debug.log');
+function logDebug(msg, extra = '') {
+  try {
+    const formatted = typeof extra === 'object' ? JSON.stringify(extra) : extra;
+    const logStr = `[${new Date().toISOString()}] ${msg} ${formatted}\n`;
+    fs.appendFileSync(DEBUG_LOG_PATH, logStr);
+    console.log(msg, extra);
+  } catch (e) {}
+}
+
 async function autoInitializeDatabase(pool) {
+  logDebug('[Auto DB Initializer] autoInitializeDatabase started');
   try {
     const connection = await pool.getConnection();
-    console.log(`[Auto DB Initializer] Checking database schema...`);
+    logDebug(`[Auto DB Initializer] Checking database schema...`);
 
     // Check existing tables
     const [tables] = await connection.query(`SHOW TABLES`);
     const tableNames = tables.map(t => Object.values(t)[0]);
-    console.log(`[Auto DB Initializer] Found ${tableNames.length} existing tables:`, tableNames);
+    logDebug(`[Auto DB Initializer] Found ${tableNames.length} existing tables:`, tableNames);
 
     const hasCandidateTable = tableNames.some(t => t.toLowerCase() === 'candidate' || t.toLowerCase() === 'candidates');
 
     if (!hasCandidateTable || tableNames.length < 5) {
-      console.log(`[Auto DB Initializer] Database tables missing. Running schema migration scripts...`);
+      logDebug(`[Auto DB Initializer] Database tables missing. Running schema migration scripts...`);
 
       const possibleDbDirs = [
         path.join(__dirname, '../database'),
@@ -30,14 +41,14 @@ async function autoInitializeDatabase(pool) {
         dbDir = possibleDbDirs[0];
       }
 
-      console.log(`[Auto DB Initializer] Using database SQL directory: ${dbDir}`);
+      logDebug(`[Auto DB Initializer] Using database SQL directory: ${dbDir}`);
 
       const sqlFiles = ['schema.sql', 'default_data.sql', 'roles.sql', 'permissions.sql', 'indexes.sql'];
 
       for (const fileName of sqlFiles) {
         const filePath = path.join(dbDir, fileName);
         if (fs.existsSync(filePath)) {
-          console.log(`[Auto DB Initializer] Executing ${fileName}...`);
+          logDebug(`[Auto DB Initializer] Executing ${fileName}...`);
           let rawSql = fs.readFileSync(filePath, 'utf8');
 
           // Strip out CREATE DATABASE and USE statements
@@ -55,7 +66,7 @@ async function autoInitializeDatabase(pool) {
             try {
               await connection.query(stmt);
             } catch (err) {
-              console.warn(`[Auto DB Initializer Warning on ${fileName}]:`, err.message);
+              logDebug(`[Auto DB Initializer Warning on ${fileName}]:`, err.message);
             }
           }
         }
@@ -247,7 +258,7 @@ async function autoInitializeDatabase(pool) {
       try {
         await connection.query(sql);
       } catch (err) {
-        console.warn(`[Auto DB Compatibility Warning]:`, err.message);
+        logDebug(`[Auto DB Compatibility Warning]:`, err.message);
       }
     }
 
@@ -262,7 +273,7 @@ async function autoInitializeDatabase(pool) {
          ('manager', ?, 'Store Manager', 'Manager', TRUE)`,
         [hashedPass, hashedPass, hashedPass]
       );
-      console.log(`[Auto DB Initializer] Default admin users created (admin / hr / manager - Password: admin123)`);
+      logDebug(`[Auto DB Initializer] Default admin users created (admin / hr / manager - Password: admin123)`);
     }
 
     // Seed default designations if empty
@@ -290,14 +301,14 @@ async function autoInitializeDatabase(pool) {
     }
 
     const [finalTables] = await connection.query(`SHOW TABLES`);
-    console.log(`====================================================`);
-    console.log(`  [Auto DB Initializer] DATABASE FULLY INITIALIZED!`);
-    console.log(`  Total Active Tables: ${finalTables.length}`);
-    console.log(`====================================================`);
+    logDebug(`====================================================`);
+    logDebug(`  [Auto DB Initializer] DATABASE FULLY INITIALIZED!`);
+    logDebug(`  Total Active Tables: ${finalTables.length}`);
+    logDebug(`====================================================`);
 
     connection.release();
   } catch (err) {
-    console.error(`[Auto DB Initializer ERROR]:`, err.message);
+    logDebug(`[Auto DB Initializer ERROR]:`, err.message);
   }
 }
 

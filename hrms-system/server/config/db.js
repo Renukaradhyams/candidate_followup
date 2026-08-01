@@ -1,6 +1,18 @@
 const mysql = require('mysql2/promise');
 const path = require('path');
+const fs = require('fs');
+
+const DEBUG_LOG_PATH = path.join(process.cwd(), 'init-debug.log');
+function logDebug(msg) {
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch (e) {}
+  console.log(msg);
+}
+
+// Load env from multiple paths to be safe in Passenger
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config({ path: path.join(process.cwd(), '.env') });
 
 const dbHost = process.env.DB_HOST || 'localhost';
 const dbPort = parseInt(process.env.DB_PORT || '3306');
@@ -8,7 +20,7 @@ const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbName = process.env.DB_NAME || 'hrms_db';
 
-console.log(`[DB Config] Initializing MySQL pool: Host=${dbHost}, Port=${dbPort}, User=${dbUser}, DB=${dbName}`);
+logDebug(`[DB Config] Initializing MySQL pool: Host=${dbHost}, Port=${dbPort}, User=${dbUser}, DB=${dbName}`);
 
 const pool = mysql.createPool({
   host: dbHost,
@@ -27,22 +39,22 @@ const pool = mysql.createPool({
 (async () => {
   try {
     const connection = await pool.getConnection();
-    console.log(`====================================================`);
-    console.log(`  [MySQL DB] CONNECTED SUCCESSFULLY!`);
-    console.log(`  Host: ${dbHost}:${dbPort} | User: ${dbUser} | Database: ${dbName}`);
-    console.log(`====================================================`);
+    logDebug(`====================================================`);
+    logDebug(`  [MySQL DB] CONNECTED SUCCESSFULLY!`);
+    logDebug(`  Host: ${dbHost}:${dbPort} | User: ${dbUser} | Database: ${dbName}`);
+    logDebug(`====================================================`);
     
     // Quick Table Count Audit
     const [tables] = await connection.query(`SHOW TABLES`);
-    console.log(`  [MySQL DB Audit] Total Tables Found in '${dbName}': ${tables.length}`);
+    logDebug(`  [MySQL DB Audit] Total Tables Found in '${dbName}': ${tables.length}`);
     connection.release();
   } catch (err) {
-    console.error(`====================================================`);
-    console.error(`  [MySQL DB CONNECTION ERROR] Failed to connect!`);
-    console.error(`  Host: ${dbHost}:${dbPort} | User: ${dbUser} | Database: ${dbName}`);
-    console.error(`  Error Code: ${err.code || 'UNKNOWN'}`);
-    console.error(`  Error Message: ${err.message}`);
-    console.error(`====================================================`);
+    logDebug(`====================================================`);
+    logDebug(`  [MySQL DB CONNECTION ERROR] Failed to connect!`);
+    logDebug(`  Host: ${dbHost}:${dbPort} | User: ${dbUser} | Database: ${dbName}`);
+    logDebug(`  Error Code: ${err.code || 'UNKNOWN'}`);
+    logDebug(`  Error Message: ${err.message}`);
+    logDebug(`====================================================`);
   }
 })();
 

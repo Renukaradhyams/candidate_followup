@@ -87,6 +87,8 @@ class CandidateController {
     } catch (err) {
       return errorRes(res, 'File upload failed', [err.message], 500);
     }
+  }
+
   async getPendingActions(req, res) {
     try {
       const result = await candidateService.getPendingActions();

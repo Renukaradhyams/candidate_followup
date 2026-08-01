@@ -168,8 +168,17 @@ app.use((err, req, res, next) => {
   return errorRes(res, err.message || 'Internal Server Error', [err.message], status);
 });
 
-// Start Server and Initialize Database
-app.listen(PORT, async () => {
+// Run Auto Database Initializer & Migration
+// Running this outside of app.listen because Passenger environments (Hostinger/cPanel) 
+// often intercept app.listen and ignore the callback.
+autoInitializeDatabase(pool).then(() => {
+  console.log(`[App] Database Auto-Initializer triggered.`);
+}).catch(err => {
+  console.error(`[App] Database Auto-Initializer error:`, err);
+});
+
+// Start Server
+app.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`  BSC Enterprise HRMS Unified Server running on port ${PORT}`);
   console.log(`  REST API v1: http://localhost:${PORT}/api/v1`);
@@ -177,7 +186,4 @@ app.listen(PORT, async () => {
   console.log(`  Frontend Served From: ${clientBuildPath}`);
   console.log(`  Health Check: http://localhost:${PORT}/health`);
   console.log(`====================================================`);
-
-  // Run Auto Database Initializer & Migration
-  await autoInitializeDatabase(pool);
 });

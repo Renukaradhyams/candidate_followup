@@ -356,6 +356,9 @@ class CandidateService {
       color: a.color || 'navy'
     }));
 
+    return { success: true, activity };
+  }
+
   async getPendingActions() {
     try {
       const [rows] = await pool.query(
