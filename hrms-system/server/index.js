@@ -23,6 +23,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security Middlewares
+app.set('trust proxy', 1); // Required for express-rate-limit behind Hostinger reverse proxy
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));

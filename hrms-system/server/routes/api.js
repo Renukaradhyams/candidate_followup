@@ -20,14 +20,14 @@ router.get('/auth/me', authenticate, authController.getMe);
 router.get('/public/interview', interviewController.getInterviewByToken);
 router.post('/public/interview-score', interviewController.submitInterviewScore);
 router.post('/public/candidate-entry', candidateController.addCandidate);
-router.post('/public/check-duplicate', candidateController.checkDuplicate);
+router.get('/public/check-duplicate', candidateController.checkDuplicate);
 router.get('/public/designations', settingsController.getDesignations);
 
 // ── Candidate Routes ─────────────────────────────────────────
 router.get('/candidates', candidateController.getCandidates);
 router.post('/candidates/add', candidateController.addCandidate);
 router.post('/candidates/update', candidateController.updateCandidate);
-router.post('/candidates/check-duplicate', candidateController.checkDuplicate);
+router.get('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/next-app-no', candidateController.getNextAppNo);
 router.get('/candidates/kpis', candidateController.getKPIs);
 router.get('/candidates/pending-actions', candidateController.getPendingActions);
