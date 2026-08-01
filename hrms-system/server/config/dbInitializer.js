@@ -301,34 +301,6 @@ async function autoInitializeDatabase(pool) {
       }
     }
 
-    // Auto-migrate missing columns for existing tables
-    try {
-      await connection.query('ALTER TABLE designations ADD COLUMN role_scope VARCHAR(50) DEFAULT "All"');
-    } catch(e) {}
-    try {
-      await connection.query('ALTER TABLE designations ADD COLUMN active BOOLEAN DEFAULT TRUE');
-    } catch(e) {}
-
-    const newCandidateCols = [
-      'blood_group VARCHAR(20) NULL',
-      'offered_doj DATE NULL',
-      'retail_experience VARCHAR(150) NULL',
-      'previous_company VARCHAR(150) NULL',
-      'previous_designation VARCHAR(150) NULL',
-      'aadhaar_number VARCHAR(50) NULL',
-      'father_details VARCHAR(255) NULL',
-      'mother_details VARCHAR(255) NULL',
-      'religion_caste VARCHAR(150) NULL',
-      'languages_known VARCHAR(255) NULL',
-      'photo_url TEXT NULL',
-      'aadhaar_url TEXT NULL'
-    ];
-    for (const col of newCandidateCols) {
-      try {
-        await connection.query(`ALTER TABLE candidates ADD COLUMN ${col}`);
-      } catch(e) {}
-    }
-
     // Seed default admin users if `users` table is empty
     const [uRows] = await connection.query(`SELECT COUNT(*) as cnt FROM users`);
     if (uRows[0].cnt === 0) {
