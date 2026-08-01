@@ -30,7 +30,6 @@
   },
   "overrides": {
     "tar": "latest",
-    "postcss": "latest",
     "multer": "latest",
     "rimraf": "latest",
     "glob": "latest"
