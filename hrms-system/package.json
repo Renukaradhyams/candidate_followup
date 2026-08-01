@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "cd client && npm run dev",
-    "build": "cd client && npm install --legacy-peer-deps && npm run build && node -e \"const fs = require('fs'); const src = fs.existsSync('out') ? 'out' : '.next'; if (!fs.existsSync('../dist')) fs.cpSync(src, '../dist', {recursive: true}); if (!fs.existsSync('dist')) fs.cpSync(src, 'dist', {recursive: true});\"",
+    "build": "node build.js",
     "start": "cd server && npm start"
   },
   "dependencies": {
