@@ -360,7 +360,7 @@ export default function CandidatesPage() {
                               )}
                               {(c.status === 'Shortlisted' || c.status === '1st Call Done') && (
                                 <button
-                                  onClick={() => handleCallModal(c)}
+                                  onClick={() => handleOpenCallModal(c)}
                                   className="px-2.5 py-1 rounded-md bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px]"
                                 >
                                   📞 Call Step
@@ -368,7 +368,7 @@ export default function CandidatesPage() {
                               )}
                               {c.status === '2nd Call Done' && (
                                 <button
-                                  onClick={() => handleCallModal(c)}
+                                  onClick={() => handleOpenCallModal(c)}
                                   className="px-2.5 py-1 rounded-md bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px]"
                                 >
                                   📅 Schedule Interview

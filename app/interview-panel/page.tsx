@@ -212,7 +212,7 @@ export default function InterviewPanelPage() {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search candidate..."
                   className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-xs text-[#1E2D4E]"
                 />
