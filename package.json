@@ -34,8 +34,10 @@
     "@types/react-dom": "^18.3.0"
   },
   "overrides": {
-    "tar": "latest",
-    "rimraf": "latest",
-    "glob": "latest"
+    "tar": "^6.2.1",
+    "rimraf": "^5.0.5",
+    "glob": "^10.3.10",
+    "gauge": "^5.0.1",
+    "npmlog": "^6.0.0"
   }
 }

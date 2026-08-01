@@ -21,9 +21,11 @@
     "mysql2": "^3.10.1"
   },
   "overrides": {
-    "tar": "latest",
+    "tar": "^6.2.1",
     "postcss": "latest",
-    "rimraf": "latest",
-    "glob": "latest"
+    "rimraf": "^5.0.5",
+    "glob": "^10.3.10",
+    "gauge": "^5.0.1",
+    "npmlog": "^6.0.0"
   }
 }
