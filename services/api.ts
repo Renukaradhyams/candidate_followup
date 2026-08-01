@@ -2,7 +2,13 @@
  * BSC Enterprise HRMS API Client Service
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const getApiBase = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}/api`;
+  }
+  return 'http://localhost:5000/api';
+};
 
 export interface UserSession {
   username: string;
@@ -67,7 +73,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${session.token}`;
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  const apiBase = getApiBase();
+  const url = endpoint.startsWith('http') ? endpoint : `${apiBase}${endpoint}`;
 
   try {
     const res = await fetch(url, {
