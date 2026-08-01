@@ -41,3 +41,10 @@
 [2026-08-01T18:06:16.315Z]   Error Code: ECONNREFUSED
 [2026-08-01T18:06:16.316Z]   Error Message: connect ECONNREFUSED 127.0.0.1:3306
 [2026-08-01T18:06:16.317Z] ====================================================
+[2026-08-01T18:13:02.279Z] [DB Config] Initializing MySQL pool: Host=127.0.0.1, Port=3306, User=root, DB=hrms_db
+[2026-08-01T18:13:02.302Z] ====================================================
+[2026-08-01T18:13:02.304Z]   [MySQL DB CONNECTION ERROR] Failed to connect!
+[2026-08-01T18:13:02.305Z]   Host: 127.0.0.1:3306 | User: root | Database: hrms_db
+[2026-08-01T18:13:02.306Z]   Error Code: ECONNREFUSED
+[2026-08-01T18:13:02.307Z]   Error Message: connect ECONNREFUSED 127.0.0.1:3306
+[2026-08-01T18:13:02.309Z] ====================================================

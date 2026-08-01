@@ -116,6 +116,18 @@ async function autoInitializeDatabase(pool) {
         \`remarks\` TEXT NULL,
         \`is_duplicate_phone\` VARCHAR(10) DEFAULT 'No',
         \`resume_url\` TEXT NULL,
+        \`blood_group\` VARCHAR(20) NULL,
+        \`offered_doj\` DATE NULL,
+        \`retail_experience\` VARCHAR(150) NULL,
+        \`previous_company\` VARCHAR(150) NULL,
+        \`previous_designation\` VARCHAR(150) NULL,
+        \`aadhaar_number\` VARCHAR(50) NULL,
+        \`father_details\` VARCHAR(255) NULL,
+        \`mother_details\` VARCHAR(255) NULL,
+        \`religion_caste\` VARCHAR(150) NULL,
+        \`languages_known\` VARCHAR(255) NULL,
+        \`photo_url\` TEXT NULL,
+        \`aadhaar_url\` TEXT NULL,
         \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
@@ -250,7 +262,34 @@ async function autoInitializeDatabase(pool) {
 
       `CREATE TABLE IF NOT EXISTS \`designations\` (
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
-        \`name\` VARCHAR(150) NOT NULL UNIQUE
+        \`role_scope\` VARCHAR(50) DEFAULT 'All',
+        \`name\` VARCHAR(150) NOT NULL UNIQUE,
+        \`active\` BOOLEAN DEFAULT TRUE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+      `CREATE TABLE IF NOT EXISTS \`onboarding_records\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`record_id\` VARCHAR(50) NOT NULL UNIQUE,
+        \`emp_name\` VARCHAR(255) NOT NULL,
+        \`designation\` VARCHAR(150) NOT NULL,
+        \`joining_date\` DATE NULL,
+        \`progress\` INT DEFAULT 0,
+        \`status\` VARCHAR(50) DEFAULT 'On Track',
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+      `CREATE TABLE IF NOT EXISTS \`onboarding_items\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`onboarding_id\` INT NULL,
+        \`record_id\` VARCHAR(50) NOT NULL,
+        \`section\` VARCHAR(100) NOT NULL,
+        \`item_id\` VARCHAR(100) NOT NULL,
+        \`item\` VARCHAR(255) NOT NULL,
+        \`mandatory\` BOOLEAN DEFAULT FALSE,
+        \`status\` VARCHAR(50) DEFAULT 'Pending',
+        \`remarks\` TEXT NULL,
+        \`done_by\` VARCHAR(150) NULL,
+        \`done_at\` DATETIME NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
     ];
 
@@ -260,6 +299,34 @@ async function autoInitializeDatabase(pool) {
       } catch (err) {
         logDebug(`[Auto DB Compatibility Warning]:`, err.message);
       }
+    }
+
+    // Auto-migrate missing columns for existing tables
+    try {
+      await connection.query('ALTER TABLE designations ADD COLUMN role_scope VARCHAR(50) DEFAULT "All"');
+    } catch(e) {}
+    try {
+      await connection.query('ALTER TABLE designations ADD COLUMN active BOOLEAN DEFAULT TRUE');
+    } catch(e) {}
+
+    const newCandidateCols = [
+      'blood_group VARCHAR(20) NULL',
+      'offered_doj DATE NULL',
+      'retail_experience VARCHAR(150) NULL',
+      'previous_company VARCHAR(150) NULL',
+      'previous_designation VARCHAR(150) NULL',
+      'aadhaar_number VARCHAR(50) NULL',
+      'father_details VARCHAR(255) NULL',
+      'mother_details VARCHAR(255) NULL',
+      'religion_caste VARCHAR(150) NULL',
+      'languages_known VARCHAR(255) NULL',
+      'photo_url TEXT NULL',
+      'aadhaar_url TEXT NULL'
+    ];
+    for (const col of newCandidateCols) {
+      try {
+        await connection.query(`ALTER TABLE candidates ADD COLUMN ${col}`);
+      } catch(e) {}
     }
 
     // Seed default admin users if `users` table is empty

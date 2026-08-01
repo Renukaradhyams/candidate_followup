@@ -120,8 +120,18 @@ class CandidateService {
         status: r.status,
         daysIn,
         resumeUrl: r.resume_url || '',
-        photoUrl: '',
-        aadharUrl: '',
+        bloodGroup: r.blood_group || '',
+        offeredDoj: r.offered_doj ? new Date(r.offered_doj).toISOString().split('T')[0] : '',
+        retailExperience: r.retail_experience || '',
+        previousCompany: r.previous_company || '',
+        previousDesignation: r.previous_designation || '',
+        aadhaarNumber: r.aadhaar_number || '',
+        fatherDetails: r.father_details || '',
+        motherDetails: r.mother_details || '',
+        religionCaste: r.religion_caste || '',
+        languagesKnown: r.languages_known ? JSON.parse(r.languages_known) : [],
+        photoUrl: r.photo_url || '',
+        aadharUrl: r.aadhaar_url || '',
         q1: r.q1 || '',
         q2: r.q2 || '',
         q3: r.q3 || '',
@@ -142,8 +152,11 @@ class CandidateService {
         app_no, name, phone, email, dob, gender, city_state, address, designation,
         occupation, qualification, experience, current_salary, expected_salary,
         notice_period, own_vehicle, source, referrer, referrer_emp_no, source_detail,
-        q1, q2, q3, q4, status, salary, remarks, is_duplicate_phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        q1, q2, q3, q4, status, salary, remarks, is_duplicate_phone, resume_url,
+        blood_group, offered_doj, retail_experience, previous_company, previous_designation,
+        aadhaar_number, father_details, mother_details, religion_caste, languages_known,
+        photo_url, aadhaar_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         appNo,
         data.name || data.candidateName,
@@ -172,7 +185,20 @@ class CandidateService {
         'New',
         data.salary || null,
         data.remarks || null,
-        data.isDuplicatePhone || 'No'
+        data.isDuplicatePhone || 'No',
+        data.resumeUrl || null,
+        data.bloodGroup || null,
+        data.offeredDoj || null,
+        data.retailExperience || null,
+        data.previousCompany || null,
+        data.previousDesignation || null,
+        data.aadhaarNumber || null,
+        data.fatherDetails || null,
+        data.motherDetails || null,
+        data.religionCaste || null,
+        data.languagesKnown ? JSON.stringify(data.languagesKnown) : null,
+        data.photoUrl || null,
+        data.aadhaarUrl || null
       ]
     );
 

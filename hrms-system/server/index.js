@@ -114,6 +114,25 @@ app.get('/api/seed-mock', async (req, res) => {
   }
 });
 
+// Wipe DB endpoint
+app.get('/api/wipe-db', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM candidates');
+    await pool.query('DELETE FROM interview_schedules');
+    await pool.query('DELETE FROM candidate_activities');
+    await pool.query('DELETE FROM hr_evaluations');
+    await pool.query('DELETE FROM interview_tokens');
+    await pool.query('DELETE FROM selected_candidates');
+    await pool.query('DELETE FROM rejected_candidates');
+    await pool.query('DELETE FROM selection_offers');
+    await pool.query('DELETE FROM onboarding_records');
+    await pool.query('DELETE FROM onboarding_items');
+    res.json({ success: true, message: 'Sample data completely wiped from the database' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'UP', app: 'BSC Enterprise HRMS Unified Server v2.0' });
