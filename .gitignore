@@ -1,6 +1,5 @@
 node_modules/
 .next/
-dist/
 build/
 .env.local
 .env.development.local
