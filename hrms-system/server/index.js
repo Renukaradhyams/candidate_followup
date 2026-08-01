@@ -13,6 +13,14 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 dotenv.config();
 
+// Global Exception Handlers to prevent 503 Death Loops from crashing Node
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection:', reason);
+});
+
 const pool = require('./config/db');
 const { autoInitializeDatabase } = require('./config/dbInitializer');
 const v1Routes = require('./routes/v1');
