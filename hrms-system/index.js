@@ -1,52 +1,54 @@
 /**
- * BSC Enterprise HRMS - Root Entry Point for Hostinger
- * Entry file: index.js | Root directory: hrms-system
+ * BSC Enterprise HRMS - Entry Point
+ * PassengerStartupFile: index.js | PassengerAppRoot: hrms-system/
+ *
+ * IMPORTANT: With Phusion Passenger (Hostinger), do NOT call app.listen().
+ * Passenger calls listen() internally via its own socket.
+ * Just export `module.exports = app` and Passenger handles everything.
  */
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-
-// ── Load env FIRST before any other requires ─────────────────────────────────
 const dotenv = require('dotenv');
-const SERVER_DIR = path.join(__dirname, 'server');
-const APP_ROOT = __dirname;
+const helmet = require('helmet');
 
-// Load in priority order (last wins for duplicates, but dotenv never overwrites existing process.env)
+// ── Directory References ──────────────────────────────────────────────────────
+const APP_ROOT = __dirname;               // hrms-system/
+const SERVER_DIR = path.join(APP_ROOT, 'server');
+
+// ── Load .env as fallback only — Passenger/Hostinger env vars take priority ──
+// dotenv.config() NEVER overwrites already-set process.env values
 dotenv.config({ path: path.join(APP_ROOT, '..', '.env') });
 dotenv.config({ path: path.join(APP_ROOT, '.env') });
 dotenv.config({ path: path.join(SERVER_DIR, '.env') });
 
 // ── Global Crash Handlers ─────────────────────────────────────────────────────
 process.on('uncaughtException', (err) => {
-  console.error('[CRITICAL uncaughtException]', err.code, err.message);
-  // Exit on port in use so Hostinger's process manager can reassign
+  console.error('[CRITICAL] Uncaught Exception:', err.code, err.message);
   if (err.code === 'EADDRINUSE') {
-    console.error('[FATAL] Port already in use - exiting so process manager can retry');
+    console.error('[FATAL] Port in use - exiting');
     process.exit(1);
   }
 });
 process.on('unhandledRejection', (reason) => {
-  console.error('[CRITICAL unhandledRejection]', reason);
+  console.error('[CRITICAL] Unhandled Rejection:', reason);
 });
 
-// ── Load DB pool (now that env is loaded) ─────────────────────────────────────
+// ── Load modules (env must be loaded first) ───────────────────────────────────
 const pool = require('./server/config/db');
 const { autoInitializeDatabase } = require('./server/config/dbInitializer');
 const v1Routes = require('./server/routes/v1');
 const legacyRoutes = require('./server/routes/api');
 const { errorRes } = require('./server/utils/response');
-const helmet = require('helmet');
 
+// ── Express App Setup ─────────────────────────────────────────────────────────
 const app = express();
-const PORT = parseInt(process.env.PORT || '5000', 10);
 
-console.log(`[Boot] PORT=${PORT} | NODE_ENV=${process.env.NODE_ENV} | CWD=${process.cwd()}`);
-console.log(`[Boot] APP_ROOT=${APP_ROOT} | SERVER_DIR=${SERVER_DIR}`);
+console.log(`[Boot] NODE_ENV=${process.env.NODE_ENV} | DB=${process.env.DB_NAME} | PORT=${process.env.PORT || '(Passenger-managed)'}`);
 
-// ── Middleware ────────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
-
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
@@ -56,22 +58,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const uploadsDir = fs.existsSync(path.join(APP_ROOT, '..', 'uploads'))
   ? path.join(APP_ROOT, '..', 'uploads')
   : path.join(APP_ROOT, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
-}
+try { if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
 app.use('/uploads', express.static(uploadsDir));
 
 // ── Health / Diagnostics ──────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'UP', port: PORT, ts: new Date().toISOString() });
+  res.json({ status: 'UP', ts: new Date().toISOString(), db: process.env.DB_NAME });
 });
 
 app.get(['/db-status', '/api/db-status'], async (req, res) => {
   try {
     const conn = await pool.getConnection();
-    const [tables] = await conn.query('SHOW TABLES');
+    const [rows] = await conn.query('SHOW TABLES');
     conn.release();
-    res.json({ connected: true, tables: tables.length, db: process.env.DB_NAME });
+    res.json({ connected: true, tables: rows.length });
   } catch (err) {
     res.status(500).json({ connected: false, error: err.message });
   }
@@ -92,25 +92,15 @@ app.use('/api/v1', v1Routes);
 app.use('/api', legacyRoutes);
 
 // ── Frontend SPA ──────────────────────────────────────────────────────────────
-const distDir = fs.existsSync(path.join(APP_ROOT, 'dist'))
-  ? path.join(APP_ROOT, 'dist')
-  : null;
-
-if (distDir) {
+const distDir = path.join(APP_ROOT, 'dist');
+if (fs.existsSync(distDir)) {
   console.log(`[Boot] Serving frontend from: ${distDir}`);
   app.use(express.static(distDir));
-
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') ||
-        req.path === '/health' || req.path === '/db-status') {
-      return next();
-    }
+        req.path === '/health' || req.path === '/db-status') return next();
     const clean = req.path.replace(/^\//, '').replace(/\/$/, '');
-    const tries = [
-      path.join(distDir, clean + '.html'),
-      path.join(distDir, clean, 'index.html'),
-    ];
-    for (const p of tries) {
+    for (const p of [path.join(distDir, clean + '.html'), path.join(distDir, clean, 'index.html')]) {
       if (fs.existsSync(p)) return res.sendFile(p);
     }
     const fallback = path.join(distDir, 'index.html');
@@ -118,35 +108,25 @@ if (distDir) {
     return next();
   });
 } else {
-  console.warn('[Boot] WARNING: No dist/ folder found. Run npm run build first.');
+  console.warn('[Boot] No dist/ folder - run npm run build');
 }
 
 // ── Error Handlers ────────────────────────────────────────────────────────────
 app.use('/api/*', (req, res) => errorRes(res, `Not found: ${req.originalUrl}`, [], 404));
 app.use((err, req, res, next) => {
-  console.error('[Express Error]', err.message);
+  console.error('[Error]', err.message);
   errorRes(res, err.message || 'Internal Server Error', [], err.status || 500);
 });
 
-// ── DB Init (non-blocking) ────────────────────────────────────────────────────
+// ── DB Init (async, non-blocking) ─────────────────────────────────────────────
 autoInitializeDatabase(pool)
-  .then(() => console.log('[Boot] DB auto-init complete'))
+  .then(() => console.log('[Boot] DB init complete'))
   .catch(err => console.error('[Boot] DB init error:', err.message));
 
-// ── Start Server ──────────────────────────────────────────────────────────────
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`====================================================`);
-  console.log(`  BSC HRMS Server running on port ${PORT}`);
-  console.log(`  Health: http://localhost:${PORT}/health`);
-  console.log(`====================================================`);
-});
-
-server.on('error', (err) => {
-  console.error('[Server Error]', err.code, err.message);
-  if (err.code === 'EADDRINUSE') {
-    console.error(`[FATAL] Port ${PORT} is in use. Exiting.`);
-    process.exit(1);
-  }
-});
-
+// ── PASSENGER COMPATIBILITY ───────────────────────────────────────────────────
+// With Phusion Passenger (Hostinger), exporting module.exports = app
+// signals to Passenger to call listen() via its own managed socket.
+// DO NOT call app.listen() here — it conflicts with Passenger's socket.
+//
+// For LOCAL development only: run with `node server/index.js` directly.
 module.exports = app;
