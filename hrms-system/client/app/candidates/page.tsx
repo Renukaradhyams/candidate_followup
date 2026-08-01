@@ -652,6 +652,61 @@ export default function CandidatesPage() {
           </div>
         </div>
       )}
+
+      {/* Call Setup Modal */}
+      {callModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
+            <h3 className="font-black text-[#1E2D4E] text-base">
+              Call Setup — {callModal.candidate?.name}
+            </h3>
+            
+            <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e0ddd8] text-xs space-y-2">
+               <div className="font-bold text-[#1E2D4E] mb-2">
+                  {callModal.step === 1 && 'Step 1: Log 1st Call'}
+                  {callModal.step === 2 && 'Step 2: Log 2nd Call'}
+                  {callModal.step === 3 && 'Step 3: Schedule Interview'}
+               </div>
+               
+               <div className="space-y-1.5">
+                 <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Date <span className="text-red-600">*</span></label>
+                 <input 
+                   type="date"
+                   value={callDate}
+                   onChange={(e) => setCallDate(e.target.value)}
+                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] focus:outline-none focus:border-[#1E2D4E]"
+                 />
+               </div>
+
+               <div className="space-y-1.5 pt-2">
+                 <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Remarks <span className="text-red-600">*</span></label>
+                 <textarea
+                   value={callRemarks}
+                   onChange={(e) => setCallRemarks(e.target.value)}
+                   placeholder="Call summary or feedback..."
+                   rows={3}
+                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] focus:outline-none focus:border-[#1E2D4E]"
+                 />
+               </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })}
+                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold text-[#666666]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCallStep}
+                className="px-4 py-2 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340]"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
