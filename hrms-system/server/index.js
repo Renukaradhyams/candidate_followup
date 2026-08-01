@@ -118,11 +118,13 @@ app.get('/health', (req, res) => {
 
 // Serve Frontend (Client Build static files & SPA Fallback)
 const rootDistPath = path.join(__dirname, '../../dist');
+const hrmsDistPath = path.join(__dirname, '../dist');
 const rootOutPath = path.join(__dirname, '../../out');
 const clientOutPath = path.join(__dirname, '../client/out');
 
 let clientBuildPath = rootOutPath;
-if (fs.existsSync(rootDistPath)) clientBuildPath = rootDistPath;
+if (fs.existsSync(hrmsDistPath)) clientBuildPath = hrmsDistPath;
+else if (fs.existsSync(rootDistPath)) clientBuildPath = rootDistPath;
 else if (fs.existsSync(rootOutPath)) clientBuildPath = rootOutPath;
 else if (fs.existsSync(clientOutPath)) clientBuildPath = clientOutPath;
 
