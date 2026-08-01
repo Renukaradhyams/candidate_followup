@@ -4,7 +4,14 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const dotenv = require('dotenv');
+
+// Load Environment Variables from multiple candidate locations
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
+dotenv.config();
 
 const pool = require('./config/db');
 const { autoInitializeDatabase } = require('./config/dbInitializer');
@@ -45,8 +52,8 @@ const uploadsDir = fs.existsSync(path.join(__dirname, '../../uploads'))
 app.use('/uploads', express.static(uploadsDir));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
-// Database Diagnostics Endpoint (/api/db-status)
-app.get('/api/db-status', async (req, res) => {
+// Database Diagnostics Route Handler
+const dbStatusHandler = async (req, res) => {
   try {
     const conn = await pool.getConnection();
     const [tables] = await conn.query('SHOW TABLES');
@@ -81,7 +88,11 @@ app.get('/api/db-status', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-});
+};
+
+app.get('/db-status', dbStatusHandler);
+app.get('/api/db-status', dbStatusHandler);
+app.get('/api/v1/db-status', dbStatusHandler);
 
 // Versioned API Routes (/api/v1/)
 app.use('/api/v1', v1Routes);
@@ -108,7 +119,12 @@ if (fs.existsSync(clientBuildPath)) {
   app.use(express.static(clientBuildPath));
 
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/health')) {
+    if (
+      req.path === '/db-status' ||
+      req.path.startsWith('/api') || 
+      req.path.startsWith('/uploads') || 
+      req.path.startsWith('/health')
+    ) {
       return next();
     }
 

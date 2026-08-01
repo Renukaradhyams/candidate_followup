@@ -17,9 +17,20 @@ async function autoInitializeDatabase(pool) {
     if (!hasCandidateTable || tableNames.length < 5) {
       console.log(`[Auto DB Initializer] Database tables missing. Running schema migration scripts...`);
 
-      const dbDir = fs.existsSync(path.join(__dirname, '../../database'))
-        ? path.join(__dirname, '../../database')
-        : path.join(__dirname, '../database');
+      const possibleDbDirs = [
+        path.join(__dirname, '../database'),
+        path.join(__dirname, '../../database'),
+        path.join(process.cwd(), 'hrms-system/database'),
+        path.join(process.cwd(), 'database'),
+        path.join(__dirname, 'database')
+      ];
+
+      let dbDir = possibleDbDirs.find(d => fs.existsSync(path.join(d, 'schema.sql')));
+      if (!dbDir) {
+        dbDir = possibleDbDirs[0];
+      }
+
+      console.log(`[Auto DB Initializer] Using database SQL directory: ${dbDir}`);
 
       const sqlFiles = ['schema.sql', 'default_data.sql', 'roles.sql', 'permissions.sql', 'indexes.sql'];
 
