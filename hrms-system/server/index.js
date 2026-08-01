@@ -6,21 +6,26 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-// Load Environment Variables from multiple candidate locations
-dotenv.config({ path: path.join(__dirname, '../../.env') });
-dotenv.config({ path: path.join(__dirname, '../.env') });
-dotenv.config({ path: path.join(__dirname, '.env') });
-dotenv.config({ path: path.join(process.cwd(), '.env') });
+// ── Resolve the server root directory reliably ──────────────────────────────
+// __dirname is always the directory of THIS file (server/), regardless of cwd
+const SERVER_DIR = __dirname;
+const APP_ROOT = path.join(SERVER_DIR, '..'); // hrms-system/
+
+// Load .env files — check multiple locations for Hostinger Passenger compatibility
+dotenv.config({ path: path.join(SERVER_DIR, '.env') });
+dotenv.config({ path: path.join(APP_ROOT, '.env') });
+dotenv.config({ path: path.join(APP_ROOT, '..', '.env') });
 dotenv.config();
 
-// Global Exception Handlers to prevent 503 Death Loops from crashing Node
+// ── Global Crash Handlers ────────────────────────────────────────────────────
 process.on('uncaughtException', (err) => {
-  console.error('[CRITICAL] Uncaught Exception:', err);
+  console.error('[CRITICAL] Uncaught Exception:', err.stack || err.message);
 });
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[CRITICAL] Unhandled Rejection:', reason);
 });
 
+// ── Load Core Modules ────────────────────────────────────────────────────────
 const pool = require('./config/db');
 const { autoInitializeDatabase } = require('./config/dbInitializer');
 const v1Routes = require('./routes/v1');
@@ -30,22 +35,19 @@ const { errorRes } = require('./utils/response');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Add extreme logging for debugging 503
-app.use((req, res, next) => {
-  console.log(`[HTTP INCOMING] ${req.method} ${req.url}`);
-  next();
-});
-
-console.log('[DEBUG-ENV] Process Env Keys:', Object.keys(process.env).join(', '));
+console.log(`[Startup] SERVER_DIR = ${SERVER_DIR}`);
+console.log(`[Startup] APP_ROOT   = ${APP_ROOT}`);
+console.log(`[Startup] PORT       = ${PORT}`);
 if (process.env.PASSENGER_APP_ENV) {
-  console.log('[DEBUG-ENV] Passenger is detected.');
+  console.log(`[Startup] Passenger detected. ENV = ${process.env.PASSENGER_APP_ENV}`);
 }
 
-// Security Middlewares
-app.set('trust proxy', 1); // Required for express-rate-limit behind Hostinger reverse proxy
+// ── Security Middlewares ─────────────────────────────────────────────────────
+app.set('trust proxy', 1);
 
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false // Disable CSP to avoid blocking Next.js assets
 }));
 
 app.use(cors({
@@ -53,7 +55,7 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate Limiting
+// ── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
@@ -62,19 +64,22 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Body Parsing
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// ── Body Parsing ─────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve Uploads Directory
-const uploadsDir = fs.existsSync(path.join(__dirname, '../../uploads'))
-  ? path.join(__dirname, '../../uploads')
-  : path.join(__dirname, '../uploads');
+// ── Static File Serving ──────────────────────────────────────────────────────
+// Uploads
+const uploadsDir = path.join(APP_ROOT, '..', 'uploads');
+const uploadsDir2 = path.join(APP_ROOT, 'uploads');
+const activeUploadsDir = fs.existsSync(uploadsDir) ? uploadsDir : uploadsDir2;
+if (!fs.existsSync(activeUploadsDir)) {
+  try { fs.mkdirSync(activeUploadsDir, { recursive: true }); } catch(e) {}
+}
+app.use('/uploads', express.static(activeUploadsDir));
+app.use('/public', express.static(path.join(SERVER_DIR, 'public')));
 
-app.use('/uploads', express.static(uploadsDir));
-app.use('/public', express.static(path.join(__dirname, '../public')));
-
-// Database Diagnostics Route Handler
+// ── Database Diagnostics Endpoint ────────────────────────────────────────────
 const dbStatusHandler = async (req, res) => {
   try {
     const conn = await pool.getConnection();
@@ -85,28 +90,17 @@ const dbStatusHandler = async (req, res) => {
       config: {
         host: process.env.DB_HOST || 'localhost',
         port: process.env.DB_PORT || 3306,
-        user: process.env.DB_USER || 'root',
-        database: process.env.DB_NAME || 'hrms_db'
+        user: process.env.DB_USER,
+        database: process.env.DB_NAME
       },
       tablesCount: tables.length,
       tables: tables.map(t => Object.values(t)[0]),
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    console.error('[DB Diagnostics API Error]:', err.message);
     return res.status(500).json({
       connected: false,
-      config: {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 3306,
-        user: process.env.DB_USER || 'root',
-        database: process.env.DB_NAME || 'hrms_db'
-      },
-      error: {
-        code: err.code || 'UNKNOWN',
-        message: err.message,
-        sqlState: err.sqlState || null
-      },
+      error: { code: err.code, message: err.message },
       timestamp: new Date().toISOString()
     });
   }
@@ -116,128 +110,111 @@ app.get('/db-status', dbStatusHandler);
 app.get('/api/db-status', dbStatusHandler);
 app.get('/api/v1/db-status', dbStatusHandler);
 
-// Versioned API Routes (/api/v1/)
-app.use('/api/v1', v1Routes);
-
-// Legacy Dispatcher API Routes (/api/)
-app.use('/api', legacyRoutes);
-
-// Mock data seed endpoint
-app.get('/api/seed-mock', async (req, res) => {
-  try {
-    const { seedMockData } = require('./scripts/seed_mock_data');
-    const result = await seedMockData();
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
+// ── Health Check ─────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({ status: 'UP', app: 'BSC Enterprise HRMS v2.0', port: PORT, ts: new Date().toISOString() });
 });
 
-// Wipe DB endpoint
+// ── Wipe DB Endpoint ─────────────────────────────────────────────────────────
 app.get('/api/wipe-db', async (req, res) => {
   try {
-    await pool.query('DELETE FROM candidates');
-    await pool.query('DELETE FROM interview_schedules');
-    await pool.query('DELETE FROM candidate_activities');
-    await pool.query('DELETE FROM hr_evaluations');
-    await pool.query('DELETE FROM interview_tokens');
-    await pool.query('DELETE FROM selected_candidates');
-    await pool.query('DELETE FROM rejected_candidates');
-    await pool.query('DELETE FROM selection_offers');
-    await pool.query('DELETE FROM onboarding_records');
-    await pool.query('DELETE FROM onboarding_items');
-    res.json({ success: true, message: 'Sample data completely wiped from the database' });
+    const tables = ['candidates', 'interview_schedules', 'candidate_activities', 'hr_evaluations',
+      'interview_tokens', 'selected_candidates', 'rejected_candidates',
+      'selection_offers', 'onboarding_records', 'onboarding_items'];
+    for (const t of tables) {
+      try { await pool.query(`DELETE FROM \`${t}\``); } catch(e) { /* table may not exist */ }
+    }
+    res.json({ success: true, message: 'Sample data wiped.' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.json({ status: 'UP', app: 'BSC Enterprise HRMS Unified Server v2.0' });
-});
+// ── API Routes ───────────────────────────────────────────────────────────────
+app.use('/api/v1', v1Routes);
+app.use('/api', legacyRoutes);
 
-// Serve Frontend (Client Build static files & SPA Fallback)
-const rootDistPath = path.join(__dirname, '../../dist');
-const hrmsDistPath = path.join(__dirname, '../dist');
-const rootOutPath = path.join(__dirname, '../../out');
-const clientOutPath = path.join(__dirname, '../client/out');
+// ── Frontend SPA Serving ─────────────────────────────────────────────────────
+// Search for the built Next.js output in priority order
+const candidateDistPaths = [
+  path.join(APP_ROOT, 'dist'),
+  path.join(APP_ROOT, '..', 'dist'),
+  path.join(APP_ROOT, 'client', 'out'),
+  path.join(APP_ROOT, 'client', '.next'),
+];
 
-let clientBuildPath = rootOutPath;
-if (fs.existsSync(hrmsDistPath)) clientBuildPath = hrmsDistPath;
-else if (fs.existsSync(rootDistPath)) clientBuildPath = rootDistPath;
-else if (fs.existsSync(rootOutPath)) clientBuildPath = rootOutPath;
-else if (fs.existsSync(clientOutPath)) clientBuildPath = clientOutPath;
+let clientBuildPath = null;
+for (const p of candidateDistPaths) {
+  if (fs.existsSync(p)) {
+    clientBuildPath = p;
+    console.log(`[Startup] Frontend found at: ${p}`);
+    break;
+  }
+}
 
-if (fs.existsSync(clientBuildPath)) {
+if (clientBuildPath) {
   app.use(express.static(clientBuildPath));
 
   app.get('*', (req, res, next) => {
+    // Skip API / upload paths
     if (
-      req.path === '/db-status' ||
-      req.path.startsWith('/api') || 
-      req.path.startsWith('/uploads') || 
-      req.path.startsWith('/health')
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/uploads') ||
+      req.path === '/health' ||
+      req.path === '/db-status'
     ) {
       return next();
     }
 
+    // Try Next.js static export paths
     const reqPath = req.path.replace(/^\//, '').replace(/\/$/, '');
-
-    if (!reqPath) {
-      return res.sendFile(path.join(clientBuildPath, 'index.html'));
-    }
-
-    const possiblePaths = [
+    const tries = [
       path.join(clientBuildPath, `${reqPath}.html`),
       path.join(clientBuildPath, reqPath, 'index.html'),
-      path.join(clientBuildPath, reqPath)
     ];
 
-    for (const p of possiblePaths) {
+    for (const p of tries) {
       if (fs.existsSync(p) && fs.statSync(p).isFile()) {
         return res.sendFile(p);
       }
     }
 
-    // Single Page Application Fallback
-    const fallbackIndex = path.join(clientBuildPath, 'index.html');
-    if (fs.existsSync(fallbackIndex)) {
-      return res.sendFile(fallbackIndex);
+    // SPA fallback
+    const fallback = path.join(clientBuildPath, 'index.html');
+    if (fs.existsSync(fallback)) {
+      return res.sendFile(fallback);
     }
 
     return next();
   });
+} else {
+  console.warn('[Startup] WARNING: No frontend build found. Only API will be served.');
 }
 
-// 404 Handler for API
+// ── 404 / Error Handlers ─────────────────────────────────────────────────────
 app.use('/api/*', (req, res) => {
-  return errorRes(res, `API Endpoint ${req.originalUrl} Not Found`, [], 404);
+  return errorRes(res, `API Endpoint ${req.originalUrl} not found`, [], 404);
 });
 
-// Central Error Middleware
 app.use((err, req, res, next) => {
-  console.error('Central Error Middleware:', err);
+  console.error('[Error Handler]:', err.stack || err.message);
   const status = err.status || 500;
-  return errorRes(res, err.message || 'Internal Server Error', [err.message], status);
+  return errorRes(res, err.message || 'Internal Server Error', [], status);
 });
 
-// Run Auto Database Initializer & Migration
-// Running this outside of app.listen because Passenger environments (Hostinger/cPanel) 
-// often intercept app.listen and ignore the callback.
-autoInitializeDatabase(pool).then(() => {
-  console.log(`[App] Database Auto-Initializer triggered.`);
-}).catch(err => {
-  console.error(`[App] Database Auto-Initializer error:`, err);
-});
+// ── DB Init ──────────────────────────────────────────────────────────────────
+autoInitializeDatabase(pool)
+  .then(() => console.log('[App] Database initialized successfully.'))
+  .catch(err => console.error('[App] DB init error:', err.message));
 
-// Start Server
+// ── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`  BSC Enterprise HRMS Unified Server running on port ${PORT}`);
-  console.log(`  REST API v1: http://localhost:${PORT}/api/v1`);
-  console.log(`  DB Diagnostics: http://localhost:${PORT}/api/db-status`);
-  console.log(`  Frontend Served From: ${clientBuildPath}`);
-  console.log(`  Health Check: http://localhost:${PORT}/health`);
+  console.log(`  BSC Enterprise HRMS running on port ${PORT}`);
+  console.log(`  API: http://localhost:${PORT}/api/v1`);
+  console.log(`  Health: http://localhost:${PORT}/health`);
+  console.log(`  Frontend: ${clientBuildPath || 'NOT FOUND'}`);
   console.log(`====================================================`);
 });
+
+module.exports = app;
