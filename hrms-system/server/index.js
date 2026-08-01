@@ -54,7 +54,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'UP', app: 'BSC Enterprise HRMS Unified Server v2.0' });
 });
 
-// Serve Frontend (Client Build static files)
+// Serve Frontend (Client Build static files & SPA Fallback)
 const rootDistPath = path.join(__dirname, '../../dist');
 const rootOutPath = path.join(__dirname, '../../out');
 const clientOutPath = path.join(__dirname, '../client/out');
@@ -71,14 +71,32 @@ if (fs.existsSync(clientBuildPath)) {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/health')) {
       return next();
     }
-    const cleanPath = req.path === '/' ? 'index.html' : `${req.path.replace(/^\//, '')}.html`;
-    const fullPath = path.join(clientBuildPath, cleanPath);
 
-    if (fs.existsSync(fullPath)) {
-      res.sendFile(fullPath);
-    } else {
-      res.sendFile(path.join(clientBuildPath, 'index.html'));
+    const reqPath = req.path.replace(/^\//, '').replace(/\/$/, '');
+
+    if (!reqPath) {
+      return res.sendFile(path.join(clientBuildPath, 'index.html'));
     }
+
+    const possiblePaths = [
+      path.join(clientBuildPath, `${reqPath}.html`),
+      path.join(clientBuildPath, reqPath, 'index.html'),
+      path.join(clientBuildPath, reqPath)
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        return res.sendFile(p);
+      }
+    }
+
+    // Single Page Application Fallback
+    const fallbackIndex = path.join(clientBuildPath, 'index.html');
+    if (fs.existsSync(fallbackIndex)) {
+      return res.sendFile(fallbackIndex);
+    }
+
+    return next();
   });
 }
 
