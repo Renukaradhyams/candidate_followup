@@ -23,6 +23,7 @@ router.get('/auth/me', authenticate, authController.getMe);
 // ── Candidates Module ────────────────────────────────────────
 router.get('/candidates', candidateController.getCandidates);
 router.post('/candidates', validateAddCandidate, candidateController.addCandidate);
+router.delete('/candidates/:appNo', candidateController.deleteCandidate);
 router.put('/candidates/:id', validateUpdateCandidate, candidateController.updateCandidate);
 router.post('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/kpis', candidateController.getKPIs);

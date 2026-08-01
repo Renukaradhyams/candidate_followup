@@ -29,10 +29,11 @@ const pool = mysql.createPool({
   password: dbPassword,
   database: dbName,
   waitForConnections: true,
-  connectionLimit: 20,
+  connectionLimit: 3, // Reduced from 20 to prevent max_connections on Hostinger
   queueLimit: 0,
   dateStrings: true,
-  connectTimeout: 10000
+  connectTimeout: 10000,
+  idleTimeout: 30000 // Close idle connections after 30 seconds
 });
 
 // Immediate Runtime Connection Verification

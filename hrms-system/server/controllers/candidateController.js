@@ -25,10 +25,25 @@ class CandidateController {
     try {
       const { appNo, updates, doneBy } = req.body;
       const user = doneBy || (req.user ? req.user.username : 'HR');
-      const result = await candidateService.updateCandidate(appNo, updates, user);
+      let result;
+      if (updates.isFullEdit) {
+        result = await candidateService.updateCandidateFull(appNo, updates, user);
+      } else {
+        result = await candidateService.updateCandidate(appNo, updates, user);
+      }
       return res.json(result);
     } catch (err) {
       return errorRes(res, 'Failed to update candidate', [err.message], 500);
+    }
+  }
+
+  async deleteCandidate(req, res) {
+    try {
+      const { appNo } = req.params;
+      const result = await candidateService.deleteCandidate(appNo);
+      return res.json(result);
+    } catch (err) {
+      return errorRes(res, 'Failed to delete candidate', [err.message], 500);
     }
   }
 

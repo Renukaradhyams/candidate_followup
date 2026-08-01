@@ -112,6 +112,18 @@ export default function CandidatesPage() {
     setRemarksText('');
   };
 
+  const handleDeleteCandidate = async (appNo: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this candidate?')) return;
+    try {
+      await API.deleteCandidate(appNo);
+      showToast('Candidate deleted successfully', 'success');
+      setDrawerCandidate(null);
+      loadCandidates();
+    } catch (err) {
+      showToast('Failed to delete candidate', 'error');
+    }
+  };
+
   const handleConfirmRemark = async () => {
     if (!remarksText.trim() || remarksText.trim().length < 5) {
       showToast('Remarks are required (min 5 characters)', 'error');
@@ -585,7 +597,7 @@ export default function CandidatesPage() {
 
             {/* Drawer Actions */}
             {!isViewOnly && (
-              <div className="p-4 border-t border-[#e0ddd8] bg-[#F9F7F4] flex gap-2">
+              <div className="p-4 border-t border-[#e0ddd8] bg-[#F9F7F4] flex flex-wrap gap-2">
                 {drawerCandidate.status === 'New' && (
                   <>
                     <button
@@ -608,6 +620,21 @@ export default function CandidatesPage() {
                     </button>
                   </>
                 )}
+                
+                <div className="flex w-full gap-2 mt-2 pt-2 border-t border-[#e0ddd8]/50">
+                  <button
+                    onClick={() => window.location.href = '/candidate-entry?edit=' + drawerCandidate.appNo}
+                    className="flex-1 py-2.5 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-xs hover:bg-[#1E2D4E]/5"
+                  >
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCandidate(drawerCandidate.appNo)}
+                    className="flex-1 py-2.5 rounded-lg border border-red-600 text-red-600 font-bold text-xs hover:bg-red-50"
+                  >
+                    Delete Profile
+                  </button>
+                </div>
               </div>
             )}
           </div>

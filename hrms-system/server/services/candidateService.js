@@ -240,10 +240,38 @@ class CandidateService {
       await pool.query(
         `INSERT INTO candidate_activities (candidate_id, app_no, action_type, icon, label, remarks, by_user, color)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cand[0].id, appNo, 'status_change', '🔄', `Status changed to ${updates.status || 'Updated'}`, updates.remarks || '', doneBy, 'gold']
+        [cand[0].id, appNo, 'status_change', '📝', `Status changed to ${updates.status || 'Updated'}`, updates.remarks || '', doneBy, 'gold']
       );
     }
 
+    return { success: true };
+  }
+
+  async updateCandidateFull(appNo, data, doneBy = 'HR') {
+    const fields = [];
+    const values = [];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known'];
+    
+    for (const key of allowed) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(Array.isArray(data[key]) ? JSON.stringify(data[key]) : data[key]);
+      }
+    }
+
+    if (fields.length > 0) {
+      values.push(appNo);
+      await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+    }
+
+    return { success: true };
+  }
+
+  async deleteCandidate(appNo) {
+    // Delete from candidates and related tables
+    await pool.query('DELETE FROM candidates WHERE app_no = ?', [appNo]);
+    await pool.query('DELETE FROM candidate_activities WHERE app_no = ?', [appNo]);
+    await pool.query('DELETE FROM interview_schedules WHERE app_no = ?', [appNo]);
     return { success: true };
   }
 

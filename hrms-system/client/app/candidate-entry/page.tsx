@@ -8,6 +8,7 @@ export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
   const [designations, setDesignations] = useState<string[]>([]);
   const [dupWarn, setDupWarn] = useState('');
+  const [editAppNo, setEditAppNo] = useState<string | null>(null);
 
   // Form Fields - Step 1
   const [name, setName] = useState('');
@@ -50,6 +51,43 @@ export default function CandidateEntryPage() {
     API.getDesignations().then(res => {
       if (res && res.designations) setDesignations(res.designations);
     }).catch(() => {});
+
+    // Check Edit Mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    if (editId) {
+      setEditAppNo(editId);
+      setLoading(true);
+      API.call('getCandidates', { search: editId }).then(res => {
+        if (res.candidates && res.candidates.length > 0) {
+          const c = res.candidates[0];
+          setName(c.name || '');
+          setEmail(c.email || '');
+          setPhone(c.phone || '');
+          setAddress(c.address || '');
+          setGender(c.gender || '');
+          setBloodGroup(c.bloodGroup || '');
+          setDob(c.dob ? c.dob.split('T')[0] : '');
+          setOfferedDoj(c.offeredDoj ? c.offeredDoj.split('T')[0] : '');
+          setDesig(c.desig || '');
+          setQualification(c.qualification || '');
+          setExperience(c.experience || '');
+          setRetailExperience(c.retailExperience || '');
+          setPreviousCompany(c.previousCompany || '');
+          setPreviousDesignation(c.previousDesignation || '');
+          setAadhaarNumber(c.aadhaarNumber || '');
+          setFatherDetails(c.fatherDetails || '');
+          setMotherDetails(c.motherDetails || '');
+          setReligionCaste(c.religionCaste || '');
+          setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? JSON.parse(c.languagesKnown) : c.languagesKnown) : []);
+          setDeclaration(true); // Assuming they declared it earlier
+        }
+        setLoading(false);
+      }).catch(err => {
+        showToast('Failed to load candidate data', 'error');
+        setLoading(false);
+      });
+    }
   }, []);
 
   const checkDuplicate = async (ph: string) => {
@@ -104,10 +142,10 @@ export default function CandidateEntryPage() {
       const photoUrl = photoFile ? URL.createObjectURL(photoFile) : '';
       const aadhaarUrl = aadhaarFile ? URL.createObjectURL(aadhaarFile) : '';
 
-      const res = await API.addCandidate({
+      const payload = {
         name,
         email,
-        phone: '+91' + phone,
+        phone: phone.startsWith('+91') ? phone : '+91' + phone,
         address,
         gender,
         bloodGroup,
@@ -125,20 +163,24 @@ export default function CandidateEntryPage() {
         religionCaste,
         languagesKnown,
         q1, q2, q3, q4,
-        resumeUrl,
-        photoUrl,
-        aadhaarUrl,
-        isDuplicatePhone: dupWarn ? 'Yes' : 'No',
-        source: 'Form',
-        expectedSalary: 0
-      });
+        resumeUrl, photoUrl, aadhaarUrl
+      };
 
-      if (res.success && res.appNo) {
-        setSuccessAppNo(res.appNo);
-        showToast('Registration successful!', 'success');
-        setStep(3);
+      if (editAppNo) {
+        await API.updateCandidate(editAppNo, { ...payload, isFullEdit: true });
+        showToast('Candidate Profile Updated Successfully!', 'success');
+        setTimeout(() => {
+          window.location.href = '/candidates';
+        }, 1500);
       } else {
-        showToast('Registration failed: ' + (res.error || 'Unknown error'), 'error');
+        const res = await API.addCandidate(payload);
+        if (res && res.success) {
+          setSuccessAppNo(res.appNo || res.candidateCode);
+          setStep(3);
+          window.scrollTo(0, 0);
+        } else {
+          showToast('Registration failed: ' + (res.error || 'Unknown error'), 'error');
+        }
       }
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');

@@ -6,8 +6,8 @@ execSync('cd client && npm install --legacy-peer-deps && npm run build', {stdio:
 
 const src = fs.existsSync('client/out') ? 'client/out' : 'client/.next';
 if (fs.existsSync(src)) {
-    if (!fs.existsSync('../dist')) fs.cpSync(src, '../dist', {recursive: true});
-    if (!fs.existsSync('dist')) fs.cpSync(src, 'dist', {recursive: true});
+    fs.cpSync(src, '../dist', {recursive: true, force: true});
+    fs.cpSync(src, 'dist', {recursive: true, force: true});
     console.log('[Build] Copied client build to dist directories.');
 } else {
     console.warn('[Build] Warning: Client build directory not found.');

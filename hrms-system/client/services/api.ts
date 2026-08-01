@@ -118,14 +118,20 @@ export const API = {
     return apiFetch(`/candidates?${query}`);
   },
   async addCandidate(data: any) {
-    return apiFetch('/candidates/add', {
+    // Legacy route uses /add or we just map it in our generic call
+    return apiFetch('/candidates', {
       method: 'POST',
       body: JSON.stringify({ data })
     });
   },
+  async deleteCandidate(appNo: string) {
+    return apiFetch(`/candidates/${appNo}`, {
+      method: 'DELETE'
+    });
+  },
   async updateCandidate(appNo: string, updates: any, candName?: string, doneBy?: string) {
-    return apiFetch('/candidates/update', {
-      method: 'POST',
+    return apiFetch(`/candidates/${appNo}`, {
+      method: 'PUT',
       body: JSON.stringify({ appNo, updates, candName, doneBy })
     });
   },
