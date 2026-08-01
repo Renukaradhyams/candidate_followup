@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BSC Candidate — Login</title>
+<link rel="icon" type="image/jpeg" href="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#EDE8DE;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card{background:#fff;border-radius:16px;overflow:hidden;width:100%;max-width:400px;box-shadow:0 4px 32px rgba(30,45,78,.15)}
+.hd{background:#1E2D4E;padding:18px 24px;display:flex;align-items:center;gap:14px}
+.hd-logo{width:88px;height:auto;flex-shrink:0}
+.hd-logo img{width:100%;height:auto;border-radius:6px}
+.hd-title{color:#fff;font-size:17px;font-weight:800}
+.hd-sub{color:rgba(255,255,255,.38);font-size:9.5px;letter-spacing:.08em;margin-top:3px;text-transform:uppercase}
+.body{padding:26px}
+.welcome{font-size:22px;font-weight:800;color:#1E2D4E;margin-bottom:4px}
+.desc{font-size:12px;color:#999;margin-bottom:24px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:6px}
+.fg input{width:100%;font-size:14px;padding:11px 14px;border:1.5px solid #e0ddd8;border-radius:9px;background:#F9F7F4;color:#1E2D4E;transition:border .15s;font-family:inherit}
+.fg input:focus{outline:none;border-color:#1E2D4E;background:#fff}
+.fg input.err{border-color:#C0272D;background:#FFF5F5}
+.field-err{font-size:10px;color:#C0272D;margin-top:4px;display:none}
+.field-err.show{display:block}
+.foot{display:flex;justify-content:flex-end;margin-bottom:18px}
+.forgot{font-size:11.5px;color:#C9952A;cursor:pointer;background:none;border:none;font-family:inherit}
+.forgot:hover{text-decoration:underline}
+.submit-btn{width:100%;background:#1E2D4E;color:#fff;border:none;padding:13px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+.submit-btn:hover{background:#162340}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+.spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .6s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-err{font-size:11.5px;color:#C0272D;background:#FFF5F5;border:1px solid #f5c6c8;border-radius:7px;padding:9px 12px;text-align:center;margin-top:12px;display:none}
+.login-err.show{display:block}
+.card-foot{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:#F9F7F4;border-top:1px solid #f0ede8}
+.card-foot-note{font-size:9px;color:#bbb}
+.card-foot img{height:16px;opacity:.45;object-fit:contain}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hd">
+    <div class="hd-logo"><img src="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg" alt="BSC The Textile Mall"></div>
+    <div><div class="hd-title">Candidate Portal</div><div class="hd-sub">BSC The Textile Mall · Since 1938</div></div>
+  </div>
+  <div class="body">
+    <div class="welcome">Welcome back</div>
+    <div class="desc">Sign in to access the HR portal</div>
+    <div class="fg">
+      <label for="li-user">Username / Email</label>
+      <input type="text" id="li-user" placeholder="Enter username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="field-err" id="err-user">Please enter your username</div>
+    </div>
+    <div class="fg">
+      <label for="li-pass">Password</label>
+      <input type="password" id="li-pass" placeholder="••••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="field-err" id="err-pass">Please enter your password</div>
+    </div>
+    <div class="foot"><button class="forgot" onclick="forgotPass()">Forgot password?</button></div>
+    <button class="submit-btn" id="li-btn" onclick="doLogin()">
+      <span id="li-text">Sign In</span>
+      <span id="li-spin" class="spinner" style="display:none"></span>
+    </button>
+    <div class="login-err" id="login-err">Incorrect username or password. Please try again.</div>
+  </div>
+  <div class="card-foot">
+    <span class="card-foot-note">Authorised personnel only · Access is logged</span>
+    <img src="https://bsctextilescandb-ui.github.io/retail-crm/cnb-logo.png" alt="Consulting &amp; Beyond">
+  </div>
+</div>
+<script>
+'use strict';
+const SK='bsc_crm_session';
+const SU='https://script.google.com/macros/s/AKfycbwolTclzyP2skiQi4ndcPs4y4z0s0gRglN0fUK3jmBq-w8RAxBUltcw47QqyjGGRF-3/exec';
+const RH={'HR':'dashboard.html','Manager':'dashboard.html','Admin':'dashboard.html'};
+sessionStorage.removeItem('_bsc_redir');
+try{const s=JSON.parse(localStorage.getItem(SK));if(s&&s.role)window.location.replace(RH[s.role]||'dashboard.html');}catch(e){localStorage.removeItem(SK);}
+function el(id){return document.getElementById(id);}
+async function doLogin(){
+  const u=el('li-user').value.trim(),p=el('li-pass').value;
+  ['user','pass'].forEach(f=>{el('err-'+f).classList.remove('show');el('li-'+f).classList.remove('err');});
+  el('login-err').classList.remove('show');
+  let err=false;
+  if(!u){el('err-user').classList.add('show');el('li-user').classList.add('err');err=true;}
+  if(!p){el('err-pass').classList.add('show');el('li-pass').classList.add('err');err=true;}
+  if(err)return;
+  const btn=el('li-btn');btn.disabled=true;el('li-text').textContent='Signing in…';el('li-spin').style.display='';
+  try{
+    const r=await verify(u,p);
+    if(r.success){
+      localStorage.setItem(SK,JSON.stringify({username:r.displayName||u,role:r.role,loginAt:Date.now()}));
+      window.location.replace(RH[r.role]||'dashboard.html');
+    }else throw new Error('invalid');
+  }catch(e){
+    el('login-err').classList.add('show');el('li-pass').classList.add('err');el('li-pass').value='';el('li-pass').focus();
+    btn.disabled=false;el('li-text').textContent='Sign In';el('li-spin').style.display='none';
+  }
+}
+async function verify(u,p){
+  if(!SU||SU.includes('YOUR_SCRIPT_ID'))return demo(u,p);
+  try{const r=await fetch(SU,{method:'POST',body:JSON.stringify({action:'verifyUser',username:u,password:p})});const d=await r.json();return d.success?d:demo(u,p);}catch{return demo(u,p);}
+}
+const DEMO=[{u:'hr@bsctextiles.com',p:'bsc@2026',role:'HR',n:'HR Admin'},{u:'fm@bsctextiles.com',p:'bsc@2026',role:'Floor Manager',n:'Floor Manager'},{u:'manager@bsctextiles.com',p:'bsc@2026',role:'Manager',n:'Store Manager'},{u:'admin@bsctextiles.com',p:'bsc@2026',role:'Admin',n:'Admin'}];
+function demo(u,p){const m=DEMO.find(d=>d.u.toLowerCase()===u.toLowerCase()&&d.p===p);return Promise.resolve(m?{success:true,role:m.role,displayName:m.n}:{success:false});}
+function forgotPass(){alert('Contact admin:\nadmin@bsctextiles.com');}
+
+
+function toast(msg, type){
+  let t = document.getElementById('login-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'login-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;color:#fff;z-index:9999;transition:opacity .3s;opacity:0;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = type==='error' ? '#C0272D' : type==='success' ? '#2d8a4e' : '#1E2D4E';
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>{ t.style.opacity='0'; }, 4000);
+}
+
+function showForgotMsg(){
+  toast('Please contact your Admin to reset your password','info');
+}
+</script>
+</body>
+</html>

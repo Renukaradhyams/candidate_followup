@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Candidates — BSC Candidate CRM</title>
+<link rel="icon" type="image/jpeg" href="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg">
+<link rel="stylesheet" href="shared.css">
+<style>
+.bulk-bar{display:none;align-items:center;gap:9px;background:#EDE8DE;padding:8px 12px;border-radius:8px;margin-bottom:10px;font-size:11px}
+.bulk-bar.show{display:flex}
+.rej-reason{font-size:8.5px;background:#FCEBEB;color:#A32D2D;padding:2px 7px;border-radius:4px;display:block;margin-top:3px}
+.call-hist-item{font-size:10.5px;color:#555;padding:5px 8px;background:#F9F7F4;border-radius:6px;margin-bottom:5px}
+.call-hist-badge{font-size:8.5px;background:#E6F1FB;color:#185FA5;padding:2px 6px;border-radius:4px;font-weight:700;margin-right:5px}
+.rm-textarea{width:100%;font-size:13px;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;background:#F9F7F4;font-family:inherit;resize:none;height:80px;margin-top:8px}
+.rm-textarea:focus{outline:none;border-color:var(--navy)}
+.rm-textarea.err{border-color:var(--red)}
+
+.activity-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #f5f3f0}
+.activity-item:last-child{border-bottom:none}
+.ai-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.ai-body{flex:1}
+.ai-title{font-size:11.5px;font-weight:600;color:var(--navy)}
+.ai-remarks{font-size:10.5px;color:#777;margin-top:3px;font-style:italic;background:#F9F7F4;padding:5px 8px;border-radius:5px;margin-top:4px}
+.ai-extra{font-size:10px;color:#555;margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+/* Drawer tabs */
+.dr-tabs{display:flex;gap:0;border-bottom:2px solid #f0ede8;margin-bottom:14px}
+.dr-tab{padding:8px 14px;font-size:11px;font-weight:600;color:#aaa;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap}
+.dr-tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.dr-tab-panel{display:none}
+.dr-tab-panel.active{display:block}
+.dr-status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F9F7F4;border-radius:8px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<button class="sb-toggle" id="sb-toggle"><span></span><span></span><span></span></button>
+<div class="sb-mob-overlay" id="sb-mob-overlay"></div>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="sb-logo-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg" alt="BSC The Textile Mall"></div>
+  <div class="sb-user"><div class="sb-avatar" id="sb-av">HR</div>
+    <div><div class="sb-user-name" id="sb-username">HR Admin</div>
+         <div class="sb-user-role" id="sb-userrole">HR</div></div>
+  </div>
+  <div class="sb-section">Main</div>
+    <a class="nav-item" data-page="dashboard" href="dashboard.html"><span class="nav-icon">📊</span> Dashboard </a>
+    <a class="nav-item active" data-page="candidates" href="candidates.html"><span class="nav-icon">👥</span> Candidates <span class="nav-badge" id="nb-cand">0</span></a>
+    <a class="nav-item" data-page="interview" href="interview-panel.html"><span class="nav-icon">🎯</span> Interview Panel </a>
+    <a class="nav-item" data-page="offer" href="offer-process.html"><span class="nav-icon">📄</span> Offer Process <span class="nav-badge" id="nb-offer">0</span></a>
+    <a class="nav-item" data-page="onboarding" style="display:none" href="onboarding.html"><span class="nav-icon">✅</span> Onboarding </a>
+    <a class="nav-item" data-page="exit" style="display:none" href="employee-exit.html"><span class="nav-icon">🚪</span> Employee Exit </a>
+  <div class="sb-section">HR Ops</div>
+  <a class="nav-item" data-page="onboarding" href="onboarding.html"><span class="nav-icon">🎉</span> Onboarding</a>
+  <a class="nav-item" data-page="exit" href="employee-exit.html"><span class="nav-icon">🚪</span> Exit / FnF</a>
+  <div class="sb-section">Public</div>
+  <a class="nav-item" data-page="form" href="candidate-entry.html" target="_blank"><span class="nav-icon">📋</span> Entry Form (QR)</a>
+  <div class="sb-section">Admin</div>
+  <a class="nav-item" data-page="settings" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  <div class="sb-bottom">
+    <button class="logout-btn" id="logout-btn">↩ &nbsp;Logout</button>
+    <div class="sb-cnb-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/cnb-logo.png" alt="Consulting &amp; Beyond"></div>
+  </div>
+</aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">Candidates</div>
+        <div class="breadcrumb"><a class="bc-link" href="dashboard.html">Dashboard</a><span class="bc-sep">›</span><span>Candidates</span></div>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-time" id="live-clock"></span>
+        <span class="live-ind"><span class="live-dot"></span>Live</span>
+        <button class="btn btn-primary btn-sm" onclick="window.open('candidate-entry.html','_blank')">＋ Add Walk-in</button>
+      </div>
+    </header>
+    <main class="content">
+      <div class="kpi-grid">
+        <div class="kpi gold"><div class="kpi-label">All Candidates</div><div class="kpi-val" id="k-total">0</div></div>
+        <div class="kpi blue"><div class="kpi-label">New / Unreviewed</div><div class="kpi-val" id="k-new">0</div></div>
+        <div class="kpi navy"><div class="kpi-label">Shortlisted / Calling</div><div class="kpi-val" id="k-short">0</div></div>
+        <div class="kpi" style="border-left-color:#F57F17"><div class="kpi-label">Interviewed</div><div class="kpi-val" id="k-int" style="color:#F57F17">0</div></div>
+      </div>
+      <div class="kpi-grid" style="margin-top:-4px">
+        <div class="kpi green"><div class="kpi-label">Selected</div><div class="kpi-val" id="k-sel">0</div></div>
+        <div class="kpi teal"><div class="kpi-label">Offer Sent</div><div class="kpi-val" id="k-offer">0</div></div>
+        <div class="kpi orange"><div class="kpi-label">On Hold</div><div class="kpi-val" id="k-hold">0</div></div>
+        <div class="kpi red"><div class="kpi-label">Rejected</div><div class="kpi-val" id="k-rej">0</div></div>
+      </div>
+      <div class="status-pills">
+        <span class="sp sp-all active" data-status="all">All · <b id="p-all">0</b></span>
+        <span class="sp sp-new"   data-status="New">New · <b id="p-new">0</b></span>
+        <span class="sp sp-short" data-status="Shortlisted">Shortlisted · <b id="p-short">0</b></span>
+        <span class="sp sp-short" data-status="1st Call Done">1st Call · <b id="p-call1">0</b></span>
+        <span class="sp sp-short" data-status="2nd Call Done">2nd Call · <b id="p-call2">0</b></span>
+        <span class="sp sp-int"   data-status="Interview Scheduled">Interview Scheduled · <b id="p-sch">0</b></span>
+        <span class="sp sp-int"   data-status="Interviewed">Interviewed · <b id="p-int">0</b></span>
+        <span class="sp sp-sel"   data-status="Selected">Selected · <b id="p-sel">0</b></span>
+        <span class="sp sp-offer" data-status="Offer Sent">Offer Sent · <b id="p-offer">0</b></span>
+        <span class="sp sp-hold"  data-status="Hold">Hold · <b id="p-hold">0</b></span>
+        <span class="sp sp-rej"   data-status="Rejected">Rejected · <b id="p-rej">0</b></span>
+        <span class="sp sp-board" data-status="Onboarding">Onboarding · <b id="p-board">0</b></span>
+        <span class="sp" data-status="Offer Accepted" style="color:var(--teal)">Offer Accepted · <b id="p-joina">0</b></span>
+        <span class="sp" data-status="Joined" style="color:var(--green)">Joined · <b id="p-joined">0</b></span>
+      </div>
+      <div class="filter-bar">
+        <input class="search-input" id="cand-search" placeholder="&#x1F50D; Search name, phone, app no..." oninput="applyFilters()">
+        <select class="fsel" id="f-desig" data-desig-source="filter" onchange="applyFilters()"><option value="">All Designations</option></select>
+        <select class="fsel" id="f-source" onchange="applyFilters()">
+          <option value="">All Sources</option><option>Walk-in</option><option>Employee Reference</option><option>Advertisement</option><option>Other</option>
+        </select>
+        <button class="btn btn-muted btn-sm" id="sort-btn" onclick="toggleSort()">&#x2191; Oldest First</button>
+        <button class="btn btn-outline-green btn-sm" onclick="exportCSV()">&#x2B07; CSV</button>
+      </div>
+      <div class="bulk-bar" id="bulk-bar">
+        <b id="bulk-count">0 selected</b>
+        <button class="btn btn-outline-gold btn-sm" onclick="bulkAction('Shortlisted')">Bulk Shortlist</button>
+        <button class="btn btn-outline-red btn-sm" onclick="bulkAction('Rejected')">Bulk Reject</button>
+        <button class="btn btn-muted btn-sm" onclick="clearBulk()">✕</button>
+      </div>
+      <div class="table-card" style="padding:0">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th><input type="checkbox" id="chk-all" onchange="toggleAll(this)"></th>
+              <th>App No</th><th>Candidate</th><th>Phone</th><th>Gender</th>
+              <th>Designation</th><th>Source</th><th>Date</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="cand-tbody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination">
+          <span id="cand-page-info">Loading...</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-muted btn-sm" id="prev-btn" onclick="changePage(-1)" disabled>← Prev</button>
+            <button class="btn btn-outline btn-sm" id="next-btn" onclick="changePage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    
+      <!-- Selected / Rejected separate view -->
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn-outline-green btn-sm" onclick="toggleSelRejPanel('selected')">&#x2713; View Selected Candidates</button>
+        <button class="btn btn-outline-red btn-sm"   onclick="toggleSelRejPanel('rejected')">&#x2717; View Rejected Candidates</button>
+      </div>
+      <div id="sel-rej-panel" style="display:none;margin-top:10px">
+        <div class="table-card" style="padding:0">
+          <div style="padding:10px 16px;border-bottom:1px solid #f0ede8;display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title" id="sel-rej-title">Selected Candidates</span>
+            <button class="btn btn-muted btn-sm" onclick="el('sel-rej-panel').style.display='none'">&#x2715; Close</button>
+          </div>
+          <div class="table-wrap"><table>
+            <thead id="sel-rej-head"></thead>
+            <tbody id="sel-rej-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="cand-drawer">
+  <div class="drawer-head">
+    <div class="drawer-av" id="dr-av"></div>
+    <div><div class="drawer-name" id="dr-name"></div><div class="drawer-appno" id="dr-appno"></div></div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-actions" id="drawer-actions"></div>
+</div>
+
+<!-- Mandatory Remarks Modal -->
+<div class="modal-overlay" id="remark-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-title" id="rm-title">Shortlist Candidate</div>
+    <div class="modal-body">
+      <label style="font-size:10px;font-weight:700;color:#888;display:block;margin-bottom:5px">REMARKS <span style="color:var(--red)">*</span></label>
+      <textarea class="rm-textarea" id="rm-remarks" placeholder="Enter your remarks..." maxlength="300"></textarea>
+      <div style="font-size:10px;color:var(--red);margin-top:4px;display:none" id="rm-remarks-err">Remarks are required (min 5 characters)</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-muted" onclick="closeRemarkModal()">Cancel</button>
+      <button class="btn btn-primary" id="rm-confirm-btn" onclick="confirmRemark()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step-by-Step Call Modal -->
+<div class="modal-overlay" id="call-modal" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title" id="call-modal-title">📞 1st Follow-up Call</div>
+    <div class="modal-body">
+      <p id="call-modal-cand" style="font-size:11.5px;color:#555;background:#F9F7F4;padding:8px 12px;border-radius:7px;margin-bottom:14px"></p>
+      <div id="call-history-wrap" style="display:none;margin-bottom:12px">
+        <div style="font-size:9px;font-weight:800;color:#aaa;text-transform:uppercase;margin-bottom:6px">Previous Steps</div>
+        <div id="call-history"></div>
+      </div>
+      <div style="font-size:9px;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:6px">
+        Step <span id="call-step-num">1</span> of 3
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="display:block;font-size:9px;font-weight:700;color:#888;margin-bottom:5px" id="call-date-label">Call Date *</label>
+          <input type="date" id="call-date" style="width:100%;font-size:13px;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;background:#F9F7F4;font-family:inherit">
+        </div>
+      </div>
+      <label style="display:block;font-size:9px;font-weight:700;color:#888;margin-bottom:5px">REMARKS / NOTES <span style="color:var(--red)">*</span></label>
+      <textarea id="call-remarks" style="width:100%;font-size:13px;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;background:#F9F7F4;font-family:inherit;resize:none;height:80px" placeholder="What was discussed in this call?..." maxlength="500"></textarea>
+      <div style="font-size:10px;color:var(--red);margin-top:4px;display:none" id="call-remarks-err">Remarks are required</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-muted" onclick="closeCallModal()">Cancel</button>
+      <button class="btn btn-primary" id="call-confirm-btn" onclick="confirmCallStep()">Save & Continue</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+'use strict';
+const session  = initPage('candidates');
+const userRole = session ? session.role : 'HR';
+const isViewOnly = userRole === 'Manager';
+const PAGE_SIZE  = 10;
+
+let currentPage=1, allCandidates=[], filtered=[], activeStatus='all', sortDir='asc';
+const AV_BG={navy:'#1E2D4E',gold:'#C9952A',green:'#2d8a4e',red:'#C0272D',purple:'#7c4dbd',teal:'#1a8a84'};
+
+// ── Load ──────────────────────────────────────────────────────
+(async function load(){
+  // Show loading indicator
+  el('cand-page-info').textContent = 'Fetching candidates...';
+
+  try {
+    // Add 15-second timeout to prevent stuck loading
+    const timeoutPromise = new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),15000));
+    const fetchPromise   = API.getCandidates({limit:500});
+    const data = await Promise.race([fetchPromise, timeoutPromise]);
+    allCandidates = (data && data.candidates) ? data.candidates : [];
+  } catch(e) {
+    console.warn('[Candidates load]', e.message);
+    allCandidates = [];
+    // Show connection error in table
+    el('cand-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;padding:30px">'
+      +'<div style="font-size:32px;margin-bottom:10px">&#x1F4E1;</div>'
+      +'<div style="font-size:13px;font-weight:600;color:#888;margin-bottom:6px">Could not load candidates</div>'
+      +'<div style="font-size:11px;color:#bbb;margin-bottom:12px">Check: Apps Script deployed · Sheet ID set · Internet connection</div>'
+      +'<button class="btn btn-outline btn-sm" onclick="window.location.reload()">&#x21BB; Retry</button>'
+      +'</td></tr>';
+    el('cand-page-info').textContent = 'Connection error';
+    el('prev-btn').disabled = true; el('next-btn').disabled = true;
+  }
+  buildKPIs(); buildPills(); applyFilters();
+})();
+
+// ── KPIs & Pills ──────────────────────────────────────────────
+function buildKPIs(){
+  const c = s => allCandidates.filter(x=>x.status===s).length;
+  const cM= a => allCandidates.filter(x=>a.includes(x.status)).length;
+  el('k-total').textContent  = allCandidates.length;
+  el('k-new').textContent    = c('New');
+  el('k-short').textContent  = cM(['Shortlisted','1st Call Done','2nd Call Done']);
+  el('k-int').textContent    = c('Interviewed');
+  el('k-sel').textContent    = c('Selected');
+  el('k-offer').textContent  = c('Offer Sent');
+  el('k-hold').textContent   = c('Hold');
+  el('k-rej').textContent    = c('Rejected');
+}
+function buildPills(){
+  const c = s => allCandidates.filter(x=>x.status===s).length;
+  const cM= a => allCandidates.filter(x=>a.includes(x.status)).length;
+  el('p-all').textContent    = allCandidates.length;
+  el('p-new').textContent    = c('New');
+  el('p-short').textContent  = c('Shortlisted');
+  if(el('p-call1')) el('p-call1').textContent = c('1st Call Done');
+  if(el('p-call2')) el('p-call2').textContent = c('2nd Call Done');
+  if(el('p-sch'))   el('p-sch').textContent   = c('Interview Scheduled');
+  el('p-int').textContent    = c('Interviewed');
+  el('p-sel').textContent    = c('Selected');
+  el('p-offer').textContent  = c('Offer Sent');
+  el('p-hold').textContent   = c('Hold');
+  el('p-rej').textContent    = c('Rejected');
+  el('p-board').textContent  = c('Onboarding');
+  if(el('p-joina')) el('p-joina').textContent = c('Offer Accepted');
+  if(el('p-joined')) el('p-joined').textContent = c('Joined');
+}
+
+// ── Filters — sort earliest first by default ──────────────────
+function applyFilters(){
+  const q    = (el('cand-search').value||'').toLowerCase();
+  const desig= el('f-desig')  ? el('f-desig').value  : '';
+  const src  = el('f-source') ? el('f-source').value : '';
+  filtered = allCandidates.filter(function(c){
+    if(activeStatus!=='all' && c.status!==activeStatus) return false;
+    if(desig && c.desig!==desig)   return false;
+    if(src   && c.source!==src)    return false;
+    if(q && !c.name.toLowerCase().includes(q) &&
+            !c.appNo.toLowerCase().includes(q) &&
+            !String(c.phone).includes(q)) return false;
+    return true;
+  });
+  filtered.sort(function(a,b){
+    return sortDir==='asc' ? (a.rawDate||0)-(b.rawDate||0) : (b.rawDate||0)-(a.rawDate||0);
+  });
+  currentPage=1; renderTable();
+}
+function toggleSort(){
+  sortDir = sortDir==='asc' ? 'desc' : 'asc';
+  el('sort-btn').textContent = sortDir==='asc' ? '↑ Oldest First' : '↓ Newest First';
+  applyFilters();
+}
+initStatusPills(function(s){ activeStatus=s; applyFilters(); });
+
+// ── Render Table ──────────────────────────────────────────────
+function renderTable(){
+  const start=(currentPage-1)*PAGE_SIZE, page=filtered.slice(start,start+PAGE_SIZE), total=filtered.length;
+  if(!page.length){
+    el('cand-tbody').innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">&#x1F50D;</div><div class="empty-title">No candidates found</div></div></td></tr>';
+    el('cand-page-info').textContent='0 results';
+    el('prev-btn').disabled=true; el('next-btn').disabled=true; return;
+  }
+  el('cand-tbody').innerHTML = page.map(function(c,i){
+    const idx    = start+i;
+    const ph     = '<span class="phone-mask" data-real="'+c.phone+'">'+maskPhone(c.phone)+'</span>';
+    const rejTag = (c.status==='Rejected'&&c.rejReason) ? '<span class="rej-reason">'+c.rejReason+'</span>' : '';
+    const rowCls = c.status==='Hold'?'row-hold':c.status==='Rejected'?'row-rejected':'';
+    return '<tr class="'+rowCls+'">'
+      +'<td>'+(isViewOnly?'':'<input type="checkbox" class="row-chk" data-idx="'+idx+'" onchange="rowCheck()">')+'</td>'
+      +'<td style="font-size:10px;white-space:nowrap">'+c.appNo+'</td>'
+      +'<td><div class="td-name" style="cursor:pointer" onclick="openDrawer('+idx+')">'
+        +'<div class="av av-'+c.color+'">'+c.initials+'</div>'
+        +'<b style="color:var(--blue);text-decoration:underline dotted">'+c.name+'</b>'
+      +'</div></td>'
+      +'<td>'+ph+'</td>'
+      +'<td style="font-size:11px">'+(c.gender||'—')+'</td>'
+      +'<td>'+c.desig+'</td>'
+      +'<td>'+c.source+'</td>'
+      +'<td style="font-size:10.5px;white-space:nowrap">'+c.date+'</td>'
+      +'<td>'+statusBadge(c.status)+'</td>'
+      +'<td>'+(isViewOnly?'<span style="font-size:10px;color:#aaa">View only</span>':buildTableActionBtns(c,idx))+'</td>'
+    +'</tr>';
+  }).join('');
+  el('cand-page-info').textContent='Showing '+(start+1)+'–'+Math.min(start+PAGE_SIZE,total)+' of '+total;
+  el('prev-btn').disabled = currentPage===1;
+  el('next-btn').disabled = start+PAGE_SIZE>=total;
+}
+
+// ── Action buttons ────────────────────────────────────────────
+// Table actions - New status shows no buttons (must open drawer first)
+function buildTableActionBtns(c, idx){
+  const s = c.status;
+  const d = 'data-idx="'+idx+'"';
+  if(s==='New')                 return '<span style="font-size:10px;color:#bbb;font-style:italic">Open profile</span>';
+  if(s==='Shortlisted')         return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doCall(this)">&#x1F4DE; 1st Call</button>';
+  if(s==='1st Call Done')       return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doCall(this)">&#x1F4DE; 2nd Call</button>';
+  if(s==='2nd Call Done')       return '<button class="btn btn-primary btn-sm" '+d+' onclick="doCall(this)">&#x1F4C5; Schedule Interview</button>';
+  if(s==='Interview Scheduled') return '<span class="badge b-int" style="font-size:9px">In Interview Panel</span>';
+  if(s==='Interviewed')         return '<button class="btn btn-outline btn-sm" onclick="window.location.href=\'interview-panel.html\'">View Scores</button>';
+  if(s==='Selected')            return '<button class="btn btn-outline-green btn-sm" onclick="window.location.href=\'offer-process.html\'">Send Offer</button>';
+  if(s==='Hold')                return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doReactivate(this)">Reactivate</button>';
+  if(s==='Rejected')            return '<button class="btn btn-muted btn-sm" '+d+' onclick="doReactivate(this)">Re-engage</button>';
+  if(s==='Onboarding')          return '<span class="badge b-board">Onboarding</span>';
+  if(s==='Offer Accepted')      return '<button class="btn btn-outline btn-sm" onclick="window.location.href=\'offer-process.html\'">View Joining</button>';
+  if(s==='Joined')              return '<span class="badge b-sel">&#x2705; Joined</span>';
+  return '';
+}
+
+// Drawer actions - full actions including Shortlist/Hold/Reject for New
+function buildActionBtns(c, idx){
+  const s = c.status;
+  const d = 'data-idx="'+idx+'"';
+  if(s==='New')
+    return '<div style="display:flex;gap:3px;flex-wrap:wrap">'
+      +'<button class="btn btn-outline btn-sm" '+d+' onclick="doShortlist(this)">Shortlist</button>'
+      +'<button class="btn btn-muted btn-sm" '+d+' onclick="doHold(this)">Hold</button>'
+      +'<button class="btn btn-outline-red btn-sm" '+d+' onclick="doReject(this)">Reject</button>'
+    +'</div>';
+  if(s==='Shortlisted')         return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doCall(this)">&#x1F4DE; 1st Call</button>';
+  if(s==='1st Call Done')       return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doCall(this)">&#x1F4DE; 2nd Call</button>';
+  if(s==='2nd Call Done')       return '<button class="btn btn-primary btn-sm" '+d+' onclick="doCall(this)">&#x1F4C5; Schedule Interview</button>';
+  if(s==='Interview Scheduled') return '<span class="badge b-int" style="font-size:9px">In Interview Panel</span>';
+  if(s==='Interviewed')         return '<button class="btn btn-outline btn-sm" onclick="window.location.href=\'interview-panel.html\'">View Scores</button>';
+  if(s==='Selected')            return '<button class="btn btn-outline-green btn-sm" onclick="window.location.href=\'offer-process.html\'">Send Offer</button>';
+  if(s==='Hold')                return '<button class="btn btn-outline-gold btn-sm" '+d+' onclick="doReactivate(this)">Reactivate</button>';
+  if(s==='Rejected')            return '<button class="btn btn-muted btn-sm" '+d+' onclick="doReactivate(this)">Re-engage</button>';
+  if(s==='Onboarding')          return '<span class="badge b-board">Onboarding</span>';
+  if(s==='Offer Accepted')      return '<button class="btn btn-outline btn-sm" onclick="window.location.href=\'offer-process.html\'">View Joining</button>';
+  if(s==='Joined')              return '<span class="badge b-sel">&#x2705; Joined</span>';
+  return '';
+}
+function changePage(d){ currentPage+=d; renderTable(); }
+
+// ── Safe candidate getter — always works ──────────────────────
+function getCand(btn){ return filtered[parseInt(btn.dataset.idx)]; }
+
+// ── All action handlers go through remarks modal ──────────────
+function doShortlist(btn){ const c=getCand(btn); if(c) showRemarkModal('shortlist',c); }
+function doHold(btn){      const c=getCand(btn); if(c) showRemarkModal('hold',c); }
+function doReject(btn){    const c=getCand(btn); if(c) showRemarkModal('reject',c); }
+function doCall(btn){      const c=getCand(btn); if(c) openCallModal(c); }
+function doReactivate(btn){
+  const c=getCand(btn); if(!c) return;
+  const isReengage = c.status==='Rejected';
+  const title = isReengage ? 'Re-engage' : 'Reactivate';
+  const btnTxt = isReengage ? 'Confirm Re-engage' : 'Confirm Reactivate';
+  const btnClr = '#1E2D4E';
+
+  el('rm-title').textContent            = title+' — '+c.name;
+  el('rm-remarks').value                = '';
+  el('rm-remarks').style.borderColor    = '#ddd';
+  el('rm-remarks-err').style.display    = 'none';
+  el('rm-confirm-btn').style.background = btnClr;
+  el('rm-confirm-btn').textContent      = btnTxt;
+
+  _rmAction  = isReengage ? 'reengage' : 'reactivate';
+  _rmCand    = c;
+
+  el('remark-modal').style.display = 'flex';
+  setTimeout(function(){ el('rm-remarks').focus(); }, 150);
+}
+
+// ── Quick status (no remarks needed for reactivate) ───────────
+async function quickStatusChange(appNo, status, candName){
+  await API.updateCandidate(appNo,{status}, candName||'', session?session.username:'HR');
+  updateLocal(appNo,{status}); buildKPIs(); buildPills(); applyFilters();
+  toast('Status updated','success');
+}
+
+// ── REMARKS MODAL — direct DOM manipulation ───────────────────
+let _rmAction=null, _rmCand=null;
+function showRemarkModal(action, cand){
+  _rmAction=action; _rmCand=cand;
+  const titles = {shortlist:'Shortlist',hold:'Hold',reject:'Reject'};
+  const btnClrs = {shortlist:'#1E2D4E',hold:'#C9952A',reject:'#C0272D'};
+  const btnTxts = {shortlist:'Confirm Shortlist',hold:'Confirm Hold',reject:'Confirm Reject'};
+
+  el('rm-title').textContent            = titles[action]+' — '+cand.name;
+  el('rm-remarks').value                = '';
+  el('rm-remarks').style.borderColor    = '#ddd';
+  el('rm-remarks-err').style.display    = 'none';
+  el('rm-confirm-btn').style.background = btnClrs[action];
+  el('rm-confirm-btn').textContent      = btnTxts[action];
+
+  el('remark-modal').style.display = 'flex';
+  setTimeout(function(){ el('rm-remarks').focus(); }, 150);
+}
+
+function closeRemarkModal(){
+  el('remark-modal').style.display = 'none';
+  _rmAction=null; _rmCand=null;
+}
+
+async function confirmRemark(){
+  const remarks = el('rm-remarks').value.trim();
+  if(remarks.length < 5){
+    el('rm-remarks').style.borderColor = 'var(--red)';
+    el('rm-remarks-err').style.display = 'block';
+    return;
+  }
+  const c=_rmCand, action=_rmAction;
+  closeRemarkModal();
+  const statusMap = {shortlist:'Shortlisted', hold:'Hold', reject:'Rejected', reactivate:'New', reengage:'New'};
+  const doneBy = session ? session.username : 'HR';
+  try {
+    if(action==='reject'){
+      await API.rejectCandidate({appNo:c.appNo, remarks:remarks, candName:c.name, doneBy:doneBy});
+      updateLocal(c.appNo,{status:'Rejected', rejReason:remarks});
+      toast(c.name+' — Rejected','success');
+    } else if(action==='reactivate'||action==='reengage'){
+      const actLabel = action==='reengage' ? 'Re-engaged' : 'Reactivated';
+      await API.updateCandidate(c.appNo,{status:'New', remarks:remarks}, c.name, doneBy);
+      // Also log the specific action
+      await API.call('logCustomActivity',{appNo:c.appNo, candName:c.name, action:actLabel, remarks:remarks, doneBy:doneBy});
+      updateLocal(c.appNo,{status:'New', rejReason:''});
+      toast(c.name+' — '+actLabel,'success');
+    } else {
+      await API.updateCandidate(c.appNo,{status:statusMap[action], remarks:remarks}, c.name, doneBy);
+      updateLocal(c.appNo,{status:statusMap[action]});
+      toast(c.name+' — '+statusMap[action],'success');
+    }
+    buildKPIs(); buildPills(); applyFilters();
+    closeDrawer();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+}
+
+// ── CALL MODAL ────────────────────────────────────────────────
+let _callCand=null;
+async function openCallModal(cand){
+  _callCand=cand;
+  let status={step:0};
+  try{ status = await API.getCallStatus(cand.appNo); }catch(e){}
+  const step  = (status.step||0)+1; // next step to fill
+  const labels = {
+    1: {title:'1st Call — Acknowledgement', icon:'📞', dateLabel:'Call Date *',    btnTxt:'Confirm 1st Call'},
+    2: {title:'2nd Call — Interview Scheduling', icon:'📞', dateLabel:'Call Date *', btnTxt:'Confirm 2nd Call'},
+    3: {title:'Schedule Interview', icon:'📅', dateLabel:'Interview Date *',        btnTxt:'Confirm Schedule'}
+  };
+  const lbl = labels[step] || labels[1];
+
+  el('call-modal-title').textContent   = lbl.icon+' '+lbl.title;
+  el('call-modal-cand').textContent    = cand.name+' · '+cand.desig;
+  el('call-step-num').textContent      = step;
+  el('call-date-label').textContent    = lbl.dateLabel;
+  el('call-confirm-btn').textContent   = lbl.btnTxt;
+  el('call-date').value              = new Date().toISOString().slice(0,10);
+  el('call-remarks').value           = '';
+  el('call-remarks').style.borderColor = '#ddd';
+  el('call-remarks-err').style.display = 'none';
+
+  // Show history
+  let hist='';
+  if(status.call1Date&&status.call1Date!=='—')
+    hist+='<div class="call-hist-item"><span class="call-hist-badge">1st Call</span> '+status.call1Date
+         +(status.call1Remarks?' — <i style="color:#777">'+status.call1Remarks+'</i>':'')+'</div>';
+  if(status.call2Date&&status.call2Date!=='—')
+    hist+='<div class="call-hist-item"><span class="call-hist-badge">2nd Call</span> '+status.call2Date
+         +(status.call2Remarks?' — <i style="color:#777">'+status.call2Remarks+'</i>':'')+'</div>';
+  el('call-history').innerHTML       = hist;
+  el('call-history-wrap').style.display = hist ? 'block' : 'none';
+  el('call-modal').dataset.step      = step;
+  el('call-modal').style.display     = 'flex';
+  setTimeout(function(){ el('call-remarks').focus(); }, 150);
+}
+function closeCallModal(){ el('call-modal').style.display='none'; _callCand=null; }
+
+async function confirmCallStep(){
+  const date    = el('call-date').value;
+  const remarks = el('call-remarks').value.trim();
+  if(!date){ toast('Date is required','error'); return; }
+  if(remarks.length<5){
+    el('call-remarks').style.borderColor='var(--red)';
+    el('call-remarks-err').style.display='block'; return;
+  }
+  const step = parseInt(el('call-modal').dataset.step);
+  const btn  = el('call-confirm-btn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    const res = await API.saveCallStep({
+      appNo:_callCand.appNo, candidate:_callCand.name,
+      desig:_callCand.desig, step, date, remarks,
+      doneBy: session ? session.username : 'HR'
+    });
+    updateLocal(_callCand.appNo,{status:res.newStatus||_callCand.status});
+    buildKPIs(); buildPills(); applyFilters();
+    closeCallModal(); closeDrawer();
+    toast({1:'1st call logged ✓',2:'2nd call logged ✓',3:'Interview scheduled! ✓'}[step],'success');
+  }catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ btn.disabled=false; }
+}
+
+// ── Bulk ──────────────────────────────────────────────────────
+function rowCheck(){ const n=document.querySelectorAll('.row-chk:checked').length; el('bulk-bar').classList.toggle('show',n>0); el('bulk-count').textContent=n+' selected'; }
+function toggleAll(chk){ document.querySelectorAll('.row-chk').forEach(c=>c.checked=chk.checked); rowCheck(); }
+function clearBulk(){ document.querySelectorAll('.row-chk,#chk-all').forEach(c=>c.checked=false); rowCheck(); }
+async function bulkAction(status){
+  const idxs=Array.from(document.querySelectorAll('.row-chk:checked')).map(c=>parseInt(c.dataset.idx));
+  if(!idxs.length) return;
+  const appNos=idxs.map(i=>filtered[i]?filtered[i].appNo:null).filter(Boolean);
+  showModal({title:'Bulk '+status,body:'Change <b>'+appNos.length+'</b> to <b>'+status+'</b>?',confirmText:'Apply',confirmClass:'btn-primary',
+    onConfirm:async function(){
+      await Promise.all(appNos.map(a=>API.updateCandidate(a,{status})));
+      appNos.forEach(a=>updateLocal(a,{status}));
+      buildKPIs(); buildPills(); applyFilters(); clearBulk(); toast(appNos.length+' updated','success');
+    }
+  });
+}
+function exportCSV(){
+  const hdr=['App No','Name','Phone','Designation','Source','Date','Status'];
+  const rows=filtered.map(c=>[c.appNo,c.name,c.phone,c.desig,c.source,c.date,c.status]);
+  const csv=[hdr].concat(rows).map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='BSC_Candidates_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+function updateLocal(appNo,updates){ allCandidates=allCandidates.map(c=>c.appNo===appNo?Object.assign({},c,updates):c); }
+
+// ── DRAWER — shows ALL remarks + logs + resume PDF ────────────
+function drTab(tabId){
+  document.querySelectorAll('.dr-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.dr-tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.dr-tab[data-tab="'+tabId+'"]').classList.add('active');
+  el('dr-panel-'+tabId).classList.add('active');
+}
+
+async function openDrawer(idx){
+  const c=filtered[idx]; if(!c) return;
+  el('dr-av').textContent      = c.initials;
+  el('dr-av').style.background = AV_BG[c.color]||'#1E2D4E';
+  el('dr-name').textContent    = c.name;
+  el('dr-appno').textContent   = c.appNo+' · Applied '+c.date;
+
+  // Format DOB
+  let dobStr = '—';
+  if(c.dob){
+    try{
+      const d=new Date(c.dob);
+      if(!isNaN(d)) dobStr=d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+      else dobStr=c.dob;
+    }catch(e){dobStr=c.dob;}
+  }
+  const age = c.dob ? calcAge(c.dob) : '—';
+
+  // Status bar
+  const statusBar = '<div class="dr-status-bar">'
+    +statusBadge(c.status)
+    +(c.rejReason?'<span style="font-size:10px;color:var(--red);font-style:italic">'+c.rejReason+'</span>':'')
+    +'<span style="font-size:10px;color:#999;margin-left:auto">'+c.daysIn+'d in pipeline</span>'
+    +'</div>';
+
+  // Tabs
+  const tabs = '<div class="dr-tabs">'
+    +'<div class="dr-tab active" data-tab="overview" onclick="drTab(\'overview\')">Overview</div>'
+    +'<div class="dr-tab" data-tab="details" onclick="drTab(\'details\')">Details</div>'
+    +'<div class="dr-tab" data-tab="questions" onclick="drTab(\'questions\')">Questions</div>'
+    +'<div class="dr-tab" data-tab="activity" onclick="drTab(\'activity\')">Activity</div>'
+    +'</div>';
+
+  // ── Tab 1: Overview ──────────────────────────────────
+  let t1 = '<div class="drawer-section"><div class="ds-title">Personal</div>'
+    +'<div class="drow"><span class="drow-label">Full Name</span><span class="drow-val highlight">'+c.name+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Gender</span><span class="drow-val">'+(c.gender||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">DOB / Age</span><span class="drow-val">'+dobStr+(age!=='—'?' ('+age+' yrs)':'')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Phone</span><span class="drow-val">'+formatPhone(c.phone)+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Email</span><span class="drow-val">'+(c.email||'—')+'</span></div>'
+    +'</div>';
+
+  t1 += '<div class="drawer-section"><div class="ds-title">Application</div>'
+    +'<div class="drow"><span class="drow-label">Designation</span><span class="drow-val highlight">'+c.desig+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Current Salary</span><span class="drow-val">'+(c.currentSalary||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Expected Salary</span><span class="drow-val salary">'+(c.salary?'&#x20B9;'+Number(c.salary).toLocaleString('en-IN'):'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Notice Period</span><span class="drow-val">'+(c.noticePeriod||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Own Vehicle</span><span class="drow-val">'+(c.ownVehicle||'—')+'</span></div>'
+    +'</div>';
+
+  t1 += '<div class="drawer-section"><div class="ds-title">Source</div>'
+    +'<div class="drow"><span class="drow-label">Source</span><span class="drow-val">'+(c.source||'—')+'</span></div>'
+    +(c.referrer?'<div class="drow"><span class="drow-label">Referrer</span><span class="drow-val">'+c.referrer+(c.referrerEmpNo?' ('+c.referrerEmpNo+')':'')+'</span></div>':'')
+    +(c.sourceDetail?'<div class="drow"><span class="drow-label">Detail</span><span class="drow-val">'+c.sourceDetail+'</span></div>':'')
+    +'</div>';
+
+  // ── Tab 2: Details ───────────────────────────────────
+  let t2 = '<div class="drawer-section"><div class="ds-title">Location</div>'
+    +'<div class="drow"><span class="drow-label">City & State</span><span class="drow-val">'+(c.cityState||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Address</span><span class="drow-val">'+(c.address||'—')+'</span></div>'
+    +'</div>';
+
+  t2 += '<div class="drawer-section"><div class="ds-title">Professional Background</div>'
+    +'<div class="drow"><span class="drow-label">Occupation</span><span class="drow-val">'+(c.occupation||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Qualification</span><span class="drow-val">'+(c.qualification||'—')+'</span></div>'
+    +'<div class="drow"><span class="drow-label">Experience</span><span class="drow-val">'+(c.experience||'—')+'</span></div>'
+    +'</div>';
+
+  t2 += '<div class="drawer-section"><div class="ds-title">Documents</div>';
+  t2 += c.resumeUrl
+    ? '<a href="'+c.resumeUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:var(--navy);color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;margin-bottom:8px">&#x1F4C4; View Resume &#x2197;</a><br>'
+    : '<div style="font-size:11px;color:#bbb;margin-bottom:6px">No resume uploaded</div>';
+  t2 += c.photoUrl
+    ? '<a href="'+c.photoUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:#555;color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;margin-bottom:8px">&#x1F4F7; View Photo &#x2197;</a><br>'
+    : '<div style="font-size:11px;color:#bbb;margin-bottom:6px">No photo uploaded</div>';
+  t2 += c.aadharUrl
+    ? '<a href="'+c.aadharUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;background:#2d8a4e;color:#fff;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700;margin-bottom:8px">&#x1F4CB; View Aadhar &#x2197;</a>'
+    : '<div style="font-size:11px;color:#bbb">No Aadhar uploaded</div>';
+  t2 += '</div>';
+
+  // ── Tab 3: Questions ─────────────────────────────────
+  let t3 = '<div class="drawer-section">';
+  if(c.whyJoin||c.whyHire||c.weekendOk||c.value90Days){
+    if(c.whyJoin)     t3+='<div class="q-ans"><div class="q-ans-label">Why join BSC Exclusive?</div><div class="q-ans-val">'+c.whyJoin+'</div></div>';
+    if(c.whyHire)     t3+='<div class="q-ans"><div class="q-ans-label">Why should we hire you?</div><div class="q-ans-val">'+c.whyHire+'</div></div>';
+    if(c.weekendOk)   t3+='<div class="q-ans"><div class="q-ans-label">Comfortable on weekends/festivals?</div><div class="q-ans-val">'+c.weekendOk+'</div></div>';
+    if(c.value90Days) t3+='<div class="q-ans"><div class="q-ans-label">Value in first 90 days?</div><div class="q-ans-val">'+c.value90Days+'</div></div>';
+  } else {
+    t3 += '<div style="font-size:11px;color:#bbb;padding:10px 0">No answers recorded</div>';
+  }
+  t3 += '</div>';
+
+  // ── Tab 4: Activity ──────────────────────────────────
+  const t4 = '<div id="dr-activity-log"><div style="font-size:10px;color:#bbb;padding:6px 0">Loading...</div></div>';
+
+  // Assemble
+  const body = statusBar + tabs
+    +'<div class="dr-tab-panel active" id="dr-panel-overview">'+t1+'</div>'
+    +'<div class="dr-tab-panel" id="dr-panel-details">'+t2+'</div>'
+    +'<div class="dr-tab-panel" id="dr-panel-questions">'+t3+'</div>'
+    +'<div class="dr-tab-panel" id="dr-panel-activity">'+t4+'</div>';
+
+  el('drawer-body').innerHTML = body;
+  el('drawer-actions').innerHTML = isViewOnly
+    ? '<div style="font-size:11px;color:#aaa;text-align:center;padding:8px">View only access</div>'
+    : buildDrawerActions(c, idx);
+
+  el('drawer-overlay').classList.add('show');
+  el('cand-drawer').classList.add('open');
+
+  loadActivityLog(c.appNo);
+}
+
+async function loadActivityLog(appNo){
+  const logEl = el('dr-activity-log'); if(!logEl) return;
+  logEl.innerHTML='<div style="font-size:10px;color:#bbb;padding:4px 0">Loading activity...</div>';
+  try {
+    const d = await API.call('getActivityFull',{appNo:appNo});
+    if(!d.success||!d.activity||!d.activity.length){
+      logEl.innerHTML='<div style="font-size:10px;color:#bbb;padding:4px 0">No activity recorded yet</div>';
+      return;
+    }
+    const colorMap = {
+      navy:'#1E2D4E', gold:'#C9952A', green:'#2d8a4e',
+      red:'#C0272D', teal:'#1a8a84', purple:'#7c4dbd'
+    };
+    logEl.innerHTML = d.activity.map(function(a){
+      const dot = colorMap[a.color]||'#aaa';
+      let extra = '';
+      if(a.score!==undefined){
+        const pct = a.maxScore ? Math.round(a.score/a.maxScore*100) : 0;
+        const pass = pct>=60;
+        extra += '<div class="ai-extra">'
+          +'<span style="font-size:13px;font-weight:800;color:'+(pass?'var(--green)':'var(--red)')+'">'+a.score+'/'+a.maxScore+'</span>'
+          +'<span style="font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;background:'+(pass?'#EAF3DE':'#FCEBEB')+';color:'+(pass?'#3B6D11':'#A32D2D')+'">'+(pass?'PASS':'FAIL')+'</span>'
+          +(a.assignedBy?'<span style="font-size:10px;color:#555">by '+a.assignedBy+'</span>':'')
+          +'</div>';
+      }
+      if(a.by) extra += '<div style="font-size:10px;color:#555;margin-top:3px">by '+a.by+'</div>';
+      if(a.note) extra += '<div style="font-size:10px;color:#555;margin-top:3px">'+a.note+'</div>';
+      return '<div class="activity-item">'
+        +'<div class="ai-dot" style="background:'+dot+'"></div>'
+        +'<div class="ai-body">'
+          +'<div class="ai-title">'+a.icon+' '+a.label+(a.date&&a.date!=='\u2014'?' <span style=\'font-size:9.5px;color:#aaa;font-weight:400\'>\u00b7 '+a.date+'</span>':'')+'</div>'
+          +(a.remarks?'<div class="ai-remarks">"'+a.remarks+'"</div>':'')
+          +extra
+        +'</div>'
+      +'</div>';
+    }).join('');
+  } catch(e){
+    console.error('[Activity]',e);
+    logEl.innerHTML='<div style="font-size:10px;color:#bbb">Could not load activity</div>';
+  }
+}
+
+function buildDrawerActions(c,idx){
+  const s=c.status;
+  const d='data-idx="'+idx+'"';
+  if(s==='New')         return '<button class="da-btn da-shortlist" '+d+' onclick="doShortlist(this)">&#x2713; Shortlist</button><button class="da-btn da-hold" '+d+' onclick="doHold(this)">Hold</button><button class="da-btn da-reject" '+d+' onclick="doReject(this)">Reject</button>';
+  if(['Shortlisted','1st Call Done','2nd Call Done'].includes(s))
+                        return '<button class="da-btn da-schedule" '+d+' onclick="doCall(this)">Next Step &#x2192;</button><button class="da-btn da-hold" '+d+' onclick="doHold(this)">Hold</button>';
+  if(s==='Hold')        return '<button class="da-btn da-shortlist" '+d+' onclick="doReactivate(this)">Reactivate</button><button class="da-btn da-reject" '+d+' onclick="doReject(this)">Reject</button>';
+  if(s==='Rejected')    return '<button class="da-btn da-shortlist" '+d+' onclick="doReactivate(this)">Re-engage</button>';
+  if(s==='Selected')    return '<button class="da-btn da-shortlist" onclick="window.location.href=\'offer-process.html\'">Send Offer</button>';
+  if(s==='Onboarding')  return '<button class="da-btn da-schedule" onclick="window.location.href=\'onboarding.html\'">Onboarding</button>';
+  return '<span style="font-size:11px;color:#aaa;padding:8px">No actions</span>';
+}
+
+function closeDrawer(){ el('drawer-overlay').classList.remove('show'); el('cand-drawer').classList.remove('open'); }
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDrawer(); closeCallModal(); closeRemarkModal(); }});
+
+// ── Selected / Rejected panel ─────────────────────────────────
+async function toggleSelRejPanel(type){
+  const panel=el('sel-rej-panel');
+  if(panel.dataset.current===type&&panel.style.display!=='none'){ panel.style.display='none'; return; }
+  panel.dataset.current=type; panel.style.display='block';
+  el('sel-rej-title').textContent = type==='selected' ? 'Selected Candidates' : 'Rejected Candidates';
+  el('sel-rej-tbody').innerHTML   = '<tr><td colspan="7" style="text-align:center;padding:16px"><div class="skel" style="height:12px;width:40%;margin:auto"></div></td></tr>';
+  try{
+    if(type==='selected'){
+      const d=await API.getSelectedCandidates();
+      el('sel-rej-head').innerHTML='<tr><th>App No</th><th>Name</th><th>Designation</th><th>Source</th><th>HR Score</th><th>Total</th><th>Remarks</th></tr>';
+      el('sel-rej-tbody').innerHTML=(d.candidates||[]).map(c=>
+        '<tr><td style="font-size:10px">'+c.appNo+'</td><td><b>'+c.name+'</b></td><td>'+c.desig+'</td><td>'+c.source+'</td>'
+        +'<td>'+c.hrScore+'</td><td><b style="color:var(--green)">'+c.totalScore+'</b></td>'
+        +'<td style="font-size:10.5px;color:#777;max-width:180px">'+c.remarks+'</td></tr>'
+      ).join('') || '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:16px">No selected candidates</td></tr>';
+    } else {
+      const d=await API.getRejectedCandidates();
+      el('sel-rej-head').innerHTML='<tr><th>App No</th><th>Name</th><th>Designation</th><th>Stage</th><th>Rejected On</th><th>Remarks</th></tr>';
+      el('sel-rej-tbody').innerHTML=(d.candidates||[]).map(c=>
+        '<tr><td style="font-size:10px">'+c.appNo+'</td><td><b>'+c.name+'</b></td><td>'+c.desig+'</td>'
+        +'<td><span class="badge b-short">'+c.stage+'</span></td><td style="font-size:10.5px">'+c.rejectionDate+'</td>'
+        +'<td style="font-size:10.5px;color:#777;max-width:180px">'+c.remarks+'</td></tr>'
+      ).join('') || '<tr><td colspan="6" style="text-align:center;color:#bbb;padding:16px">No rejected candidates</td></tr>';
+    }
+  } catch(e){ el('sel-rej-tbody').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--red);padding:12px">Error loading</td></tr>'; }
+}
+
+</script>
+</body>
+</html>

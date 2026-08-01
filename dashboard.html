@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — BSC Candidate CRM</title>
+<link rel="icon" type="image/jpeg" href="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg">
+<link rel="icon" type="image/jpeg" href="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg">
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+.chart-grid{display:grid;grid-template-columns:1.7fr 1fr 1fr;gap:10px;margin-bottom:12px}
+@media(max-width:1100px){.chart-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.chart-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<button class="sb-toggle" id="sb-toggle" aria-label="Open menu">
+  <span></span><span></span><span></span>
+</button>
+<div class="sb-mob-overlay" id="sb-mob-overlay"></div>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="sb-logo-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg" alt="BSC The Textile Mall"></div>
+  <div class="sb-user"><div class="sb-avatar" id="sb-av">HR</div>
+    <div><div class="sb-user-name" id="sb-username">HR Admin</div>
+         <div class="sb-user-role" id="sb-userrole">HR</div></div>
+  </div>
+  <div class="sb-section">Main</div>
+    <a class="nav-item active" data-page="dashboard" href="dashboard.html"><span class="nav-icon">📊</span> Dashboard </a>
+    <a class="nav-item" data-page="candidates" href="candidates.html"><span class="nav-icon">👥</span> Candidates <span class="nav-badge" id="nb-cand">0</span></a>
+    <a class="nav-item" data-page="interview" href="interview-panel.html"><span class="nav-icon">🎯</span> Interview Panel </a>
+    <a class="nav-item" data-page="offer" href="offer-process.html"><span class="nav-icon">📄</span> Offer Process <span class="nav-badge" id="nb-offer">0</span></a>
+    <a class="nav-item" data-page="onboarding" style="display:none" href="onboarding.html"><span class="nav-icon">✅</span> Onboarding </a>
+    <a class="nav-item" data-page="exit" style="display:none" href="employee-exit.html"><span class="nav-icon">🚪</span> Employee Exit </a>
+  <div class="sb-section">HR Ops</div>
+  <a class="nav-item" data-page="onboarding" href="onboarding.html"><span class="nav-icon">🎉</span> Onboarding</a>
+  <a class="nav-item" data-page="exit" href="employee-exit.html"><span class="nav-icon">🚪</span> Exit / FnF</a>
+  <div class="sb-section">Public</div>
+  <a class="nav-item" data-page="form" href="candidate-entry.html" target="_blank"><span class="nav-icon">📋</span> Entry Form (QR)</a>
+  <div class="sb-section">Admin</div>
+  <a class="nav-item" data-page="settings" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  <div class="sb-bottom">
+    <button class="logout-btn" id="logout-btn">↩ &nbsp;Logout</button>
+    <div class="sb-cnb-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/cnb-logo.png" alt="Consulting &amp; Beyond"></div>
+  </div>
+</aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left"><div class="topbar-title">Dashboard</div>
+        <div class="breadcrumb"><span>BSC CRM</span><span class="bc-sep">›</span><span>Dashboard</span></div></div>
+      <div class="topbar-right">
+        <span class="topbar-time" id="live-clock"></span>
+        <span class="live-ind"><span class="live-dot"></span>Live</span>
+        <div class="bell-btn">🔔<div class="bell-dot" id="bell-dot" style="display:none"></div></div>
+      </div>
+    </header>
+    <main class="content">
+      <div class="df-bar">
+        <button class="df-btn active" data-range="today">Today</button>
+        <button class="df-btn" data-range="week">This Week</button>
+        <button class="df-btn" data-range="month">This Month</button>
+        <button class="df-btn" data-range="last_month">Last Month</button>
+        <input type="date" class="df-date" id="df-from" onchange="applyCustomRange()">
+        <span style="font-size:11px;color:#888;align-self:center">to</span>
+        <input type="date" class="df-date" id="df-to" onchange="applyCustomRange()">
+        <span class="df-label" id="df-label">Showing: Today</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi gold"><div class="kpi-label">Total Pipeline</div><div class="kpi-val" id="k-total">0</div><div class="kpi-sub">All candidates</div><div class="kpi-trend kt-up" id="k-trend"></div></div>
+        <div class="kpi navy"><div class="kpi-label">Shortlisted</div><div class="kpi-val" id="k-short">0</div><div class="kpi-sub">Awaiting interview</div></div>
+        <div class="kpi green"><div class="kpi-label">Selected</div><div class="kpi-val" id="k-sel">0</div><div class="kpi-sub">Passed all rounds</div></div>
+        <div class="kpi teal"><div class="kpi-label">Joined</div><div class="kpi-val" id="k-joined">0</div><div class="kpi-sub">Actual joined</div></div>
+      </div>
+      <div class="kpi-grid" style="margin-top:-4px">
+        <div class="kpi blue"><div class="kpi-label">Offer Acceptance Rate</div><div class="kpi-val" id="k-acc">0<span style="font-size:14px">%</span></div><div class="kpi-sub" id="k-acc-sub">of offers accepted</div></div>
+        <div class="kpi orange"><div class="kpi-label">Avg Days to Hire</div><div class="kpi-val" id="k-days">0<span style="font-size:13px">d</span></div><div class="kpi-sub">Applied → Joined</div></div>
+        <div class="kpi purple"><div class="kpi-label">Awaiting Joining</div><div class="kpi-val" id="k-ob">0</div><div class="kpi-sub">Offer accepted</div></div>
+        <div class="kpi red"><div class="kpi-label">Interviews Today</div><div class="kpi-val" id="k-int">0</div><div class="kpi-sub">Scheduled</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="card">
+          <div class="card-title">Hiring Funnel</div>
+          <div class="card-sub">Conversion at each stage · drop-off % shown</div>
+          <div id="funnel-container"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Source Breakdown</div>
+          <div class="card-sub">Where candidates come from</div>
+          <canvas id="srcChart" height="190"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:7px">Pending Actions <span class="nav-badge" id="pa-count" style="margin-left:0">0</span></div>
+          <div class="card-sub">Requires your attention</div>
+          <div id="pending-actions"><div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">All clear</div></div></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="card-header">
+          <span class="card-title">Recent Candidates</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--muted)" id="recent-count">Loading…</span>
+            <input class="search-input" id="rc-search" placeholder="🔍 Search…" oninput="filterRecent(this.value)">
+            <button class="btn btn-outline btn-sm" onclick="window.location.href='candidates.html'">View All →</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>App No</th><th>Candidate</th><th>Designation</th><th>Source</th><th>Date</th><th>Status</th><th>Days In</th><th>Action</th></tr></thead>
+          <tbody id="recent-tbody"><tr><td colspan="8" style="text-align:center;padding:24px"><div class="skel" style="height:14px;margin:6px auto;width:50%"></div></td></tr></tbody></table>
+        </div>
+        <div class="table-pagination">
+          <span id="recent-page-info">—</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-muted btn-sm" id="prev-btn" onclick="changePage(-1)" disabled>← Prev</button>
+            <button class="btn btn-outline btn-sm" id="next-btn" onclick="changePage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+'use strict';
+initPage('dashboard');
+let allCandidates=[],filteredC=[],currentPage=1,srcChart=null;
+const PAGE_SIZE=5;
+
+(async function load(){
+  await Promise.all([loadKPIs(),loadFunnel(),loadPendingActions(),loadRecent()]);
+})();
+
+async function loadKPIs(){
+  const k=await API.getKPIs('today');
+  el('k-total').textContent=k.total;
+  el('k-short').textContent=k.shortlisted;
+  el('k-sel').textContent=k.selected;
+  el('k-joined').textContent=k.joined;
+  if(el('k-ob'))  el('k-ob').textContent=k.onboarding||0;
+  if(el('k-int')) el('k-int').textContent=k.interviewsToday||0;
+  el('k-acc').innerHTML=k.acceptanceRate+'<span style="font-size:14px">%</span>';
+  el('k-days').innerHTML=(k.avgDays||0)+'<span style="font-size:13px">d</span>';
+  el('k-ob').textContent=k.onboarding;el('k-int').textContent=k.interviewsToday;
+  el('k-acc-sub').textContent='of '+(k.selected||0)+' offers';
+  if(k.interviewsToday>0)el('bell-dot').style.display='';
+}
+
+async function loadFunnel(){
+  const k=await API.getKPIs('today');
+  const total=k.total||0;
+  const container=el('funnel-container');
+  if(total===0){container.innerHTML='<div style="text-align:center;padding:28px;color:#bbb;font-size:12px">📋 No candidates yet — add via Entry Form (QR)</div>';}
+  else{
+    const stages=[
+      {label:'Applied',              val:total,                      color:'#1E2D4E'},
+      {label:'Shortlisted',          val:k.shortlisted||0,           color:'#2a3f6e'},
+      {label:'Interview Scheduled',  val:k.interviewScheduled||0,    color:'#C9952A'},
+      {label:'Both Rounds Done',     val:k.bothRoundsDone||0,        color:'#7c4dbd'},
+      {label:'Selected',             val:k.selected||0,              color:'#2d8a4e'},
+      {label:'Offer Sent',           val:k.offerAccepted||0,         color:'#3da060'},
+      {label:'Joined',               val:k.joined||0,                color:'#1a8a84'}
+    ];
+    const funnelRows = stages.map((s,i)=>{
+      const pct=total>0?Math.round(s.val/total*100):0;
+      const prev=(stages[i-1]||{}).val||0;
+      const dropPct=(i===0||prev===0)?'':'−'+Math.round((1-s.val/prev)*100)+'%';
+      const drop=dropPct?'<span class="f-drop">'+dropPct+'</span>':'<span class="f-drop"></span>';
+      return '<div class="funnel-row"><div class="f-lbl">'+s.label+'</div><div class="f-bg"><div class="f-bar" style="width:'+Math.max(pct,1)+'%;background:'+s.color+'">'+s.val+'</div></div><div class="f-num">'+s.val+'</div>'+drop+'</div>';
+    }).join('');
+    // Pipeline Loss section
+    const lossRows =
+      '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed #e0ddd8;display:flex;gap:16px;align-items:center">'+
+      '<span style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em">Pipeline Loss</span>'+
+      '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:5px;background:#FCEBEB;font-size:11px;font-weight:700;color:#A32D2D">'+
+        '🔴 Rejected: '+(k.rejected||0)+
+      '</span>'+
+      '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:5px;background:#FFF7E6;font-size:11px;font-weight:700;color:#B8860B">'+
+        '🟡 On Hold: '+(k.hold||0)+
+      '</span>'+
+      '</div>';
+    container.innerHTML = funnelRows + lossRows;
+  }
+  // Source donut
+  const src=await API.call('getSourceBreakdown').catch(()=>({walkin:0,empref:0,online:0,other:0}));
+  const ctx=el('srcChart');
+  if(ctx){if(srcChart)srcChart.destroy();
+    srcChart=new Chart(ctx,{type:'doughnut',data:{labels:['Walk-in','Employee Reference','Advertisement','Other'],datasets:[{data:[src.walkin||0,src.empref||0,src.online||0,src.other||0],backgroundColor:['#1E2D4E','#C9952A','#2d8a4e','#C0272D'],borderWidth:3,borderColor:'#fff',hoverOffset:4}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:9.5},boxWidth:10,padding:8}}},cutout:'58%'}});
+  }
+}
+
+async function loadPendingActions(){
+  const data=await API.getPendingActions();
+  const items=data.items||[];
+  el('pa-count').textContent=items.filter(i=>i.priority==='urgent').length;
+  const pm={urgent:{dot:'red',tag:'pt-urgent',label:'Urgent'},warn:{dot:'amber',tag:'pt-warn',label:'Due Soon'},info:{dot:'navy',tag:'pt-info',label:'Review'}};
+  el('pending-actions').innerHTML=items.length?items.map(item=>{
+    const p=pm[item.priority]||pm.info;
+    return '<div class="pa-row"><div class="pa-dot '+p.dot+'"></div><div class="pa-text">'+item.text+'</div><span class="pa-tag '+p.tag+'">'+p.label+'</span></div>';
+  }).join(''):'<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">All clear</div></div>';
+}
+
+// ── Date range helpers ────────────────────────────────────
+function getDateRange(range){
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth(), d=now.getDate();
+  if(range==='today')      return {from:new Date(y,m,d), to:new Date(y,m,d,23,59,59)};
+  if(range==='week'){
+    const day=now.getDay(), diff=day===0?6:day-1;
+    const mon=new Date(y,m,d-diff);
+    return {from:mon, to:new Date(y,m,d,23,59,59)};
+  }
+  if(range==='month')      return {from:new Date(y,m,1), to:new Date(y,m,d,23,59,59)};
+  if(range==='last_month') return {from:new Date(y,m-1,1), to:new Date(y,m,0,23,59,59)};
+  return null;
+}
+function filterByDateRange(candidates, range, fromDate, toDate){
+  let from, to;
+  if(range==='custom'){
+    if(!fromDate) return candidates;
+    from = new Date(fromDate);
+    to   = toDate ? new Date(toDate) : new Date(fromDate);
+    to.setHours(23,59,59);
+  } else {
+    const dr = getDateRange(range);
+    if(!dr) return candidates;
+    from = dr.from; to = dr.to;
+  }
+  return candidates.filter(c => {
+    if(!c.rawDate) return false;
+    const d = new Date(c.rawDate);
+    return d >= from && d <= to;
+  });
+}
+
+// ── Active range state ─────────────────────────────────
+let activeRange = 'today';
+
+async function loadRecent(){
+  const data=await API.getCandidates({limit:500});
+  allCandidates=data.candidates||[];
+  applyDateFilter();
+}
+function applyDateFilter(){
+  const from = el('df-from') ? el('df-from').value : '';
+  const to   = el('df-to')   ? el('df-to').value   : '';
+  filteredC = filterByDateRange(allCandidates, activeRange, from, to);
+  currentPage=1;
+  el('recent-count') && (el('recent-count').textContent='Showing 1–'+Math.min(PAGE_SIZE,filteredC.length)+' of '+filteredC.length);
+  renderRecent();
+}
+function applyCustomRange(){
+  const from = el('df-from').value;
+  const to   = el('df-to').value;
+  if(!from) return;
+  // If only from is set, copy to to
+  if(from && !to) el('df-to').value = from;
+  // Deactivate preset buttons
+  document.querySelectorAll('.df-btn').forEach(b=>b.classList.remove('active'));
+  activeRange = 'custom';
+  // Update label
+  const f = new Date(from).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const t = to ? new Date(to||from).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : f;
+  el('df-label').textContent = f===t ? 'Showing: '+f : 'Showing: '+f+' – '+t;
+  applyDateFilter();
+}
+function renderRecent(){
+  const start=(currentPage-1)*PAGE_SIZE,page=filteredC.slice(start,start+PAGE_SIZE),total=filteredC.length;
+  if(!page.length){el('recent-tbody').innerHTML='<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No candidates found</div></div></td></tr>';return;}
+  el('recent-tbody').innerHTML=page.map(c=>{
+    const am={'New':'<button class="btn btn-outline btn-sm" onclick="qAction(\'shortlist\',\''+c.appNo+'\')">Shortlist</button>',
+      'Shortlisted':'<button class="btn btn-outline-gold btn-sm" onclick="window.location.href=\'candidates.html\'">Schedule</button>',
+      'Selected':'<button class="btn btn-outline-green btn-sm">Send Offer</button>',
+      'Hold':'<button class="btn btn-outline-gold btn-sm" onclick="qAction(\'reactivate\',\''+c.appNo+'\')">Reactivate</button>',
+      'Rejected':'<button class="btn btn-muted btn-sm">Re-engage</button>',
+      'Onboarding':'<button class="btn btn-outline-green btn-sm">Checklist</button>'};
+    return '<tr><td style="font-size:10px">'+c.appNo+'</td><td><div class="td-name"><div class="av av-'+c.color+'">'+c.initials+'</div><b>'+c.name+'</b></div></td><td>'+c.desig+'</td><td>'+c.source+'</td><td style="white-space:nowrap;font-size:10.5px">'+c.date+'</td><td>'+statusBadge(c.status)+'</td><td>'+daysChip(c.daysIn)+'</td><td>'+(am[c.status]||'—')+'</td></tr>';
+  }).join('');
+  el('recent-page-info').textContent='Showing '+(start+1)+'–'+Math.min(start+PAGE_SIZE,total)+' of '+total;
+  el('prev-btn').disabled=currentPage===1;el('next-btn').disabled=start+PAGE_SIZE>=total;
+}
+function filterRecent(q){currentPage=1;const lq=q.toLowerCase();filteredC=allCandidates.filter(c=>c.name.toLowerCase().includes(lq)||c.appNo.toLowerCase().includes(lq));renderRecent();}
+function changePage(d){currentPage+=d;renderRecent();}
+async function qAction(action,appNo){
+  const sm={shortlist:'Shortlisted',reactivate:'New'};
+  await API.updateCandidate(appNo,{status:sm[action]});
+  toast(action+' successful','success');loadRecent();
+}
+// Date filter buttons
+document.querySelectorAll('.df-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.df-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeRange = btn.dataset.range;
+    // Clear custom date inputs
+    if(el('df-from')) el('df-from').value='';
+    if(el('df-to'))   el('df-to').value='';
+    // Update label
+    const labels={today:'Today',week:'This Week',month:'This Month',last_month:'Last Month'};
+    el('df-label').textContent='Showing: '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+    applyDateFilter();
+  });
+});
+el('df-label').textContent='Showing: '+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+</script>
+</body>
+</html>

@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exit / FnF — BSC Candidate CRM</title>
+<link rel="icon" type="image/jpeg" href="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg">
+<link rel="stylesheet" href="shared.css">
+<style>
+.ex-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ex-filter-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.ex-tab{padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.ex-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* Exit drawer */
+.ex-drawer{position:fixed;top:0;right:-560px;width:560px;height:100vh;background:#fff;z-index:600;box-shadow:-4px 0 24px rgba(0,0,0,.12);transition:right .25s;display:flex;flex-direction:column}
+.ex-drawer.open{right:0}
+.ex-drawer-head{background:var(--red);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.ex-drawer-av{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.ex-drawer-name{color:#fff;font-size:15px;font-weight:800}
+.ex-drawer-meta{color:rgba(255,255,255,.6);font-size:10px;margin-top:2px}
+.ex-drawer-close{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:4px 8px}
+.ex-drawer-close:hover{color:#fff}
+.ex-prog-bar-wrap{background:rgba(0,0,0,.06);padding:10px 18px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.ex-prog-label{display:flex;justify-content:space-between;margin-bottom:5px}
+.ex-prog-label span{font-size:10px;color:var(--muted)}
+.ex-prog-label b{font-size:11px;color:var(--navy)}
+.ex-prog-track{height:6px;background:#f0ede8;border-radius:3px;overflow:hidden}
+.ex-prog-fill{height:100%;background:var(--red);border-radius:3px;transition:width .4s}
+.ex-drawer-body{flex:1;overflow-y:auto;padding:14px 18px}
+.ex-section{margin-bottom:18px}
+.ex-section-title{font-size:10px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.06em;padding:7px 12px;background:#FFF5F5;border-radius:7px;margin-bottom:8px;border-left:3px solid var(--red)}
+.ex-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);margin-bottom:6px;background:#fff;transition:all .15s}
+.ex-item.st-done{background:#F0F9E8;border-color:#c3e6a8}
+.ex-item.st-na{background:#F5F5F5;border-color:#ddd}
+.ex-item-info{flex:1}
+.ex-item-text{font-size:12px;color:#2c2c2c;line-height:1.5}
+.ex-item-mandatory{font-size:9px;color:var(--red);font-weight:700;margin-top:2px}
+.ex-item-doneby{font-size:9.5px;color:var(--muted);margin-top:4px}
+.ex-item-rem{width:100%;font-size:11px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-family:inherit;color:#555;margin-top:6px;background:#F9F7F4}
+.ex-item-rem:focus{outline:none;border-color:var(--navy);background:#fff}
+.ex-tick-wrap{display:flex;gap:5px;flex-shrink:0;margin-top:2px}
+.ex-tick{width:34px;height:34px;border-radius:7px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit}
+.ex-tick:hover{transform:scale(1.08)}
+.ex-tick.t-done{background:var(--green);border-color:var(--green);color:#fff}
+.ex-tick.t-na{background:#888;border-color:#888;color:#fff}
+.ex-drawer-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;background:#fff}
+
+/* Progress bar in table */
+.prog-wrap{display:flex;align-items:center;gap:8px;min-width:120px}
+.prog-track{flex:1;height:6px;background:#f0ede8;border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .3s}
+.prog-pct{font-size:10px;font-weight:700;color:var(--muted);min-width:28px;text-align:right}
+
+/* New Exit modal */
+.nex-field{margin-bottom:12px}
+.nex-field label{display:block;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.nex-field input,.nex-field select{width:100%;font-size:13px;padding:9px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;background:#F9F7F4}
+.nex-field input:focus,.nex-field select:focus{outline:none;border-color:var(--navy)}
+.nex-err{font-size:10px;color:var(--red);margin-top:3px;display:none}
+</style>
+</head>
+<body>
+<button class="sb-toggle" id="sb-toggle"><span></span><span></span><span></span></button>
+<div class="sb-mob-overlay" id="sb-mob-overlay"></div>
+<div class="app-shell">
+<aside class="sidebar">
+  <div class="sb-logo-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/logo.jpg" alt="BSC The Textile Mall"></div>
+  <div class="sb-user"><div class="sb-avatar" id="sb-av">HR</div>
+    <div><div class="sb-user-name" id="sb-username">HR Admin</div>
+         <div class="sb-user-role" id="sb-userrole">HR</div></div>
+  </div>
+  <div class="sb-section">Main</div>
+    <a class="nav-item" data-page="dashboard" href="dashboard.html"><span class="nav-icon">📊</span> Dashboard</a>
+    <a class="nav-item" data-page="candidates" href="candidates.html"><span class="nav-icon">👥</span> Candidates <span class="nav-badge" id="nb-cand">0</span></a>
+    <a class="nav-item" data-page="interview" href="interview-panel.html"><span class="nav-icon">🎯</span> Interview Panel</a>
+    <a class="nav-item" data-page="offer" href="offer-process.html"><span class="nav-icon">📄</span> Offer Process <span class="nav-badge" id="nb-offer">0</span></a>
+  <div class="sb-section">HR Ops</div>
+    <a class="nav-item" data-page="onboarding" href="onboarding.html"><span class="nav-icon">🎉</span> Onboarding</a>
+    <a class="nav-item active" data-page="exit" href="employee-exit.html"><span class="nav-icon">🚪</span> Exit / FnF</a>
+  <div class="sb-section">Public</div>
+    <a class="nav-item" data-page="form" href="candidate-entry.html" target="_blank"><span class="nav-icon">📋</span> Entry Form (QR)</a>
+  <div class="sb-section">Admin</div>
+    <a class="nav-item" data-page="settings" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  <div class="sb-bottom">
+    <button class="logout-btn" id="logout-btn">↩ &nbsp;Logout</button>
+    <div class="sb-cnb-box"><img src="https://bsctextilescandb-ui.github.io/retail-crm/cnb-logo.png" alt="Consulting &amp; Beyond"></div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">Exit / FnF</div>
+      <div class="breadcrumb"><a class="bc-link" href="dashboard.html">Dashboard</a><span class="bc-sep">›</span><span>Exit / FnF</span></div>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-time" id="live-clock"></span>
+      <span class="live-ind"><span class="live-dot"></span>Live</span>
+      <button class="btn btn-primary btn-sm" onclick="openNewModal()">＋ New Exit / FnF</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi gold"><div class="kpi-label">Total Active</div><div class="kpi-val" id="k-active">0</div><div class="kpi-sub">In progress</div></div>
+      <div class="kpi red"><div class="kpi-label">Pending</div><div class="kpi-val" id="k-pending">0</div><div class="kpi-sub">Not started</div></div>
+      <div class="kpi" style="border-left-color:var(--gold)"><div class="kpi-label">In Progress</div><div class="kpi-val" id="k-inprog" style="color:var(--gold)">0</div><div class="kpi-sub">Partially done</div></div>
+      <div class="kpi navy"><div class="kpi-label">Completed</div><div class="kpi-val" id="k-done">0</div><div class="kpi-sub">All items done</div></div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="ex-filter-bar">
+      <input class="search-input" id="ex-search" placeholder="🔍 Search employee..." oninput="applyFilter()" style="max-width:260px">
+      <div class="ex-filter-tabs">
+        <button class="ex-tab active" data-f="all"          onclick="setTab(this)">All</button>
+        <button class="ex-tab"        data-f="In Progress"  onclick="setTab(this)">In Progress</button>
+        <button class="ex-tab"        data-f="Completed"    onclick="setTab(this)">Completed</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+      <div class="table-toolbar">
+        <span class="table-title">Exit / FnF Tracker</span>
+        <span id="ex-count" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+      <table class="data-table">
+        <thead><tr>
+          <th>Employee</th>
+          <th>Designation</th>
+          <th>Last Working Day</th>
+          <th>Progress</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr></thead>
+        <tbody id="ex-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:#bbb">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</div>
+
+<!-- Overlay -->
+<div class="ex-overlay" id="ex-overlay" onclick="closeDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:599;display:none"></div>
+
+<!-- Exit Drawer -->
+<div class="ex-drawer" id="ex-drawer">
+  <div class="ex-drawer-head">
+    <div class="ex-drawer-av" id="dr-av">HR</div>
+    <div>
+      <div class="ex-drawer-name" id="dr-name"></div>
+      <div class="ex-drawer-meta" id="dr-meta"></div>
+    </div>
+    <button class="ex-drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="ex-prog-bar-wrap">
+    <div class="ex-prog-label">
+      <span>Exit / FnF Progress</span>
+      <b id="dr-prog-text">0%</b>
+    </div>
+    <div class="ex-prog-track"><div class="ex-prog-fill" id="dr-prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="ex-drawer-body" id="dr-body">Loading...</div>
+  <div class="ex-drawer-foot">
+    <button class="btn btn-primary" onclick="saveAll()" id="save-btn">💾 Save Progress</button>
+    <button class="btn btn-green" onclick="markComplete()" id="complete-btn" style="display:none">✅ Mark FnF Complete</button>
+    <button class="btn btn-muted" onclick="closeDrawer()">Close</button>
+  </div>
+</div>
+
+<!-- New Exit Modal -->
+<div class="modal-overlay" id="new-modal" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" style="background:var(--red)">🚪 New Exit / FnF Process</div>
+    <div class="modal-body">
+      <div class="nex-field">
+        <label>Select Employee *</label>
+        <select id="nex-emp">
+          <option value="">Loading employees...</option>
+        </select>
+        <div class="nex-err" id="nex-emp-err">Please select an employee</div>
+      </div>
+      <div class="nex-field" id="nex-desig-wrap" style="display:none">
+        <label>Designation</label>
+        <input type="text" id="nex-desig" placeholder="Auto-filled from onboarding" readonly style="background:#f0ede8;color:#888">
+      </div>
+      <div class="nex-field">
+        <label>Last Working Day *</label>
+        <input type="date" id="nex-lwd">
+        <div class="nex-err" id="nex-lwd-err">Last working day is required</div>
+      </div>
+      <div style="background:#FFF7E6;border-radius:8px;padding:10px 12px;font-size:11px;color:#B8860B;margin-top:4px">
+        ⚠ Only employees who have completed onboarding appear in this list.
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-muted" onclick="closeNewModal()">Cancel</button>
+      <button class="btn btn-red" id="nex-btn" onclick="createExit()">Start Exit Process</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirm-modal" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title" id="cm-title"></div>
+    <div class="modal-body" id="cm-body"></div>
+    <div class="modal-btns">
+      <button class="btn btn-muted" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-green" id="cm-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+'use strict';
+const session  = initPage('exit');
+const userRole = session ? session.role : 'HR';
+
+let allRecords=[], filtered=[], activeFilter='all';
+let currentRecord=null, currentItems=[], pendingChanges={};
+let joinedEmployees=[];
+const AV_C=['navy','gold','green','red','purple','teal'];
+
+// ── HR OPS API ────────────────────────────────────────────────
+async function hrCall(action, params={}) {
+  const url = CONFIG.HR_OPS_URL;
+  if(!url){ toast('HR_OPS_URL not set','error'); return {success:false}; }
+  const res = await fetch(url,{method:'POST',body:JSON.stringify({action,...params})});
+  return res.json();
+}
+
+// ── Load ──────────────────────────────────────────────────────
+(async function load(){
+  try {
+    const d = await hrCall('getExitList');
+    allRecords = d.records||[];
+  } catch(e){ allRecords=[]; }
+  buildKPIs(); applyFilter();
+  loadJoinedEmployees();
+})();
+
+async function loadJoinedEmployees(){
+  try {
+    const d = await hrCall('getOnboardingList');
+    // Get completed onboarding employees
+    joinedEmployees = (d.records||[]).filter(r=>r.status==='Completed');
+    populateEmpDropdown();
+  } catch(e){ joinedEmployees=[]; }
+}
+
+function populateEmpDropdown(){
+  const sel = el('nex-emp');
+  sel.innerHTML = '<option value="">Select employee...</option>';
+  if(!joinedEmployees.length){
+    sel.innerHTML = '<option value="">No completed onboarding employees found</option>';
+    return;
+  }
+  joinedEmployees.forEach(emp=>{
+    const opt = document.createElement('option');
+    opt.value = emp.empName;
+    opt.dataset.desig = emp.desig||'';
+    opt.textContent = emp.empName + (emp.desig?' — '+emp.desig:'');
+    sel.appendChild(opt);
+  });
+}
+
+function onEmpSelect(){
+  const sel = el('nex-emp');
+  const opt = sel.options[sel.selectedIndex];
+  if(opt && opt.dataset.desig){
+    el('nex-desig').value = opt.dataset.desig;
+    el('nex-desig-wrap').style.display = 'block';
+  } else {
+    el('nex-desig-wrap').style.display = 'none';
+  }
+}
+
+function buildKPIs(){
+  const active   = allRecords.filter(r=>r.status!=='Completed').length;
+  const pending  = allRecords.filter(r=>r.progress===0).length;
+  const inprog   = allRecords.filter(r=>r.progress>0 && r.status!=='Completed').length;
+  const done     = allRecords.filter(r=>r.status==='Completed').length;
+  el('k-active').textContent  = active;
+  el('k-pending').textContent = pending;
+  el('k-inprog').textContent  = inprog;
+  el('k-done').textContent    = done;
+}
+
+function setTab(btn){
+  document.querySelectorAll('.ex-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.f;
+  applyFilter();
+}
+
+function applyFilter(){
+  const q = (el('ex-search').value||'').toLowerCase();
+  filtered = allRecords.filter(r=>{
+    if(activeFilter!=='all' && r.status!==activeFilter) return false;
+    if(q && !r.empName.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  renderTable();
+}
+
+function renderTable(){
+  el('ex-count').textContent = filtered.length+' record'+(filtered.length!==1?'s':'');
+  if(!filtered.length){
+    el('ex-tbody').innerHTML='<tr><td colspan="6"><div style="text-align:center;padding:40px;color:#bbb"><div style="font-size:28px;margin-bottom:8px">🚪</div><div style="font-size:13px;font-weight:700">No exit records found</div><div style="font-size:11px;margin-top:4px">Click + New Exit / FnF to get started</div></div></td></tr>';
+    return;
+  }
+  el('ex-tbody').innerHTML = filtered.map((r,i)=>{
+    const init  = r.empName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const color = AV_C[i%AV_C.length];
+    const sBadge= r.status==='Completed'
+      ? '<span class="badge b-sel">✅ Completed</span>'
+      : r.progress>0
+        ? '<span class="badge b-int">In Progress</span>'
+        : '<span class="badge b-new">Pending</span>';
+    const progColor = r.progress>=70?'var(--green)':r.progress>=40?'var(--gold)':'var(--red)';
+    const progBar   = `<div class="prog-wrap"><div class="prog-track"><div class="prog-fill" style="width:${r.progress}%;background:${progColor}"></div></div><span class="prog-pct">${r.progress}%</span></div>`;
+    const actionBtn = r.status==='Completed'
+      ? `<button class="btn btn-muted btn-sm" onclick="openDrawer('${r.recordId}')">View</button>`
+      : `<button class="btn btn-red btn-sm" onclick="openDrawer('${r.recordId}')">Open Checklist</button>`;
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="openDrawer('${r.recordId}')">
+        <div class="av av-${color}">${init}</div>
+        <b style="color:var(--navy)">${r.empName}</b>
+      </div></td>
+      <td style="font-size:11px">${r.desig||'—'}</td>
+      <td style="font-size:11px">${r.lwd||'—'}</td>
+      <td>${progBar}</td>
+      <td>${sBadge}</td>
+      <td>${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Drawer ────────────────────────────────────────────────────
+async function openDrawer(recordId){
+  const r = allRecords.find(x=>x.recordId===recordId); if(!r) return;
+  currentRecord  = r;
+  pendingChanges = {};
+  const init = r.empName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  el('dr-av').textContent   = init;
+  el('dr-name').textContent = r.empName;
+  el('dr-meta').textContent = (r.desig||'') + (r.lwd?' · LWD: '+r.lwd:'');
+  updateProgBar(r.progress, r.done, r.total);
+  el('dr-body').innerHTML   = '<div style="text-align:center;padding:32px;color:#bbb">Loading checklist...</div>';
+  el('ex-overlay').style.display='block';
+  el('ex-drawer').classList.add('open');
+  try {
+    const d = await hrCall('getExitItems',{recordId});
+    currentItems = d.items||[];
+    renderChecklist(d.sections||{});
+    el('complete-btn').style.display = (r.progress>=100 && r.status!=='Completed') ? 'flex' : 'none';
+  } catch(e){
+    el('dr-body').innerHTML = `<div style="color:var(--red);padding:16px">Error: ${e.message}</div>`;
+  }
+}
+
+function updateProgBar(pct, done, total){
+  el('dr-prog-text').textContent = pct+'% ('+(done||0)+'/'+(total||0)+' items)';
+  el('dr-prog-fill').style.width = pct+'%';
+}
+
+function renderChecklist(sections){
+  let html='';
+  Object.keys(sections).forEach(sec=>{
+    html += `<div class="ex-section"><div class="ex-section-title">${sec}</div>`;
+    sections[sec].forEach(item=>{
+      const dCls = item.status==='Done' ? 't-done' : '';
+      const nCls = item.status==='NA'   ? 't-na'   : '';
+      const rowCls = item.status==='Done' ? 'st-done' : item.status==='NA' ? 'st-na' : '';
+      const rem  = (item.remarks||'').replace(/"/g,'&quot;');
+      html += `<div class="ex-item ${rowCls}" id="ei-${item.itemId}">
+        <div class="ex-item-info">
+          <div class="ex-item-text">${item.item}</div>
+          ${item.mandatory?'<div class="ex-item-mandatory">★ Mandatory</div>':''}
+          <input class="ex-item-rem" type="text" placeholder="Remarks (optional)" value="${rem}"
+            id="rem-${item.itemId}" onchange="setRemark('${item.itemId}',this.value)">
+          ${item.doneBy?`<div class="ex-item-doneby">✓ ${item.doneBy} · ${item.doneAt}</div>`:''}
+        </div>
+        <div class="ex-tick-wrap">
+          <button class="ex-tick ${dCls}" title="Done" onclick="tick('${item.itemId}','Done')">✓</button>
+          <button class="ex-tick ${nCls}" title="Not Applicable" onclick="tick('${item.itemId}','NA')">NA</button>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  el('dr-body').innerHTML = html;
+}
+
+function tick(itemId, status){
+  const item = currentItems.find(i=>i.itemId===itemId); if(!item) return;
+  item.status = item.status===status ? '' : status;
+  const row  = document.getElementById('ei-'+itemId);
+  const btns = row.querySelectorAll('.ex-tick');
+  btns[0].className = 'ex-tick'+(item.status==='Done'?' t-done':'');
+  btns[1].className = 'ex-tick'+(item.status==='NA'?' t-na':'');
+  row.className = 'ex-item'+(item.status==='Done'?' st-done':item.status==='NA'?' st-na':'');
+  if(!pendingChanges[itemId]) pendingChanges[itemId]={};
+  pendingChanges[itemId].status = item.status;
+  recalcProgress();
+}
+
+function setRemark(itemId, val){
+  if(!pendingChanges[itemId]) pendingChanges[itemId]={};
+  pendingChanges[itemId].remarks = val;
+}
+
+function recalcProgress(){
+  const done  = currentItems.filter(i=>i.status==='Done'||i.status==='NA').length;
+  const total = currentItems.length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  updateProgBar(pct, done, total);
+  el('complete-btn').style.display = (pct>=100 && currentRecord.status!=='Completed') ? 'flex' : 'none';
+  const r = allRecords.find(x=>x.recordId===currentRecord.recordId);
+  if(r){ r.progress=pct; r.done=done; r.total=total; }
+}
+
+async function saveAll(){
+  const keys = Object.keys(pendingChanges);
+  if(!keys.length){ toast('No changes to save','warn'); return; }
+  const btn=el('save-btn'); btn.disabled=true; btn.textContent='Saving...';
+  try{
+    for(const itemId of keys){
+      const item = currentItems.find(i=>i.itemId===itemId);
+      const rem  = el('rem-'+itemId) ? el('rem-'+itemId).value : (item?item.remarks||'':'');
+      await hrCall('updateExitItem',{
+        recordId : currentRecord.recordId,
+        itemId,
+        status  : pendingChanges[itemId].status!==undefined ? pendingChanges[itemId].status : (item?item.status||'':''),
+        remarks : pendingChanges[itemId].remarks!==undefined ? pendingChanges[itemId].remarks : rem,
+        doneBy  : session?session.username:'HR'
+      });
+    }
+    pendingChanges={};
+    toast('Progress saved!','success');
+    const d=await hrCall('getExitList'); allRecords=d.records||[]; buildKPIs(); applyFilter();
+  }catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ btn.disabled=false; btn.textContent='💾 Save Progress'; }
+}
+
+async function markComplete(){
+  showConfirm({
+    title:'✅ Mark FnF Complete',
+    body:`<p style="font-size:13px;margin:0">Mark Exit / FnF for <b>${currentRecord.empName}</b> as complete? This will close the process.</p>`,
+    confirmText:'Yes, Mark Complete',
+    onConfirm:async function(){
+      try{
+        await saveAll();
+        await hrCall('completeExit',{recordId:currentRecord.recordId});
+        const r=allRecords.find(x=>x.recordId===currentRecord.recordId);
+        if(r) r.status='Completed';
+        closeDrawer(); buildKPIs(); applyFilter();
+        toast(currentRecord.empName+' Exit / FnF completed!','success');
+      }catch(e){ toast('Error: '+e.message,'error'); }
+    }
+  });
+}
+
+function closeDrawer(){
+  el('ex-overlay').style.display='none';
+  el('ex-drawer').classList.remove('open');
+  currentRecord=null; currentItems=[]; pendingChanges={};
+}
+
+// ── New Exit Modal ────────────────────────────────────────────
+function openNewModal(){
+  el('nex-lwd').value = new Date().toISOString().slice(0,10);
+  ['nex-emp-err','nex-lwd-err'].forEach(id=>el(id).style.display='none');
+  el('nex-btn').disabled=false; el('nex-btn').textContent='Start Exit Process';
+  el('nex-desig-wrap').style.display='none';
+  // Attach onchange to emp select
+  el('nex-emp').onchange = onEmpSelect;
+  populateEmpDropdown();
+  el('new-modal').style.display='flex';
+}
+function closeNewModal(){ el('new-modal').style.display='none'; }
+
+async function createExit(){
+  const empName = el('nex-emp').value;
+  const lwd     = el('nex-lwd').value;
+  const desig   = el('nex-desig').value;
+  let ok=true;
+  if(!empName){ el('nex-emp-err').style.display='block'; ok=false; } else el('nex-emp-err').style.display='none';
+  if(!lwd){ el('nex-lwd-err').style.display='block'; ok=false; } else el('nex-lwd-err').style.display='none';
+  if(!ok) return;
+  const btn=el('nex-btn'); btn.disabled=true; btn.textContent='Creating...';
+  try{
+    const r=await hrCall('createExit',{empName,desig,lwd});
+    if(r.success){
+      closeNewModal();
+      const d=await hrCall('getExitList'); allRecords=d.records||[]; buildKPIs(); applyFilter();
+      toast(empName+' exit process started!','success');
+    } else toast('Error: '+r.error,'error');
+  }catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ btn.disabled=false; btn.textContent='Start Exit Process'; }
+}
+
+// ── Confirm Modal ─────────────────────────────────────────────
+let _confirmFn=null;
+function showConfirm({title,body,confirmText,onConfirm}){
+  el('cm-title').textContent=title;
+  el('cm-body').innerHTML=body;
+  el('cm-confirm').textContent=confirmText||'Confirm';
+  _confirmFn=onConfirm;
+  el('confirm-modal').style.display='flex';
+}
+function closeConfirm(){ el('confirm-modal').style.display='none'; _confirmFn=null; }
+el('cm-confirm').addEventListener('click',function(){ closeConfirm(); if(_confirmFn)_confirmFn(); });
+
+function el(id){ return document.getElementById(id); }
+</script>
+</body>
+</html>
