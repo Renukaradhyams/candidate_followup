@@ -35,10 +35,8 @@
   },
   "overrides": {
     "tar": "latest",
-    "next": "latest",
     "postcss": "latest",
     "multer": "latest",
-    "recharts": "latest",
     "rimraf": "latest",
     "glob": "latest"
   }
