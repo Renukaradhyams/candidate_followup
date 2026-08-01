@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build": "echo 'Express backend ready'",
+    "build": "node -e \"require('fs').mkdirSync('.next', {recursive: true})\"",
     "dev": "node --watch index.js",
     "seed": "node scripts/seed.js"
   },
