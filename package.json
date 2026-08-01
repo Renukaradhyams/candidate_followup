@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node -e \"const fs = require('fs'); const src = fs.existsSync('out') ? 'out' : '.next'; if (!fs.existsSync('dist')) fs.cpSync(src, 'dist', {recursive: true});\"",
     "start": "node server.js",
     "seed": "node hrms-system/server/scripts/seed.js"
   },

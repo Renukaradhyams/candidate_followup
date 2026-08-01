@@ -55,9 +55,14 @@ app.get('/health', (req, res) => {
 });
 
 // Serve Frontend (Client Build static files)
+const rootDistPath = path.join(__dirname, '../../dist');
 const rootOutPath = path.join(__dirname, '../../out');
 const clientOutPath = path.join(__dirname, '../client/out');
-const clientBuildPath = fs.existsSync(rootOutPath) ? rootOutPath : clientOutPath;
+
+let clientBuildPath = rootOutPath;
+if (fs.existsSync(rootDistPath)) clientBuildPath = rootDistPath;
+else if (fs.existsSync(rootOutPath)) clientBuildPath = rootOutPath;
+else if (fs.existsSync(clientOutPath)) clientBuildPath = clientOutPath;
 
 if (fs.existsSync(clientBuildPath)) {
   app.use(express.static(clientBuildPath));
