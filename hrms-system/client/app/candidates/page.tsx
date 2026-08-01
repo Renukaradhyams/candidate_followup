@@ -561,17 +561,26 @@ export default function CandidatesPage() {
 
               {drawerTab === 'questions' && (
                 <div className="space-y-3">
-                  {[
-                    { q: '1. Why join BSC Exclusive?', a: drawerCandidate.q1 },
-                    { q: '2. Why should we hire you?', a: drawerCandidate.q2 },
-                    { q: '3. Comfortable on weekends?', a: drawerCandidate.q3 },
-                    { q: '4. Value in first 90 days?', a: drawerCandidate.q4 }
-                  ].map((item, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-1">
-                      <div className="font-bold text-[#1E2D4E]">{item.q}</div>
-                      <div className="text-[#666666] leading-relaxed">{item.a || '—'}</div>
-                    </div>
-                  ))}
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Retail Experience</div>
+                    <div className="text-[#1E2D4E] font-semibold">{drawerCandidate.retailExperience || '—'}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Qualification</div>
+                    <div>{drawerCandidate.qualification || '—'}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Total Experience</div>
+                    <div>{drawerCandidate.experience || '—'}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Previous Company</div>
+                    <div>{drawerCandidate.previousCompany || '—'} {drawerCandidate.previousDesignation ? `(${drawerCandidate.previousDesignation})` : ''}</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Languages Known</div>
+                    <div>{Array.isArray(drawerCandidate.languagesKnown) ? drawerCandidate.languagesKnown.join(', ') : drawerCandidate.languagesKnown || '—'}</div>
+                  </div>
                 </div>
               )}
 
@@ -620,7 +629,6 @@ export default function CandidatesPage() {
                     </button>
                   </>
                 )}
-                
                 <div className="flex w-full gap-2 mt-2 pt-2 border-t border-[#e0ddd8]/50">
                   <button
                     onClick={() => window.location.href = '/candidate-entry?edit=' + drawerCandidate.appNo}
@@ -635,6 +643,29 @@ export default function CandidatesPage() {
                     Delete Profile
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Call Step button for shortlisted / called candidates */}
+            {(drawerCandidate.status === 'Shortlisted' ||
+              drawerCandidate.status === '1st Call Done' ||
+              drawerCandidate.status === '2nd Call Done') && !isViewOnly && (
+              <div className="p-4 border-t border-amber-200 bg-amber-50">
+                <div className="text-[10px] font-black uppercase text-amber-700 tracking-wider mb-2">
+                  {drawerCandidate.status === '2nd Call Done' ? '📅 Schedule Interview' : '📞 Call Step'}
+                </div>
+                <button
+                  onClick={() => handleOpenCallModal(drawerCandidate)}
+                  className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg text-white ${
+                    drawerCandidate.status === '2nd Call Done'
+                      ? 'bg-[#1E2D4E] hover:bg-[#162340]'
+                      : 'bg-amber-500 hover:bg-amber-600'
+                  }`}
+                >
+                  {drawerCandidate.status === 'Shortlisted' && '☎ Log 1st Call'}
+                  {drawerCandidate.status === '1st Call Done' && '☎ Log 2nd Call'}
+                  {drawerCandidate.status === '2nd Call Done' && '📅 Schedule Interview'}
+                </button>
               </div>
             )}
           </div>

@@ -31,11 +31,7 @@ export default function CandidateEntryPage() {
   const [religionCaste, setReligionCaste] = useState('');
   const [languagesKnown, setLanguagesKnown] = useState<string[]>([]);
   
-  // Step 2 Questions
-  const [q1, setQ1] = useState('');
-  const [q2, setQ2] = useState('');
-  const [q3, setQ3] = useState('Yes');
-  const [q4, setQ4] = useState('');
+  // No screening questions in BSC Registration Form v2
 
   // Files
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -129,10 +125,7 @@ export default function CandidateEntryPage() {
       showToast('Please upload all mandatory documents', 'error');
       return;
     }
-    if (!q1.trim() || !q2.trim() || !q4.trim()) {
-      showToast('Please answer all questions in Step 2', 'error');
-      return;
-    }
+    // All required fields already validated before reaching Step 2
 
     setLoading(true);
     try {
@@ -162,7 +155,6 @@ export default function CandidateEntryPage() {
         motherDetails,
         religionCaste,
         languagesKnown,
-        q1, q2, q3, q4,
         resumeUrl, photoUrl, aadhaarUrl
       };
 
@@ -191,7 +183,7 @@ export default function CandidateEntryPage() {
 
   const POSITIONS = ['Sales Executive', 'Cashier', 'Billing Executive', 'HR', 'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 'Floor Manager', 'Security', 'Housekeeping', 'Helper', 'Other'];
   const QUALIFICATIONS = ['SSLC', 'PUC', 'Diploma', 'Graduate', 'Other'];
-  const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1-2 Years', '2-5 Years', 'More than 5 Years'];
+  const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1–2 Years', '2–5 Years', 'More than 5 Years'];
   const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi'];
 
   return (
@@ -332,14 +324,27 @@ export default function CandidateEntryPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Do you have prior retail sales experience? *</label>
-                <select value={retailExperience} onChange={(e) => setRetailExperience(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                  <option value="">Select</option>
-                  <option value="Yes, in a clothing/apparel store">Yes, in a clothing/apparel store</option>
-                  <option value="Yes, in another type of retail store">Yes, in another type of retail store</option>
-                  <option value="No, I do not have retail experience">No, I do not have retail experience</option>
-                </select>
+                <div className="space-y-2">
+                  {[
+                    'Yes, in a clothing/apparel store',
+                    'Yes, in another type of retail store',
+                    'No, I do not have retail experience'
+                  ].map(opt => (
+                    <label key={opt} className="flex items-center gap-2 p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] cursor-pointer hover:bg-[#f0ece4]">
+                      <input
+                        type="radio"
+                        name="retailExperience"
+                        value={opt}
+                        checked={retailExperience === opt}
+                        onChange={() => setRetailExperience(opt)}
+                        className="accent-[#1E2D4E]"
+                      />
+                      <span className="text-xs font-medium text-[#1E2D4E]">{opt}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {experience !== 'Fresher' && experience !== '' && (
@@ -387,29 +392,7 @@ export default function CandidateEntryPage() {
                 </div>
               </div>
 
-              <div className="text-xs font-black uppercase text-[#1E2D4E] tracking-wider border-b border-[#e0ddd8] pb-2 pt-2">
-                Screening Questions
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block font-bold text-[#1E2D4E]">1. Why do you want to join BSC Exclusive? *</label>
-                <textarea rows={2} value={q1} onChange={(e) => setQ1(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-bold text-[#1E2D4E]">2. Why should we hire you? *</label>
-                <textarea rows={2} value={q2} onChange={(e) => setQ2(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-bold text-[#1E2D4E]">3. Comfortable working weekends/festivals? *</label>
-                <select value={q3} onChange={(e) => setQ3(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold">
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="block font-bold text-[#1E2D4E]">4. Value in first 90 days? *</label>
-                <textarea rows={2} value={q4} onChange={(e) => setQ4(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
-              </div>
+              {/* No additional screening questions - all questions captured in Step 1 */}
 
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mt-4">
                 <label className="flex items-start gap-3 cursor-pointer">
