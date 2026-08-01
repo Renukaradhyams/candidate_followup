@@ -18,11 +18,14 @@ async function seedMockData() {
 
     for (const c of mockData) {
       await db.query(
-        `INSERT IGNORE INTO candidates (app_no, date, time, cand_name, gender, dob, address, email, phone, alt_phone,
-         designation, qualification, experience, cur_company, cur_salary, exp_salary, source, notes, created_by, status)
-         VALUES (?, CURDATE(), CURTIME(), ?, 'Male', '1995-01-01', 'Sample Address', ?, ?, '0000000000',
-         ?, 'Graduate', '2 Years', 'Sample Co', 20000, 25000, 'Walk-in', 'Mock data', 'HR Admin', ?)`,
-        [c.appNo, c.name, `${c.name.split(' ')[0].toLowerCase()}@example.com`, c.phone, c.role, c.status]
+        `INSERT IGNORE INTO candidates (
+          app_no, name, phone, email, dob, gender, address, 
+          designation, qualification, experience, current_salary, expected_salary, 
+          source, remarks, status
+         )
+         VALUES (?, ?, ?, ?, '1995-01-01', 'Male', 'Sample Address',
+         ?, 'Graduate', '2 Years', '20000', '25000', 'Walk-in', 'Mock data seed', ?)`,
+        [c.appNo, c.name, c.phone, `${c.name.split(' ')[0].toLowerCase()}@example.com`, c.role, c.status]
       );
     }
     console.log('✓ 10 Mock Candidates seeded.');
