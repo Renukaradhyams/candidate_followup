@@ -57,3 +57,5 @@
 [2026-08-01T18:24:29.636Z]   Error Message: connect ECONNREFUSED 127.0.0.1:3306
 [2026-08-01T18:24:29.638Z] ====================================================
 [2026-08-01T18:24:29.641Z] [Auto DB Initializer ERROR]: connect ECONNREFUSED 127.0.0.1:3306
+[2026-08-01T18:35:12.024Z] [DB Config] Initializing MySQL pool: Host=127.0.0.1, Port=3306, User=root, DB=hrms_db
+[2026-08-01T18:35:12.453Z] [Auto DB Initializer] autoInitializeDatabase started 
