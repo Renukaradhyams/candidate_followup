@@ -26,6 +26,8 @@ router.post('/candidates', validateAddCandidate, candidateController.addCandidat
 router.put('/candidates/:id', validateUpdateCandidate, candidateController.updateCandidate);
 router.post('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/kpis', candidateController.getKPIs);
+router.get('/candidates/pending-actions', candidateController.getPendingActions);
+router.get('/candidates/source-breakdown', candidateController.getSourceBreakdown);
 router.get('/candidates/activity-full', candidateController.getActivityFull);
 router.post('/candidates/upload-resume', upload.single('resume'), candidateController.uploadResume);
 

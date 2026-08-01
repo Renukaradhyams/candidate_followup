@@ -356,7 +356,41 @@ class CandidateService {
       color: a.color || 'navy'
     }));
 
-    return { success: true, activity };
+  async getPendingActions() {
+    try {
+      const [rows] = await pool.query(
+        `SELECT appNo, candidateName as name, designation as desig, status, createdAt 
+         FROM Candidate 
+         WHERE deletedAt IS NULL AND status IN ('New', 'Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled')
+         ORDER BY createdAt DESC LIMIT 10`
+      );
+      const actions = rows.map(r => ({
+        appNo: r.appNo,
+        candidate: r.name,
+        desig: r.desig,
+        actionNeeded: r.status === 'New' ? 'Screen Candidate' : r.status === 'Interview Scheduled' ? 'Conduct Interview' : 'Follow-up Call',
+        badgeColor: r.status === 'New' ? 'amber' : 'navy',
+        urgency: 'High'
+      }));
+      return { actions };
+    } catch (err) {
+      return { actions: [] };
+    }
+  }
+
+  async getSourceBreakdown() {
+    try {
+      const [rows] = await pool.query(
+        `SELECT source, COUNT(*) as cnt FROM Candidate WHERE deletedAt IS NULL GROUP BY source`
+      );
+      const breakdown = rows.map(r => ({
+        source: r.source || 'Other',
+        count: r.cnt
+      }));
+      return { breakdown };
+    } catch (err) {
+      return { breakdown: [] };
+    }
   }
 }
 
