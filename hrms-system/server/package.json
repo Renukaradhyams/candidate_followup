@@ -19,5 +19,14 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "latest",
     "mysql2": "^3.10.1"
+  },
+  "overrides": {
+    "tar": "latest",
+    "next": "latest",
+    "postcss": "latest",
+    "multer": "latest",
+    "recharts": "latest",
+    "rimraf": "latest",
+    "glob": "latest"
   }
 }
