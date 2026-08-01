@@ -100,6 +100,17 @@ app.use('/api/v1', v1Routes);
 // Legacy Dispatcher API Routes (/api/)
 app.use('/api', legacyRoutes);
 
+// Mock data seed endpoint
+app.get('/api/seed-mock', async (req, res) => {
+  try {
+    const { seedMockData } = require('./scripts/seed_mock_data');
+    const result = await seedMockData();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'UP', app: 'BSC Enterprise HRMS Unified Server v2.0' });
