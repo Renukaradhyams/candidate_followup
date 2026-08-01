@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const v1Routes = require('./routes/v1');
@@ -34,24 +35,44 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve Uploads & Static Assets
+// Serve Uploads Directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Versioned API Routes (/api/v1/)
 app.use('/api/v1', v1Routes);
 
-// Legacy Action Dispatcher API Routes (/api/)
+// Legacy Dispatcher API Routes (/api/)
 app.use('/api', legacyRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {
-  res.json({ status: 'UP', app: 'BSC Enterprise HRMS Server v2.0' });
+  res.json({ status: 'UP', app: 'BSC Enterprise HRMS Unified Server v2.0' });
 });
 
-// 404 Handler
-app.use((req, res) => {
-  return errorRes(res, `Route ${req.originalUrl} Not Found`, [], 404);
+// Serve Frontend (Client Build static files)
+const clientBuildPath = path.join(__dirname, '../client/out');
+if (fs.existsSync(clientBuildPath)) {
+  app.use(express.static(clientBuildPath));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/health')) {
+      return next();
+    }
+    const cleanPath = req.path === '/' ? 'index.html' : `${req.path.replace(/^\//, '')}.html`;
+    const fullPath = path.join(clientBuildPath, cleanPath);
+
+    if (fs.existsSync(fullPath)) {
+      res.sendFile(fullPath);
+    } else {
+      res.sendFile(path.join(clientBuildPath, 'index.html'));
+    }
+  });
+}
+
+// 404 Handler for API
+app.use('/api/*', (req, res) => {
+  return errorRes(res, `API Endpoint ${req.originalUrl} Not Found`, [], 404);
 });
 
 // Central Error Middleware
@@ -64,8 +85,9 @@ app.use((err, req, res, next) => {
 // Start Server
 app.listen(PORT, () => {
   console.log(`====================================================`);
-  console.log(`  BSC Enterprise HRMS Server v2.0 running on port ${PORT}`);
+  console.log(`  BSC Enterprise HRMS Unified Server running on port ${PORT}`);
   console.log(`  REST API v1: http://localhost:${PORT}/api/v1`);
+  console.log(`  Frontend Served From: ${clientBuildPath}`);
   console.log(`  Health Check: http://localhost:${PORT}/health`);
   console.log(`====================================================`);
 });

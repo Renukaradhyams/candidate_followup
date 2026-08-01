@@ -1,10 +1,10 @@
 {
-  "name": "bsc-hrms-root",
+  "name": "bsc-hrms-unified",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "cd hrms-system/client && npm install && npm run build",
-    "start": "cd hrms-system/client && npm start",
-    "server": "cd hrms-system/server && npm start"
+    "start": "node server.js",
+    "seed": "cd hrms-system/server && npm run seed"
   }
 }
