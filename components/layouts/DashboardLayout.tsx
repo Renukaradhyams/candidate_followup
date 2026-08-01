@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import Topbar from '@/components/Topbar';
-import ToastContainer from '@/components/Toast';
-import { Auth, UserSession } from '@/services/api';
+import Sidebar from '../Sidebar';
+import Topbar from '../Topbar';
+import ToastContainer from '../Toast';
+import { Auth, UserSession } from '../../services/api';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

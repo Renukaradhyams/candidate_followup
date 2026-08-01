@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { API } from '@/services/api';
-import ToastContainer, { showToast } from '@/components/Toast';
+import { API } from '../../services/api';
+import ToastContainer, { showToast } from '../../components/Toast';
 
 export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
@@ -113,7 +113,7 @@ export default function CandidateEntryPage() {
       }
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
-    } finally {
+    } fontally {
       setLoading(false);
     }
   };

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Menu, Bell, Clock } from 'lucide-react';
-import { UserSession } from '@/services/api';
+import { UserSession } from '../services/api';
 
 interface TopbarProps {
   title: string;

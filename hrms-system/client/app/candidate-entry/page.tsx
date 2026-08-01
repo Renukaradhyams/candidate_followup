@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { API } from '@/services/api';
-import ToastContainer, { showToast } from '@/components/Toast';
+import { API } from '../../services/api';
+import ToastContainer, { showToast } from '../../components/Toast';
 
 export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
@@ -380,7 +380,7 @@ export default function CandidateEntryPage() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-3">
+              <div className="flex gap-[#3px] pt-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setStep(1)}

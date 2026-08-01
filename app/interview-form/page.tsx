@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { API } from '@/services/api';
-import ToastContainer, { showToast } from '@/components/Toast';
+import { API } from '../../services/api';
+import ToastContainer, { showToast } from '../../components/Toast';
 
 export default function EvaluatorInterviewFormPage() {
   const searchParams = useSearchParams();

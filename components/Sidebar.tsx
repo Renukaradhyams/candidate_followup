@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Auth, UserSession } from '@/services/api';
+import { Auth, UserSession } from '../services/api';
 import { 
   BarChart3, 
   Users, 

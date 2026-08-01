@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/Sidebar';
-import Topbar from '@/components/Topbar';
-import ToastContainer, { showToast } from '@/components/Toast';
-import { API, Auth, UserSession } from '@/services/api';
+import Sidebar from '../../components/Sidebar';
+import Topbar from '../../components/Topbar';
+import ToastContainer, { showToast } from '../../components/Toast';
+import { API, Auth, UserSession } from '../../services/api';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
   FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X
