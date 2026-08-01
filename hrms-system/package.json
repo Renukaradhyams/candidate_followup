@@ -38,5 +38,10 @@
     "glob": "^10.3.10",
     "gauge": "^5.0.1",
     "npmlog": "^6.0.0"
+  },
+  "description": "Express server application",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
