@@ -22,6 +22,17 @@ const { errorRes } = require('./utils/response');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Add extreme logging for debugging 503
+app.use((req, res, next) => {
+  console.log(`[HTTP INCOMING] ${req.method} ${req.url}`);
+  next();
+});
+
+console.log('[DEBUG-ENV] Process Env Keys:', Object.keys(process.env).join(', '));
+if (process.env.PASSENGER_APP_ENV) {
+  console.log('[DEBUG-ENV] Passenger is detected.');
+}
+
 // Security Middlewares
 app.set('trust proxy', 1); // Required for express-rate-limit behind Hostinger reverse proxy
 
