@@ -1,15 +1,10 @@
-const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 
-const DEBUG_LOG_PATH = path.join(process.cwd(), 'init-debug.log');
+// Log only to console (no file writing to avoid permission issues on Hostinger)
 function logDebug(msg, extra = '') {
-  try {
-    const formatted = typeof extra === 'object' ? JSON.stringify(extra) : extra;
-    const logStr = `[${new Date().toISOString()}] ${msg} ${formatted}\n`;
-    fs.appendFileSync(DEBUG_LOG_PATH, logStr);
-    console.log(msg, extra);
-  } catch (e) {}
+  const formatted = typeof extra === 'object' ? JSON.stringify(extra).slice(0, 200) : extra;
+  console.log(msg, formatted || '');
 }
 
 async function autoInitializeDatabase(pool) {

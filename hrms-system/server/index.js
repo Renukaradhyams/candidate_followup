@@ -11,11 +11,13 @@ const dotenv = require('dotenv');
 const SERVER_DIR = __dirname;
 const APP_ROOT = path.join(SERVER_DIR, '..'); // hrms-system/
 
-// Load .env files — check multiple locations for Hostinger Passenger compatibility
-dotenv.config({ path: path.join(SERVER_DIR, '.env') });
-dotenv.config({ path: path.join(APP_ROOT, '.env') });
-dotenv.config({ path: path.join(APP_ROOT, '..', '.env') });
-dotenv.config();
+// ── Load .env ONLY as fallback — Hostinger dashboard env vars always win ────
+// dotenv.config() never overwrites already-set process.env values.
+// We load in reverse-priority order so more specific files can override less specific ones,
+// but NOTHING overrides env vars already set by Hostinger's deployment system.
+dotenv.config({ path: path.join(APP_ROOT, '..', '.env') });  // repo root (lowest priority)
+dotenv.config({ path: path.join(APP_ROOT, '.env') });         // hrms-system/.env
+dotenv.config({ path: path.join(SERVER_DIR, '.env') });       // server/.env (highest priority for local dev)
 
 // ── Global Crash Handlers ────────────────────────────────────────────────────
 process.on('uncaughtException', (err) => {
