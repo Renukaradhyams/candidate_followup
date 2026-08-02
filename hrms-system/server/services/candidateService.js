@@ -3,8 +3,9 @@ const pool = require('../config/db');
 class CandidateService {
   async generateCandidateCode() {
     const year = new Date().getFullYear();
-    const [rows] = await pool.query(`SELECT COUNT(*) as cnt FROM candidates`);
-    const nextNum = (rows[0].cnt + 1).toString().padStart(4, '0');
+    const [rows] = await pool.query(`SELECT id FROM candidates ORDER BY id DESC LIMIT 1`);
+    const nextId = rows.length > 0 ? rows[0].id + 1 : 1;
+    const nextNum = nextId.toString().padStart(4, '0');
     return {
       appNo: `BSC-${year}-${nextNum}`
     };
