@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { FileText, Phone, Calendar, CheckCircle2, XCircle, UserCheck } from 'lucide-react';
+import { FileText, Phone, Calendar, CheckCircle2, XCircle, UserCheck, Trash2 } from 'lucide-react';
 
 export default function OfferProcessPage() {
   const navigate = useNavigate();
@@ -84,6 +84,17 @@ export default function OfferProcessPage() {
       }, 1200);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
+    }
+  };
+
+  const handleDeleteOffer = async (appNo: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete candidate "${name}" (${appNo})?`)) return;
+    try {
+      await API.deleteCandidate(appNo);
+      showToast(`Candidate ${name} deleted completely`, 'success');
+      loadOffers();
+    } catch (err: any) {
+      showToast('Error deleting candidate: ' + err.message, 'error');
     }
   };
 
@@ -185,6 +196,13 @@ export default function OfferProcessPage() {
                                 Mark Joined
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDeleteOffer(o.appNo, o.name)}
+                              className="p-1.5 rounded border border-red-200 text-red-600 font-bold text-[11px] hover:bg-red-50 transition-colors"
+                              title="Delete Candidate completely"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
