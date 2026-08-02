@@ -95,6 +95,13 @@ export default function CandidatesPage() {
     return p ? p.slice(0, 5) + ' XXXXX' : '—';
   };
 
+  // Build the correct URL for uploaded files (handle bare filenames vs full paths)
+  const fileUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+    return `/uploads/${url}`;
+  };
+
   const openDrawer = async (c: any) => {
     setDrawerCandidate(c);
     setDrawerTab('overview');
@@ -541,9 +548,9 @@ export default function CandidatesPage() {
                   <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-3">
                     <div className="text-[10px] font-black uppercase text-[#1E2D4E]">Documents</div>
                     <div className="flex flex-col gap-2">
-                      {drawerCandidate.resumeUrl ? (
+                      {fileUrl(drawerCandidate.resumeUrl) ? (
                         <a
-                          href={drawerCandidate.resumeUrl}
+                          href={fileUrl(drawerCandidate.resumeUrl)!}
                           target="_blank"
                           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
                         >
@@ -554,9 +561,9 @@ export default function CandidatesPage() {
                         <div className="text-[#888888] italic text-[11px]">No resume uploaded</div>
                       )}
 
-                      {drawerCandidate.photoUrl ? (
+                      {fileUrl(drawerCandidate.photoUrl) ? (
                         <a
-                          href={drawerCandidate.photoUrl}
+                          href={fileUrl(drawerCandidate.photoUrl)!}
                           target="_blank"
                           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
                         >
@@ -567,9 +574,9 @@ export default function CandidatesPage() {
                         <div className="text-[#888888] italic text-[11px]">No photo uploaded</div>
                       )}
 
-                      {drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl ? (
+                      {fileUrl(drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl) ? (
                         <a
-                          href={drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl}
+                          href={fileUrl(drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl)!}
                           target="_blank"
                           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
                         >

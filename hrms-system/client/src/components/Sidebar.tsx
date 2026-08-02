@@ -28,12 +28,12 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   const role = session?.role || 'HR';
 
   const roleNavMap: Record<string, string[]> = {
-    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'onboarding', 'employees', 'exit', 'form', 'settings'],
-    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'onboarding', 'employees', 'exit', 'form', 'settings'],
-    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'onboarding', 'employees', 'exit', 'form'],
+    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings'],
+    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings'],
+    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form'],
     'Recruiter':   ['dashboard', 'candidates', 'interview', 'form'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -123,7 +123,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
                     return (
                       <Link
                         key={item.key}
-                        href={item.href}
+                        to={item.href}
                         target={item.target}
                         onClick={onClose}
                         className={`
