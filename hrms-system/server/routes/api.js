@@ -25,8 +25,11 @@ router.get('/public/designations', settingsController.getDesignations);
 
 // ── Candidate Routes ─────────────────────────────────────────
 router.get('/candidates', candidateController.getCandidates);
+router.post('/candidates', candidateController.addCandidate);
 router.post('/candidates/add', candidateController.addCandidate);
+router.put('/candidates/:appNo', candidateController.updateCandidate);
 router.post('/candidates/update', candidateController.updateCandidate);
+router.delete('/candidates/:appNo', candidateController.deleteCandidate);
 router.get('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/next-app-no', candidateController.getNextAppNo);
 router.get('/candidates/kpis', candidateController.getKPIs);
