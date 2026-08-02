@@ -140,6 +140,16 @@ class NotificationEngine {
     return { ...this.settings };
   }
 
+  public isSoundEnabled(): boolean {
+    return !!this.settings.soundEnabled;
+  }
+
+  public toggleSound(enable?: boolean): boolean {
+    const next = enable !== undefined ? enable : !this.settings.soundEnabled;
+    this.saveSettings({ ...this.settings, soundEnabled: next });
+    return next;
+  }
+
   public getNotifications(): SystemNotification[] {
     return [...this.notifications];
   }
