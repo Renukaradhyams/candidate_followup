@@ -151,6 +151,12 @@ export default function CandidateEntryPage() {
       let photoUrl = existingPhoto;
       let aadhaarUrl = existingAadhaar;
 
+      let targetAppNo = editAppNo;
+      if (!targetAppNo) {
+        const genRes = await API.getNextAppNo();
+        targetAppNo = genRes.appNo;
+      }
+
       if (resumeFile || photoFile || aadhaarFile) {
         const formData = new FormData();
         if (name) formData.append('name', name);
@@ -181,7 +187,7 @@ export default function CandidateEntryPage() {
           }
         }
         
-        const uploadRes = await API.uploadDocuments(formData, name);
+        const uploadRes = await API.uploadDocuments(formData, name, targetAppNo);
         if (uploadRes.success) {
           if (uploadRes.resumeUrl) resumeUrl = uploadRes.resumeUrl;
           if (uploadRes.photoUrl) photoUrl = uploadRes.photoUrl;
@@ -209,6 +215,8 @@ export default function CandidateEntryPage() {
         aadhaarNumber,
         fatherDetails,
         motherDetails,
+        religion,
+        caste,
         religionCaste,
         languagesKnown,
         resumeUrl,
@@ -219,13 +227,13 @@ export default function CandidateEntryPage() {
       };
 
       if (editAppNo) {
-        await API.call('updateCandidateFull', { appNo: editAppNo, ...payload });
+        await API.call('updateCandidateFull', { appNo: targetAppNo, ...payload });
         showToast('Registration details updated successfully!', 'success');
-        setSuccessAppNo(editAppNo);
+        setSuccessAppNo(targetAppNo);
       } else {
-        const res = await API.addCandidate(payload);
-        setSuccessAppNo(res.appNo);
-        showToast(`Registration Successful! App No: ${res.appNo}`, 'success');
+        const res = await API.addCandidate({ appNo: targetAppNo, ...payload });
+        setSuccessAppNo(res.appNo || targetAppNo);
+        showToast(`Registration Successful! App No: ${res.appNo || targetAppNo}`, 'success');
       }
 
       setStep(3);

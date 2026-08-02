@@ -159,6 +159,8 @@ class CandidateService {
         fatherDetails: r.father_details || '',
         motherDetails: r.mother_details || '',
         religionCaste: r.religion_caste || '',
+        religion: r.religion || '',
+        caste: r.caste || '',
         languagesKnown: r.languages_known ? JSON.parse(r.languages_known) : [],
         photoUrl: r.photo_url || '',
         aadharUrl: r.aadhaar_url || '',
@@ -193,9 +195,9 @@ class CandidateService {
         notice_period, own_vehicle, source, referrer, referrer_emp_no, source_detail,
         q1, q2, q3, q4, status, salary, remarks, is_duplicate_phone, resume_url,
         blood_group, offered_doj, retail_experience, previous_company, previous_designation,
-        aadhaar_number, father_details, mother_details, religion_caste, languages_known,
+        aadhaar_number, father_details, mother_details, religion_caste, religion, caste, languages_known,
         photo_url, aadhaar_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         appNo,
         data.name || data.candidateName,
@@ -235,6 +237,8 @@ class CandidateService {
         data.fatherDetails || null,
         data.motherDetails || null,
         data.religionCaste || null,
+        data.religion || null,
+        data.caste || null,
         data.languagesKnown ? JSON.stringify(data.languagesKnown) : null,
         data.photoUrl || null,
         data.aadhaarUrl || null

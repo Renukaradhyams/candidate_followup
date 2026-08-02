@@ -30,6 +30,8 @@ async function migrate() {
       'father_details VARCHAR(255) NULL',
       'mother_details VARCHAR(255) NULL',
       'religion_caste VARCHAR(150) NULL',
+      'religion VARCHAR(100) NULL',
+      'caste VARCHAR(100) NULL',
       'languages_known VARCHAR(255) NULL',
       'photo_url TEXT NULL',
       'aadhaar_url TEXT NULL'
@@ -71,16 +73,16 @@ async function migrate() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 4. Delete sample data
-    await connection.query('DELETE FROM candidates');
-    await connection.query('DELETE FROM interview_schedules');
-    await connection.query('DELETE FROM candidate_activities');
-    await connection.query('DELETE FROM hr_evaluations');
-    await connection.query('DELETE FROM interview_tokens');
-    await connection.query('DELETE FROM selected_candidates');
-    await connection.query('DELETE FROM rejected_candidates');
-    await connection.query('DELETE FROM selection_offers');
-    await connection.query('DELETE FROM onboarding_records');
+    // 4. Delete sample data (COMMENTED OUT FOR SAFETY)
+    // await connection.query('DELETE FROM candidates');
+    // await connection.query('DELETE FROM interview_schedules');
+    // await connection.query('DELETE FROM candidate_activities');
+    // await connection.query('DELETE FROM hr_evaluations');
+    // await connection.query('DELETE FROM interview_tokens');
+    // await connection.query('DELETE FROM selected_candidates');
+    // await connection.query('DELETE FROM rejected_candidates');
+    // await connection.query('DELETE FROM selection_offers');
+    // await connection.query('DELETE FROM onboarding_records');
     
     console.log('Migrations and cleanup completed!');
   } catch (err) {

@@ -107,15 +107,23 @@ class CandidateController {
   async uploadDocuments(req, res) {
     try {
       const result = {};
+      const appNo = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+      
       if (req.files) {
         if (req.files['resume'] && req.files['resume'][0]) {
-          result.resumeUrl = `/uploads/candidate-resumes/${req.files['resume'][0].filename}`;
+          result.resumeUrl = appNo 
+            ? `uploads/applicants/${appNo}/${req.files['resume'][0].filename}` 
+            : `uploads/candidate-resumes/${req.files['resume'][0].filename}`;
         }
         if (req.files['photo'] && req.files['photo'][0]) {
-          result.photoUrl = `/uploads/candidate-photos/${req.files['photo'][0].filename}`;
+          result.photoUrl = appNo 
+            ? `uploads/applicants/${appNo}/${req.files['photo'][0].filename}` 
+            : `uploads/candidate-photos/${req.files['photo'][0].filename}`;
         }
         if (req.files['aadhar'] && req.files['aadhar'][0]) {
-          result.aadhaarUrl = `/uploads/employee-documents/${req.files['aadhar'][0].filename}`;
+          result.aadhaarUrl = appNo 
+            ? `uploads/applicants/${appNo}/${req.files['aadhar'][0].filename}` 
+            : `uploads/employee-documents/${req.files['aadhar'][0].filename}`;
         }
       }
       return res.json({ success: true, ...result });
@@ -276,6 +284,8 @@ class CandidateController {
           fatherDetails: r.father_details || '',
           motherDetails: r.mother_details || '',
           religionCaste: r.religion_caste || '',
+          religion: r.religion || '',
+          caste: r.caste || '',
           languagesKnown: r.languages_known ? (typeof r.languages_known === 'string' ? (r.languages_known.startsWith('[') ? JSON.parse(r.languages_known) : [r.languages_known]) : r.languages_known) : [],
           photoUrl: r.photo_url || '',
           aadhaarUrl: r.aadhaar_url || '',

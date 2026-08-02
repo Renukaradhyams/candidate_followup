@@ -80,20 +80,22 @@ export default function EmployeesPage() {
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
-    const clean = url.trim();
+    let clean = url.trim();
     if (!clean) return null;
     if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
 
+    if (clean.startsWith('uploads/')) {
+      clean = `/${clean}`;
+    }
+
     const filename = clean.split('/').pop() || clean;
 
-    if (filename.startsWith('photo')) return `/uploads/candidate-photos/${filename}`;
-    if (filename.startsWith('resume')) return `/uploads/candidate-resumes/${filename}`;
-    if (filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) return `/uploads/employee-documents/${filename}`;
+    if (filename.startsWith('photo') && !clean.includes('applicants')) return `/uploads/candidate-photos/${filename}`;
+    if (filename.startsWith('resume') && !clean.includes('applicants')) return `/uploads/candidate-resumes/${filename}`;
+    if ((filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) && !clean.includes('applicants')) return `/uploads/employee-documents/${filename}`;
 
     if (clean.startsWith('/uploads/')) return clean;
-    if (clean.startsWith('uploads/')) return `/${clean}`;
-
-    return `/uploads/${filename}`;
+    return `/uploads/misc/${filename}`;
   };
 
   const handleOpenEdit = (emp: any) => {
@@ -500,7 +502,8 @@ export default function EmployeesPage() {
                       <div><span className="text-[#777777] block text-[10.5px]">Date of Birth</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Blood Group</span><span className="font-extrabold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Religion</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.religion || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Caste / Category</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.caste || drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
                     </div>
                     <div className="pt-2 border-t border-[#e2dfd7]/60">
                       <span className="text-[#777777] block text-[10.5px] mb-0.5">Complete Residential Address:</span>

@@ -23,14 +23,26 @@ subdirs.forEach((dir) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let dest = 'misc';
-    if (file.fieldname === 'resume') dest = 'candidate-resumes';
-    else if (file.fieldname === 'photo') dest = 'candidate-photos';
-    else if (file.fieldname === 'document' || file.fieldname === 'aadhar' || file.fieldname === 'pan') dest = 'employee-documents';
-    else if (file.fieldname === 'offerLetter') dest = 'offer-letters';
-    else if (file.fieldname === 'relievingLetter') dest = 'relieving-letters';
-    else if (file.fieldname === 'experienceCert') dest = 'experience-certificates';
-    cb(null, path.join(uploadDir, dest));
+    let appNo = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    
+    if (appNo) {
+      // New structure: /uploads/applicants/BSC-2026-0001
+      const applicantDir = path.join(uploadDir, 'applicants', appNo);
+      if (!fs.existsSync(applicantDir)) {
+        fs.mkdirSync(applicantDir, { recursive: true });
+      }
+      cb(null, applicantDir);
+    } else {
+      // Backward compatibility / Misc uploads if no appNo
+      let dest = 'misc';
+      if (file.fieldname === 'resume') dest = 'candidate-resumes';
+      else if (file.fieldname === 'photo') dest = 'candidate-photos';
+      else if (file.fieldname === 'document' || file.fieldname === 'aadhar' || file.fieldname === 'pan') dest = 'employee-documents';
+      else if (file.fieldname === 'offerLetter') dest = 'offer-letters';
+      else if (file.fieldname === 'relievingLetter') dest = 'relieving-letters';
+      else if (file.fieldname === 'experienceCert') dest = 'experience-certificates';
+      cb(null, path.join(uploadDir, dest));
+    }
   },
   filename: (req, file, cb) => {
     let rawName = (req.body && (req.body.name || req.body.candidateName || req.body.candName)) || '';
@@ -41,7 +53,10 @@ const storage = multer.diskStorage({
       rawName = req.query.name;
     }
     const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '');
-    const prefix = cleanName ? cleanName : 'Candidate';
+    const prefixName = cleanName ? cleanName : 'Candidate';
+
+    let appNo = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    const prefix = appNo ? `${appNo}_${prefixName}` : prefixName;
 
     let docType = 'Document';
     if (file.fieldname === 'photo') docType = 'Photo';
@@ -52,17 +67,13 @@ const storage = multer.diskStorage({
     else if (file.fieldname === 'experienceCert') docType = 'ExperienceCert';
 
     const ext = path.extname(file.originalname);
-    let destSubdir = 'misc';
-    if (file.fieldname === 'resume') destSubdir = 'candidate-resumes';
-    else if (file.fieldname === 'photo') destSubdir = 'candidate-photos';
-    else if (file.fieldname === 'document' || file.fieldname === 'aadhar' || file.fieldname === 'pan') destSubdir = 'employee-documents';
-
     const baseFileName = `${prefix}_${docType}`;
     let finalFileName = `${baseFileName}${ext}`;
-    const targetDir = path.join(uploadDir, destSubdir);
 
+    // Prevent duplicates by checking if file exists in the destination
+    const destDir = appNo ? path.join(uploadDir, 'applicants', appNo) : uploadDir; // Approximation for existence check
     try {
-      if (fs.existsSync(path.join(targetDir, finalFileName))) {
+      if (fs.existsSync(path.join(destDir, finalFileName))) {
         const suffix = Date.now().toString().slice(-6);
         finalFileName = `${baseFileName}_${suffix}${ext}`;
       }

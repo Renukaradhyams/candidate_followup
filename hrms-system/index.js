@@ -62,6 +62,7 @@ const primaryUploadsDir = path.join(APP_ROOT, 'uploads');
 const parentUploadsDir = path.join(APP_ROOT, '..', 'uploads');
 
 const subdirs = [
+  'applicants',
   'candidate-resumes',
   'candidate-photos',
   'employee-documents',

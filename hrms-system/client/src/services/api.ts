@@ -113,7 +113,7 @@ export const API = {
   },
 
   // Candidates
-  async uploadDocuments(formData: FormData, candName?: string) {
+  async uploadDocuments(formData: FormData, candName?: string, appNo?: string) {
     const session = Auth.get();
     const headers: Record<string, string> = {};
     if (session && session.token) {
@@ -121,6 +121,9 @@ export const API = {
     }
     if (candName) {
       headers['x-candidate-name'] = encodeURIComponent(candName);
+    }
+    if (appNo) {
+      headers['x-app-no'] = appNo;
     }
     const apiBase = getApiBase();
     const url = `${apiBase}/candidates/upload-documents`;

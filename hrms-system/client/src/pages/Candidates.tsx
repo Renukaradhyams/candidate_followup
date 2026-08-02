@@ -97,20 +97,22 @@ export default function CandidatesPage() {
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
-    const clean = url.trim();
+    let clean = url.trim();
     if (!clean) return null;
     if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
 
+    if (clean.startsWith('uploads/')) {
+      clean = `/${clean}`;
+    }
+
     const filename = clean.split('/').pop() || clean;
 
-    if (filename.startsWith('photo')) return `/uploads/candidate-photos/${filename}`;
-    if (filename.startsWith('resume')) return `/uploads/candidate-resumes/${filename}`;
-    if (filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) return `/uploads/employee-documents/${filename}`;
+    if (filename.startsWith('photo') && !clean.includes('applicants')) return `/uploads/candidate-photos/${filename}`;
+    if (filename.startsWith('resume') && !clean.includes('applicants')) return `/uploads/candidate-resumes/${filename}`;
+    if ((filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) && !clean.includes('applicants')) return `/uploads/employee-documents/${filename}`;
 
     if (clean.startsWith('/uploads/')) return clean;
-    if (clean.startsWith('uploads/')) return `/${clean}`;
-
-    return `/uploads/${filename}`;
+    return `/uploads/misc/${filename}`;
   };
 
   const openDrawer = async (c: any) => {
@@ -610,7 +612,8 @@ export default function CandidatesPage() {
                     <div><span className="text-[#777777] block text-[10.5px]">Date of Birth:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.dob || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Blood Group:</span><span className="font-bold text-rose-700">{drawerCandidate.bloodGroup || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number (12 Digits):</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerCandidate.aadhaarNumber || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste / Category:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.religionCaste || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Religion:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.religion || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Caste / Category:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.caste || drawerCandidate.religionCaste || '—'}</span></div>
                   </div>
                 </div>
               )}
