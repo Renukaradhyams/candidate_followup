@@ -17,7 +17,7 @@ class CandidateController {
       const result = await candidateService.addCandidate(d);
       return res.json({ success: true, appNo: result.appNo, candidateCode: result.candidateCode });
     } catch (err) {
-      return errorRes(res, \`Failed to add candidate: \${err.message}\`, [err.message], 500);
+      return errorRes(res, `Failed to add candidate: ${err.message}`, [err.message], 500);
     }
   }
 

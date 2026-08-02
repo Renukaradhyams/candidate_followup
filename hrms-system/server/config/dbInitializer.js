@@ -363,8 +363,6 @@ async function autoInitializeDatabase(pool) {
       logDebug(`[Auto DB Initializer] Default admin users created (admin / hr / manager - Password: admin123)`);
     }
 
-
-
     // Seed default designations if empty
     const [dRows] = await connection.query(`SELECT COUNT(*) as cnt FROM designations`);
     if (dRows[0].cnt === 0) {
