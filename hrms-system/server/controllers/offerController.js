@@ -76,14 +76,16 @@ const logOfferCall = async (req, res) => {
 
 const updateOfferDetails = async (req, res) => {
   try {
-    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection } = req.body;
-    if (!noticePd && !estDoj && !salaryOffered && !department) return errorRes(res, 'Enter at least one field', [], 400);
+    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation } = req.body;
+    if (!noticePd && !estDoj && !salaryOffered && !department && !finalDesignation) return errorRes(res, 'Enter at least one field', [], 400);
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
 
     if (noticePd) { updFields.push('notice_period = ?'); params.push(noticePd); }
     if (estDoj) { updFields.push('est_doj = ?'); params.push(new Date(estDoj)); }
+    if (finalDesignation) { updFields.push('designation = ?'); params.push(finalDesignation); }
+    if (department) { updFields.push('department = ?'); params.push(department + (otherSection ? ` - ${otherSection}` : '')); }
 
     params.push(appNo);
     await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
@@ -94,7 +96,8 @@ const updateOfferDetails = async (req, res) => {
     if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
     if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
-    if (department) { candUpd.push('designation = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
+    if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
+    if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     candParams.push(appNo);
     await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 

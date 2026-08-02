@@ -350,7 +350,9 @@ async function autoInitializeDatabase(pool) {
       "ALTER TABLE selection_offers ADD COLUMN actual_doj DATE NULL",
       "ALTER TABLE selection_offers ADD COLUMN updated_at DATETIME NULL",
       "ALTER TABLE candidates ADD COLUMN religion VARCHAR(100) NULL",
-      "ALTER TABLE candidates ADD COLUMN caste VARCHAR(100) NULL"
+      "ALTER TABLE candidates ADD COLUMN caste VARCHAR(100) NULL",
+      "ALTER TABLE candidates ADD COLUMN department VARCHAR(150) NULL",
+      "ALTER TABLE selection_offers ADD COLUMN department VARCHAR(150) NULL"
     ];
 
     for (const sql of migrations) {
@@ -381,10 +383,13 @@ async function autoInitializeDatabase(pool) {
 
     // Seed default designations if empty or missing
     const defaultRoles = [
-      'Sales Executive', 'Cashier', 'Billing Executive', 'HR', 
-      'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 
-      'Floor Manager', 'Security', 'Housekeeping', 'Helper',
-      'Store Manager', 'Assistant Store Manager', 'Accountant'
+      'Store Head', 'Operations Manager', 'Department Manager', 'Floor Manager',
+      'Section Supervisor', 'Senior Sales Staff', 'Junior Sales Staff', 'Helpers / Trainees',
+      'Cashiers', 'Customer Care / Help Desk', 'Reception', 'Gift Wrapping',
+      'Warehouse (Receiving, Bundling, Replenishment)', 'Receiving & GRN', 'Dispatch (Online/B2B, if any)',
+      'Stock Audit / Loss Prevention', 'Visual Merchandising', 'HR', 'Admin', 'Accounts',
+      'IT / CCTV / POS Support', 'Maintenance (Electrician, Plumbing, Lift AMC liaison)',
+      'Housekeeping', 'Security', 'Cafeteria Staff', 'Parking Attendants', 'Drivers'
     ];
     for (const r of defaultRoles) {
       try {

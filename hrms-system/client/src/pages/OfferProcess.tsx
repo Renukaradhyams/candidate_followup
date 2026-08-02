@@ -19,8 +19,10 @@ export default function OfferProcessPage() {
   const [noticePd, setNoticePd] = useState('');
   const [estDoj, setEstDoj] = useState('');
   const [salaryOffered, setSalaryOffered] = useState('');
+  const [finalDesignation, setFinalDesignation] = useState('');
   const [department, setDepartment] = useState('');
   const [otherSection, setOtherSection] = useState('');
+  const [designations, setDesignations] = useState<string[]>([]);
 
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -42,6 +44,9 @@ export default function OfferProcessPage() {
     }
     setSession(Auth.get());
     loadOffers();
+    API.getDesignations().then(res => {
+      if (res && res.designations) setDesignations(res.designations);
+    }).catch(() => {});
   }, [navigate, loadOffers]);
 
   useEffect(() => {
@@ -55,12 +60,12 @@ export default function OfferProcessPage() {
 
   const handleSaveDetails = async () => {
     if (!detailOffer) return;
-    if (!salaryOffered || !estDoj || !department) {
-      showToast('Salary Offered, DOJ, and Allocated Department are mandatory fields.', 'error');
+    if (!salaryOffered || !estDoj || !department || !finalDesignation) {
+      showToast('Salary Offered, DOJ, Finalized Role, and Allocated Department are mandatory fields.', 'error');
       return;
     }
     try {
-      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered, department, otherSection });
+      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation });
       showToast('Offer joining details saved', 'success');
       loadOffers();
       setDetailOffer(null);
@@ -181,7 +186,8 @@ export default function OfferProcessPage() {
                                 setNoticePd(o.noticePd || '');
                                 setEstDoj(o.estDoj || '');
                                 setSalaryOffered(o.salary || '');
-                                setDepartment('');
+                                setFinalDesignation(o.desig || '');
+                                setDepartment(o.department || '');
                                 setOtherSection('');
                               }}
                               className="px-2.5 py-1 rounded bg-[#1E2D4E] text-white font-bold text-[11px]"
@@ -263,6 +269,18 @@ export default function OfferProcessPage() {
                   onChange={(e) => setEstDoj(e.target.value)}
                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-amber-800"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Finalized Role (Designation)</label>
+                <select
+                  value={finalDesignation}
+                  onChange={(e) => setFinalDesignation(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold"
+                >
+                  <option value="">Select Designation</option>
+                  {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
 
               <div>
