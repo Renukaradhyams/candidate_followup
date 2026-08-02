@@ -78,8 +78,10 @@ export default function OfferProcessPage() {
   const handleMarkJoined = async (appNo: string) => {
     try {
       await API.markJoined({ appNo, joiningDate });
-      showToast('Employee marked as Joined! 🎉', 'success');
-      loadOffers();
+      showToast('Employee marked as Joined! 🎉 Moving to Employee directory...', 'success');
+      setTimeout(() => {
+        navigate('/employees');
+      }, 1200);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
     }

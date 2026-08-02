@@ -375,14 +375,17 @@ async function autoInitializeDatabase(pool) {
       logDebug(`[Auto DB Initializer] Default admin users created (admin / hr / manager - Password: admin123)`);
     }
 
-    // Seed default designations if empty
-    const [dRows] = await connection.query(`SELECT COUNT(*) as cnt FROM designations`);
-    if (dRows[0].cnt === 0) {
-      await connection.query(
-        `INSERT INTO designations (name) VALUES
-         ('Store Manager'), ('Assistant Store Manager'), ('Sales Executive'),
-         ('Billing Executive'), ('HR Executive'), ('Accountant'), ('Inventory Executive')`
-      );
+    // Seed default designations if empty or missing
+    const defaultRoles = [
+      'Sales Executive', 'Cashier', 'Billing Executive', 'HR', 
+      'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 
+      'Floor Manager', 'Security', 'Housekeeping', 'Helper',
+      'Store Manager', 'Assistant Store Manager', 'Accountant'
+    ];
+    for (const r of defaultRoles) {
+      try {
+        await connection.query(`INSERT IGNORE INTO designations (name) VALUES (?)`, [r]);
+      } catch(e) {}
     }
 
     // Seed default interview questions if empty

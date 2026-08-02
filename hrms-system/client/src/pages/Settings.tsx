@@ -91,6 +91,28 @@ export default function SettingsPage() {
     }
   };
 
+  const handleChangeUserRole = async (username: string, role: string) => {
+    try {
+      await API.updateUser({ username, role });
+      showToast(`Updated role for user ${username} to ${role}`, 'success');
+      loadAll();
+    } catch (e: any) {
+      showToast('Error updating role: ' + e.message, 'error');
+    }
+  };
+
+  const handleResetUserPassword = async (username: string) => {
+    const newPassword = window.prompt(`Enter new password for user ${username}:`);
+    if (!newPassword || !newPassword.trim()) return;
+    try {
+      await API.updateUser({ username, password: newPassword.trim() });
+      showToast(`Password for user ${username} updated successfully!`, 'success');
+      loadAll();
+    } catch (e: any) {
+      showToast('Error resetting password: ' + e.message, 'error');
+    }
+  };
+
   // Page Settings Handlers
   const handleSaveVisibility = async () => {
     try {
@@ -247,15 +269,39 @@ export default function SettingsPage() {
                         <tr key={u.username} className="hover:bg-black/5 font-medium">
                           <td className="py-3 px-3 font-bold text-[#1E2D4E]">{u.fullName}</td>
                           <td className="py-3 px-3 text-[#666666] font-mono">{u.username}</td>
-                          <td className="py-3 px-3"><span className="badge b-info">{u.role}</span></td>
-                          <td className="py-3 px-3"><span className={`badge ${u.active ? 'b-sel' : 'b-rej'}`}>{u.active ? 'Active' : 'Inactive'}</span></td>
                           <td className="py-3 px-3">
-                            <button
-                              onClick={() => handleToggleUser(u)}
-                              className="px-2.5 py-1 rounded border border-[#1E2D4E] text-[#1E2D4E] font-bold text-[11px]"
+                            <select
+                              value={u.role}
+                              onChange={(e) => handleChangeUserRole(u.username, e.target.value)}
+                              className="p-1 rounded border border-[#1E2D4E]/30 bg-white font-bold text-[#1E2D4E] text-xs shadow-sm"
                             >
-                              {u.active ? 'Deactivate' : 'Activate'}
-                            </button>
+                              <option value="Admin">Admin</option>
+                              <option value="HR">HR</option>
+                              <option value="Manager">Store Manager</option>
+                              <option value="Recruiter">Recruiter</option>
+                              <option value="Interviewer">Interviewer</option>
+                            </select>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`badge ${u.active ? 'b-sel' : 'b-rej'}`}>
+                              {u.active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleToggleUser(u)}
+                                className={`px-2.5 py-1 rounded border font-bold text-[11px] ${u.active ? 'border-amber-600 text-amber-700 hover:bg-amber-50' : 'border-emerald-600 text-emerald-700 hover:bg-emerald-50'}`}
+                              >
+                                {u.active ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => handleResetUserPassword(u.username)}
+                                className="px-2.5 py-1 rounded border border-[#1E2D4E] text-[#1E2D4E] font-bold text-[11px] hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center gap-1"
+                              >
+                                <Key className="w-3 h-3" /> Reset Password
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

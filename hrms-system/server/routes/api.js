@@ -40,6 +40,7 @@ router.post('/candidates/upload-resume', upload.single('resume'), candidateContr
 router.post('/candidates/upload-documents', upload.fields([{ name: 'resume' }, { name: 'photo' }, { name: 'aadhar' }]), candidateController.uploadDocuments);
 router.get('/openings', candidateController.getOpenings);
 router.post('/openings/update', candidateController.updateOpening);
+router.get('/employees', candidateController.getEmployees);
 
 // ── Interview Routes ─────────────────────────────────────────
 router.get('/interviews', interviewController.getInterviews);

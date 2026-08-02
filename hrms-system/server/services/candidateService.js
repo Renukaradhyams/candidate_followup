@@ -287,10 +287,23 @@ class CandidateService {
   }
 
   async deleteCandidate(appNo) {
-    // Delete from candidates and related tables
-    await pool.query('DELETE FROM candidates WHERE app_no = ?', [appNo]);
-    await pool.query('DELETE FROM candidate_activities WHERE app_no = ?', [appNo]);
-    await pool.query('DELETE FROM interview_schedules WHERE app_no = ?', [appNo]);
+    // Delete from candidates and all related tables
+    const tables = [
+      'candidates',
+      'selection_offers',
+      'selected_candidates',
+      'rejected_candidates',
+      'candidate_activities',
+      'interview_schedules',
+      'hr_evaluations',
+      'interview_tokens',
+      'onboarding_records'
+    ];
+    for (const t of tables) {
+      try {
+        await pool.query(`DELETE FROM \`${t}\` WHERE app_no = ?`, [appNo]);
+      } catch (e) {}
+    }
     return { success: true };
   }
 
