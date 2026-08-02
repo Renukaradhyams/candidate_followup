@@ -24,6 +24,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "latest",
+    "socket.io": "^4.7.5",
     "lucide-react": "^0.436.0",
     "recharts": "^3.0.0",
     "clsx": "^2.1.1",
