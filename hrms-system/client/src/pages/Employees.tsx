@@ -378,58 +378,138 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* Drawer */}
+      {/* 360° Complete Employee Detail Drawer */}
       {drawerEmp && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setDrawerEmp(null)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 space-y-4 animate-fade-in overflow-y-auto">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+          <div className="fixed inset-0 bg-[#1E2D4E]/50 backdrop-blur-xs transition-opacity" onClick={() => setDrawerEmp(null)} />
+          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 space-y-4 animate-fade-in overflow-y-auto">
+            <div className="space-y-5">
+              {/* Header Profile Summary */}
+              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#1a8a84] text-white font-black text-sm flex items-center justify-center">
-                    {drawerEmp.initials}
+                  <div className="w-12 h-12 rounded-full bg-[#1E2D4E] text-white font-black text-base flex items-center justify-center shadow-md border-2 border-[#C9952A]">
+                    {drawerEmp.initials || drawerEmp.name?.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-[#1E2D4E] text-base">{drawerEmp.name}</h3>
-                    <div className="text-xs text-[#777777] font-mono">{drawerEmp.appNo} · {drawerEmp.desig}</div>
+                    <h3 className="font-extrabold text-[#1E2D4E] text-lg leading-tight">{drawerEmp.name}</h3>
+                    <div className="text-xs text-[#777777] font-mono mt-0.5">
+                      {drawerEmp.appNo} · <span className="font-bold text-[#1E2D4E]">{drawerEmp.desig}</span>
+                    </div>
                   </div>
                 </div>
-                <button onClick={() => setDrawerEmp(null)} className="text-[#888888]">
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={drawerEmp.status || 'Joined'} />
+                  <button onClick={() => setDrawerEmp(null)} className="p-1 rounded-lg text-[#888888] hover:text-[#1E2D4E]">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-4 text-xs">
-                <div className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2">
-                  <div className="flex justify-between"><span className="text-[#777777]">Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
-                  <div className="flex justify-between"><span className="text-[#777777]">Email:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.email || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[#777777]">Salary Package:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.salary || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-[#777777]">Offered DOJ:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
+                {/* Section 1: Employment & Compensation */}
+                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
+                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-[#C9952A]" />
+                    <span>Employment &amp; Compensation</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Offered Monthly Salary:</span><span className="font-extrabold text-emerald-800 text-sm">₹ {drawerEmp.salary || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Date of Joining (DOJ):</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Designation / Role:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.desig || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Current Status:</span><span className="font-bold text-emerald-700">{drawerEmp.status || 'Joined'}</span></div>
+                  </div>
                 </div>
 
+                {/* Section 2: Contact & Personal Details */}
+                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
+                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-[#C9952A]" />
+                    <span>Contact &amp; Personal Details</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Email Address:</span><span className="font-bold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Gender:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Date of Birth:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Blood Group:</span><span className="font-bold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
+                  </div>
+                  <div className="pt-2 border-t border-[#e2dfd7]/60">
+                    <span className="text-[#777777] block text-[10.5px] mb-0.5">Complete Residential Address:</span>
+                    <span className="font-semibold text-[#1E2D4E] block leading-relaxed">{drawerEmp.address || drawerEmp.cityState || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Section 3: Professional Experience & Qualification */}
+                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
+                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                    <span>Professional Experience &amp; Qualification</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Qualification:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Total Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Employer:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Role:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Salary:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || drawerEmp.current_salary || '—'}</span></div>
+                  </div>
+                </div>
+
+                {/* Section 4: Family Details & Languages */}
+                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
+                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#C9952A]" />
+                    <span>Family Details &amp; Languages</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Father's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.fatherDetails || drawerEmp.father_details || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Mother's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.motherDetails || drawerEmp.mother_details || '—'}</span></div>
+                  </div>
+                  <div className="pt-2 border-t border-[#e2dfd7]/60">
+                    <span className="text-[#777777] block text-[10.5px] mb-1">Languages Known:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {(Array.isArray(drawerEmp.languagesKnown) ? drawerEmp.languagesKnown : (drawerEmp.languagesKnown ? JSON.parse(drawerEmp.languagesKnown) : [])).map((lang: string) => (
+                        <span key={lang} className="px-2 py-0.5 rounded-lg bg-white border border-[#e2dfd7] font-bold text-[10px] text-[#1E2D4E]">
+                          {lang}
+                        </span>
+                      )) || '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Verified Documents */}
                 <div className="space-y-2">
-                  <span className="font-extrabold text-[#1E2D4E] block">Uploaded Documents</span>
+                  <span className="font-extrabold text-[#1E2D4E] block">Verified Employee Documents</span>
                   <div className="grid grid-cols-3 gap-2">
                     {fileUrl(drawerEmp.photoUrl) ? (
-                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📷 Photo</a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
+                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                        <span>📷 Photo</span>
+                      </a>
+                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Photo</span>}
                     {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
-                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📄 Aadhaar</a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
+                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                        <span>📄 Aadhaar</span>
+                      </a>
+                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Aadhaar</span>}
                     {fileUrl(drawerEmp.resumeUrl) ? (
-                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📑 Resume</a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Resume</span>}
+                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                        <span>📑 Resume</span>
+                      </a>
+                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Resume</span>}
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Action Bar */}
             <div className="pt-4 border-t border-[#e2dfd7] flex gap-2">
               <button
                 onClick={() => handleOpenEdit(drawerEmp)}
                 className="flex-1 py-2.5 rounded-xl bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-800 shadow-xs"
               >
-                <Edit3 className="w-4 h-4" /> Edit Employee
+                <Edit3 className="w-4 h-4" /> Edit Employee Details
               </button>
               <button
                 onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
