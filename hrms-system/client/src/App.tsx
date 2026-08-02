@@ -1,5 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
-import DashboardLayout from './components/layouts/DashboardLayout';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -20,22 +19,19 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/candidates" element={<Candidates />} />
         <Route path="/candidate-entry" element={<CandidateEntry />} />
+        <Route path="/interview-panel" element={<InterviewPanel />} />
         <Route path="/interview-form" element={<InterviewForm />} />
-        
-        <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/candidates" element={<Candidates />} />
-          <Route path="/interview-panel" element={<InterviewPanel />} />
-          <Route path="/offer-process" element={<OfferProcess />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/employee-exit" element={<EmployeeExit />} />
-          <Route path="/openings" element={<Openings />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-        
+        <Route path="/offer-process" element={<OfferProcess />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/employee-exit" element={<EmployeeExit />} />
+        <Route path="/openings" element={<Openings />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
 }
+
