@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { Users, Plus, Save } from 'lucide-react';
+import { Users, Plus, Save, Trash2, X, Edit3 } from 'lucide-react';
 
 export default function OpeningsPage() {
   const navigate = useNavigate();
@@ -12,6 +12,12 @@ export default function OpeningsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openings, setOpenings] = useState<any[]>([]);
   const [editMode, setEditMode] = useState<{ [key: string]: number }>({});
+
+  // Add New Role Modal
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [newRoleRequired, setNewRoleRequired] = useState<number>(1);
+  const [addingRole, setAddingRole] = useState(false);
 
   const loadOpenings = useCallback(async () => {
     try {
@@ -28,7 +34,7 @@ export default function OpeningsPage() {
       return;
     }
     const sess = Auth.get();
-    if (sess?.role !== 'Admin' && sess?.role !== 'HR') {
+    if (sess?.role !== 'Admin' && sess?.role !== 'HR' && sess?.role !== 'Super Admin') {
       navigate('/dashboard', { replace: true });
       return;
     }
@@ -36,7 +42,7 @@ export default function OpeningsPage() {
     loadOpenings();
   }, [navigate, loadOpenings]);
 
-  const handleUpdate = async (designation: string) => {
+  const handleUpdateRequirement = async (designation: string) => {
     const count = editMode[designation];
     if (count === undefined) return;
 
@@ -51,6 +57,47 @@ export default function OpeningsPage() {
       loadOpenings();
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
+    }
+  };
+
+  const handleAddNewRole = async () => {
+    if (!newRoleName.trim()) {
+      showToast('Role designation name is required', 'error');
+      return;
+    }
+
+    setAddingRole(true);
+    try {
+      // 1. Add designation to DB
+      await API.addDesignation(newRoleName.trim());
+      
+      // 2. Set initial required count in manpower_requisitions
+      await API.call('updateOpening', { 
+        designation: newRoleName.trim(), 
+        required_count: newRoleRequired || 0 
+      });
+
+      showToast(`New role "${newRoleName.trim()}" added successfully across system!`, 'success');
+      setAddModalOpen(false);
+      setNewRoleName('');
+      setNewRoleRequired(1);
+      loadOpenings();
+    } catch (err: any) {
+      showToast('Error adding role: ' + err.message, 'error');
+    } finally {
+      setAddingRole(false);
+    }
+  };
+
+  const handleDeleteRole = async (designation: string) => {
+    if (!window.confirm(`Are you sure you want to delete designation "${designation}"?`)) return;
+
+    try {
+      await API.deleteDesignation(designation);
+      showToast(`Deleted designation ${designation}`, 'success');
+      loadOpenings();
+    } catch (err: any) {
+      showToast('Error deleting role: ' + err.message, 'error');
     }
   };
 
@@ -72,10 +119,18 @@ export default function OpeningsPage() {
             <div>
               <h2 className="text-xl font-black text-[#1E2D4E] flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Hiring Capacity & Openings
+                Hiring Capacity &amp; Openings
               </h2>
-              <p className="text-sm text-[#666666] mt-1">Define manpower requisitions for each role and track fulfillment.</p>
+              <p className="text-sm text-[#666666] mt-1">Define manpower requisitions for each role and track fulfillment across the company.</p>
             </div>
+
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-2 shadow-md transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Role / Designation</span>
+            </button>
           </div>
 
           <div className="card-glass p-4 overflow-x-auto">
@@ -86,7 +141,7 @@ export default function OpeningsPage() {
                   <th className="py-3 px-4">Required Openings</th>
                   <th className="py-3 px-4">Already Hired</th>
                   <th className="py-3 px-4">Still Needed</th>
-                  <th className="py-3 px-4">Actions</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e0ddd8]/50">
@@ -105,7 +160,7 @@ export default function OpeningsPage() {
                             min="0"
                             value={reqCount}
                             onChange={(e) => setEditMode({ ...editMode, [op.designation]: parseInt(e.target.value) || 0 })}
-                            className="w-24 p-1.5 border border-[#1E2D4E] rounded-md font-bold text-[#1E2D4E] text-center"
+                            className="w-24 p-1.5 border border-[#1E2D4E] rounded-md font-bold text-[#1E2D4E] text-center bg-white"
                           />
                         ) : (
                           <span className="text-lg font-black text-[#1E2D4E]">{op.required}</span>
@@ -120,12 +175,12 @@ export default function OpeningsPage() {
                           {stillNeeded}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-4 px-4 text-right">
                         {isEditing ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handleUpdate(op.designation)}
-                              className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold flex items-center gap-1 hover:bg-[#162340]"
+                              onClick={() => handleUpdateRequirement(op.designation)}
+                              className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold flex items-center gap-1 hover:bg-[#162340] text-xs"
                             >
                               <Save className="w-4 h-4" /> Save
                             </button>
@@ -135,18 +190,27 @@ export default function OpeningsPage() {
                                 delete newEdit[op.designation];
                                 setEditMode(newEdit);
                               }}
-                              className="px-3 py-1.5 rounded-lg border border-[#e0ddd8] text-[#666666] font-bold hover:bg-white"
+                              className="px-3 py-1.5 rounded-lg border border-[#e0ddd8] text-[#666666] font-bold hover:bg-white text-xs"
                             >
                               Cancel
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => setEditMode({ ...editMode, [op.designation]: op.required })}
-                            className="px-3 py-1.5 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-xs hover:bg-[#1E2D4E] hover:text-white transition-colors"
-                          >
-                            Edit Requirement
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setEditMode({ ...editMode, [op.designation]: op.required })}
+                              className="px-3 py-1.5 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-xs hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center gap-1"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" /> Edit Requirement
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRole(op.designation)}
+                              className="p-1.5 rounded-lg border border-red-200 text-red-600 font-bold text-xs hover:bg-red-50 transition-colors"
+                              title="Delete Role"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -155,7 +219,7 @@ export default function OpeningsPage() {
                 {openings.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-[#888888]">
-                      No active designations found. Add them in Settings.
+                      No active designations found. Click "Add New Role / Designation" to create one.
                     </td>
                   </tr>
                 )}
@@ -164,6 +228,64 @@ export default function OpeningsPage() {
           </div>
         </main>
       </div>
+
+      {/* Add New Role Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e0ddd8] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">Add New Role / Designation</h3>
+              <button onClick={() => setAddModalOpen(false)} className="text-[#888888] hover:text-[#1E2D4E]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">
+                  Designation / Role Title *
+                </label>
+                <input
+                  type="text"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  placeholder="e.g. Senior Floor Manager, Store Executive"
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-[#1E2D4E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">
+                  Required Manpower Openings *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={newRoleRequired}
+                  onChange={(e) => setNewRoleRequired(parseInt(e.target.value) || 1)}
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-[#1E2D4E]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#e0ddd8]">
+              <button
+                onClick={() => setAddModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddNewRole}
+                disabled={addingRole}
+                className="px-4 py-2 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold disabled:opacity-50"
+              >
+                {addingRole ? 'Adding Role...' : 'Add Role across System'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

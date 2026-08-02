@@ -201,7 +201,8 @@ export default function CandidateEntryPage() {
     }
   };
 
-  const POSITIONS = ['Sales Executive', 'Cashier', 'Billing Executive', 'HR', 'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 'Floor Manager', 'Security', 'Housekeeping', 'Helper', 'Other'];
+  const defaultPositions = ['Sales Executive', 'Cashier', 'Billing Executive', 'HR', 'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 'Floor Manager', 'Security', 'Housekeeping', 'Helper', 'Other'];
+  const POSITIONS = Array.from(new Set([...(designations || []), ...defaultPositions])).filter(Boolean);
   const QUALIFICATIONS = ['SSLC', 'PUC', 'Diploma', 'Graduate', 'Other'];
   const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1–2 Years', '2–5 Years', 'More than 5 Years'];
   const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi'];
@@ -213,9 +214,7 @@ export default function CandidateEntryPage() {
       {/* Header */}
       <div className="bg-[#1E2D4E] p-4 text-white flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#C9952A] font-black flex items-center justify-center text-sm shadow">
-            BSC
-          </div>
+          <img src="/logo.png" alt="BSC Logo" className="w-10 h-10 object-contain rounded-lg bg-white p-1 shadow" />
           <div>
             <h1 className="font-extrabold text-base leading-tight">BSC Candidate Registration</h1>
             <div className="text-[10px] text-white/50 uppercase tracking-widest">BSC The Textile Mall · Since 1938</div>

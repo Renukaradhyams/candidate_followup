@@ -84,9 +84,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
       `}>
         {/* Header Logo */}
         <div className="p-4 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center font-extrabold text-gold text-lg border border-gold/30">
-            BSC
-          </div>
+          <img src="/logo.png" alt="BSC Logo" className="w-10 h-10 object-contain rounded-lg bg-white p-1 shadow-sm" />
           <div>
             <div className="font-extrabold text-sm text-white leading-tight">BSC Candidate CRM</div>
             <div className="text-[10px] text-white/50 uppercase tracking-widest mt-0.5">The Textile Mall</div>

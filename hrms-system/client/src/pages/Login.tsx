@@ -71,9 +71,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl border border-[#e0ddd8]">
         {/* Card Header */}
         <div className="bg-[#1E2D4E] p-5 flex items-center gap-4 border-b border-[#C9952A]/30">
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center border border-[#C9952A]/40 font-black text-[#C9952A] text-xl shadow-inner">
-            BSC
-          </div>
+          <img src="/logo.png" alt="BSC Logo" className="w-12 h-12 object-contain rounded-xl bg-white p-1 shadow-md" />
           <div>
             <h2 className="text-lg font-black text-white leading-tight">Candidate Portal</h2>
             <div className="text-[10px] text-white/50 uppercase tracking-widest mt-0.5">
