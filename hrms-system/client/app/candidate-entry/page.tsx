@@ -401,16 +401,25 @@ export default function CandidateEntryPage() {
                   <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Upload Resume *</label>
                   <input type="file" onChange={(e) => setResumeFile(e.target.files?.[0] || null)} className="text-[10px] w-full" />
                   <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
+                  {existingResume && (
+                    <a href={existingResume} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Resume</a>
+                  )}
                 </div>
                 <div className="p-4 border border-[#e0ddd8] rounded-xl bg-[#F9F7F4]">
                   <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Passport Size Photo *</label>
                   <input type="file" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} accept="image/*" className="text-[10px] w-full" />
                   <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
+                  {existingPhoto && (
+                    <a href={existingPhoto} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Photo</a>
+                  )}
                 </div>
                 <div className="p-4 border border-[#e0ddd8] rounded-xl bg-[#F9F7F4]">
                   <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Aadhaar Card *</label>
                   <input type="file" onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)} accept="image/*,.pdf" className="text-[10px] w-full" />
                   <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
+                  {existingAadhaar && (
+                    <a href={existingAadhaar} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Aadhaar</a>
+                  )}
                 </div>
               </div>
 
