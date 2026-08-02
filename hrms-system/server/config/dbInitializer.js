@@ -346,6 +346,24 @@ async function autoInitializeDatabase(pool) {
       logDebug(`[Auto DB Initializer] Default admin users created (admin / hr / manager - Password: admin123)`);
     }
 
+    // Schema Migrations (Alter existing tables to add new columns if they are missing)
+    const migrations = [
+      `ALTER TABLE candidates ADD COLUMN salary VARCHAR(100) NULL`,
+      `ALTER TABLE candidates ADD COLUMN offered_doj DATE NULL`,
+      `ALTER TABLE candidates ADD COLUMN photo_url TEXT NULL`,
+      `ALTER TABLE candidates ADD COLUMN aadhaar_url TEXT NULL`
+    ];
+
+    for (const mig of migrations) {
+      try {
+        await connection.query(mig);
+      } catch (e) {
+        if (e.code !== 'ER_DUP_FIELDNAME') {
+          logDebug(\`Migration warning for query "\${mig}": \${e.message}\`);
+        }
+      }
+    }
+
     // Seed default designations if empty
     const [dRows] = await connection.query(`SELECT COUNT(*) as cnt FROM designations`);
     if (dRows[0].cnt === 0) {
