@@ -218,7 +218,7 @@ export default function CandidatesPage() {
     }
   };
 
-  const isViewOnly = session?.role === 'Manager';
+  const canDelete = session?.role === 'Admin' || session?.role === 'Super Admin';
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
@@ -369,41 +369,39 @@ export default function CandidatesPage() {
                           <StatusBadge status={c.status} size="sm" />
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          {isViewOnly ? (
-                            <span className="text-[10px] text-[#aaa] italic">View only</span>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1.5">
-                              {c.status === 'New' && (
-                                <button
-                                  onClick={() => handleOpenRemarkModal('shortlist', c)}
-                                  className="px-2.5 py-1 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold hover:bg-[#1E2D4E] hover:text-white transition-all text-[11px]"
-                                >
-                                  Shortlist
-                                </button>
-                              )}
-                              {(c.status === 'Shortlisted') && (
-                                <button
-                                  onClick={() => handleOpenCallModal(c)}
-                                  className="px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px] shadow-xs"
-                                >
-                                  📞 1st Call
-                                </button>
-                              )}
-                              {(c.status === '1st Call') && (
-                                <button
-                                  onClick={() => handleOpenCallModal(c)}
-                                  className="px-2.5 py-1 rounded-lg bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px] shadow-xs"
-                                >
-                                  📅 Schedule Interview
-                                </button>
-                              )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {c.status === 'New' && (
                               <button
-                                onClick={() => navigate(`/candidate-entry?edit=${c.appNo}`)}
-                                className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors"
-                                title="Edit Candidate Details"
+                                onClick={() => handleOpenRemarkModal('shortlist', c)}
+                                className="px-2.5 py-1 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold hover:bg-[#1E2D4E] hover:text-white transition-all text-[11px]"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                Shortlist
                               </button>
+                            )}
+                            {(c.status === 'Shortlisted') && (
+                              <button
+                                onClick={() => handleOpenCallModal(c)}
+                                className="px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px] shadow-xs"
+                              >
+                                📞 1st Call
+                              </button>
+                            )}
+                            {(c.status === '1st Call') && (
+                              <button
+                                onClick={() => handleOpenCallModal(c)}
+                                className="px-2.5 py-1 rounded-lg bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px] shadow-xs"
+                              >
+                                📅 Schedule Interview
+                              </button>
+                            )}
+                            <button
+                              onClick={() => navigate(`/candidate-entry?edit=${c.appNo}`)}
+                              className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors"
+                              title="Edit Candidate Details"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            {canDelete && (
                               <button
                                 onClick={() => handleDeleteCandidate(c.appNo)}
                                 className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-colors"
@@ -411,8 +409,8 @@ export default function CandidatesPage() {
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

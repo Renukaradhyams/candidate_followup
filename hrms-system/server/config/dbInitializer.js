@@ -261,6 +261,21 @@ async function autoInitializeDatabase(pool) {
         \`admin_visible\` BOOLEAN DEFAULT TRUE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+      `CREATE TABLE IF NOT EXISTS \`broadcast_messages\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`title\` VARCHAR(255) NOT NULL,
+        \`subject\` VARCHAR(255) NULL,
+        \`message\` TEXT NOT NULL,
+        \`priority\` VARCHAR(50) DEFAULT 'normal',
+        \`category\` VARCHAR(100) DEFAULT 'General',
+        \`target_role\` VARCHAR(255) DEFAULT 'Everyone',
+        \`sender_name\` VARCHAR(255) NOT NULL,
+        \`status\` VARCHAR(50) DEFAULT 'Sent',
+        \`require_ack\` BOOLEAN DEFAULT FALSE,
+        \`pinned\` BOOLEAN DEFAULT FALSE,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
       `CREATE TABLE IF NOT EXISTS \`designations\` (
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
         \`role_scope\` VARCHAR(50) DEFAULT 'All',

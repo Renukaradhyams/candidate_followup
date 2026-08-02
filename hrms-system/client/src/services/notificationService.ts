@@ -1,3 +1,6 @@
+import { API, Auth } from './api';
+import { io, Socket } from 'socket.io-client';
+
 export interface SystemNotification {
   id: string;
   title: string;
@@ -55,61 +58,94 @@ class NotificationEngine {
     showPreview: true,
     muteWorkingHours: false
   };
+  private socket: Socket | null = null;
+  private initialized = false;
 
   constructor() {
-    this.loadFromStorage();
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'bsc_enterprise_notifications' || e.key === 'bsc_enterprise_direct_messages') {
-        this.loadFromStorage();
-      }
-    });
+    this.loadSettings();
+    this.initSocket();
   }
 
-  private loadFromStorage() {
+  private initSocket() {
+    if (this.initialized) return;
+    
+    this.socket = io({
+      autoConnect: true,
+      transports: ['websocket', 'polling']
+    });
+
+    this.socket.on('connect', () => {
+      console.log('[NotificationService] Connected to real-time notification socket');
+      this.fetchInitialBroadcasts();
+    });
+
+    this.socket.on('NEW_BROADCAST', (broadcast: any) => {
+      this.handleIncomingBroadcast(broadcast);
+    });
+
+    this.socket.on('DELETE_BROADCAST', ({ id }: { id: string }) => {
+      this.notifications = this.notifications.filter(n => n.id !== id.toString());
+      this.notifyListeners();
+    });
+
+    this.initialized = true;
+  }
+
+  private async fetchInitialBroadcasts() {
     try {
-      const storedNotifs = localStorage.getItem('bsc_enterprise_notifications');
-      if (storedNotifs) {
-        this.notifications = JSON.parse(storedNotifs);
-      } else {
-        this.notifications = [
-          {
-            id: 'notif-seed-1',
-            title: 'Welcome to Enterprise HRMS 2026',
-            subject: 'System Upgrade Announcement',
-            message: 'Role-based broadcasts, direct messaging, real-time alerts, and read acknowledgements are fully active.',
-            timestamp: new Date().toISOString(),
-            priority: 'normal',
-            category: 'System',
-            targetRole: 'Everyone',
-            senderName: 'System Admin',
-            read: false,
-            pinned: true,
-            status: 'Sent',
-            requireAcknowledgement: true,
-            acknowledgedBy: []
-          },
-          {
-            id: 'notif-seed-2',
-            title: 'Interview Schedule Reminder',
-            subject: 'Pending Scoring Desk',
-            message: 'Please review today’s scheduled candidate interviews in the Interview Panel.',
-            timestamp: new Date(Date.now() - 1800000).toISOString(),
-            priority: 'high',
-            category: 'Interview',
-            targetRole: 'Interview Panel',
-            senderName: 'HR Desk',
-            read: false,
-            status: 'Sent'
-          }
-        ];
-        this.saveNotificationsToStorage();
+      const res = await API.getBroadcasts();
+      if (res && res.broadcasts) {
+        this.notifications = res.broadcasts.map(this.mapDbBroadcastToNotification);
+        this.restoreReadStates();
+        this.notifyListeners();
       }
+    } catch (e) {
+      console.error('[NotificationService] Error fetching initial broadcasts:', e);
+    }
+  }
 
-      const storedDms = localStorage.getItem('bsc_enterprise_direct_messages');
-      if (storedDms) {
-        this.directMessages = JSON.parse(storedDms);
+  private mapDbBroadcastToNotification = (dbItem: any): SystemNotification => {
+    return {
+      id: dbItem.id.toString(),
+      title: dbItem.title,
+      subject: dbItem.subject || '',
+      message: dbItem.message,
+      timestamp: dbItem.created_at,
+      priority: dbItem.priority as any,
+      category: dbItem.category as any,
+      targetRole: dbItem.target_role,
+      senderName: dbItem.sender_name,
+      read: false,
+      pinned: !!dbItem.pinned,
+      status: dbItem.status as any,
+      requireAcknowledgement: !!dbItem.require_ack,
+    };
+  }
+
+  private handleIncomingBroadcast(broadcast: any) {
+    const session = Auth.get();
+    if (!session) return;
+
+    const notif = this.mapDbBroadcastToNotification(broadcast);
+    
+    const isTarget = notif.targetRole === 'Everyone' || 
+                    notif.targetRole === session.role || 
+                    (notif.targetRole === 'HR Team' && (session.role === 'HR' || session.role === 'Admin')) ||
+                    (notif.targetRole === 'Store Managers' && session.role === 'Manager') ||
+                    (notif.targetRole === 'Admins' && session.role === 'Admin') ||
+                    notif.senderName === session.fullName;
+
+    if (isTarget) {
+      if (!this.notifications.some(n => n.id === notif.id)) {
+        this.notifications = [notif, ...this.notifications];
+        this.notifyListeners();
+        this.playNotificationSound(notif.priority);
       }
+    }
+  }
 
+  private loadSettings() {
+    try {
       const storedSettings = localStorage.getItem('bsc_enterprise_notification_settings');
       if (storedSettings) {
         this.settings = JSON.parse(storedSettings);
@@ -117,16 +153,24 @@ class NotificationEngine {
     } catch (e) {}
   }
 
-  private saveNotificationsToStorage() {
+  private restoreReadStates() {
     try {
-      localStorage.setItem('bsc_enterprise_notifications', JSON.stringify(this.notifications));
-    } catch (e) {}
+      const readStates = JSON.parse(localStorage.getItem('bsc_enterprise_read_broadcasts') || '{}');
+      this.notifications = this.notifications.map(n => ({
+        ...n,
+        read: !!readStates[n.id]
+      }));
+    } catch(e) {}
   }
 
-  private saveDmsToStorage() {
+  private persistReadStates() {
     try {
-      localStorage.setItem('bsc_enterprise_direct_messages', JSON.stringify(this.directMessages));
-    } catch (e) {}
+      const readStates = this.notifications.reduce((acc, n) => {
+        if (n.read) acc[n.id] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+      localStorage.setItem('bsc_enterprise_read_broadcasts', JSON.stringify(readStates));
+    } catch(e) {}
   }
 
   public saveSettings(newSettings: NotificationSettings) {
@@ -150,179 +194,134 @@ class NotificationEngine {
     return next;
   }
 
+  public getUnreadCount(): number {
+    const session = Auth.get();
+    if (!session) return 0;
+    
+    return this.notifications.filter(n => {
+      if (n.read) return false;
+      const t = n.targetRole;
+      return t === 'Everyone' || t === session.role || 
+             (t === 'HR Team' && (session.role === 'HR' || session.role === 'Admin')) ||
+             (t === 'Store Managers' && session.role === 'Manager') ||
+             (t === 'Admins' && session.role === 'Admin') ||
+             n.senderName === session.fullName;
+    }).length;
+  }
+
+  public getUnreadDirectCount(username?: string): number {
+    return this.directMessages.filter(m => !m.read && (!username || m.recipientUsername === username)).length;
+  }
+
+  public markAsRead(id: string) {
+    let found = false;
+    this.notifications = this.notifications.map(n => {
+      if (n.id === id) {
+        found = true;
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    if (found) {
+      this.persistReadStates();
+      this.notifyListeners();
+    }
+  }
+
+  public markAllAsRead() {
+    this.notifications = this.notifications.map(n => ({ ...n, read: true }));
+    this.persistReadStates();
+    this.notifyListeners();
+  }
+
+  public acknowledgeNotification(id: string, username: string) {
+    this.markAsRead(id);
+  }
+
+  public async addNotification(data: Omit<SystemNotification, 'id' | 'timestamp' | 'read'>) {
+    try {
+      const payload = {
+        title: data.title,
+        subject: data.subject,
+        message: data.message,
+        priority: data.priority,
+        category: data.category,
+        target_role: data.targetRole,
+        sender_name: data.senderName,
+        status: data.status,
+        require_ack: data.requireAcknowledgement,
+        pinned: data.pinned
+      };
+      await API.createBroadcast(payload);
+    } catch(err) {
+      console.error('[NotificationService] Add failed', err);
+    }
+  }
+
+  public async deleteNotification(id: string) {
+    try {
+      await API.deleteBroadcast(id);
+    } catch(err) {
+      console.error('[NotificationService] Delete failed', err);
+    }
+  }
+
   public getNotifications(): SystemNotification[] {
     return [...this.notifications];
   }
 
-  public getDirectMessages(): DirectMessage[] {
-    return [...this.directMessages];
-  }
-
-  public getUnreadCount(): number {
-    return this.notifications.filter(n => !n.read && !n.archived).length;
-  }
-
   public subscribe(listener: (notifications: SystemNotification[]) => void) {
     this.listeners.push(listener);
-    listener(this.getNotifications());
+    listener([...this.notifications]);
     return () => {
       this.listeners = this.listeners.filter(l => l !== listener);
     };
   }
 
-  public subscribeDMs(listener: (messages: DirectMessage[]) => void) {
+  private notifyListeners() {
+    const list = [...this.notifications];
+    this.listeners.forEach(l => l(list));
+  }
+
+  public subscribeDirect(listener: (messages: DirectMessage[]) => void) {
     this.dmListeners.push(listener);
-    listener(this.getDirectMessages());
+    listener([...this.directMessages]);
     return () => {
       this.dmListeners = this.dmListeners.filter(l => l !== listener);
     };
   }
+  public sendDirectMessage(data: Omit<DirectMessage, 'id' | 'timestamp' | 'read' | 'delivered'>) {}
+  public markDirectAsRead(id: string) {}
 
-  private notifyListeners() {
-    this.listeners.forEach(l => l(this.getNotifications()));
-  }
-
-  private notifyDmListeners() {
-    this.dmListeners.forEach(l => l(this.getDirectMessages()));
-  }
-
-  public addNotification(notification: Omit<SystemNotification, 'id' | 'timestamp' | 'read'>) {
-    const newNotif: SystemNotification = {
-      ...notification,
-      id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-      timestamp: new Date().toISOString(),
-      read: false,
-      status: notification.status || 'Sent',
-      acknowledgedBy: notification.acknowledgedBy || []
-    };
-
-    this.notifications.unshift(newNotif);
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-    this.playSound(newNotif.priority, newNotif.category);
-  }
-
-  // Automatic System Event Triggers
-  public triggerSystemEvent(type: string, details: string, sender = 'System') {
-    this.addNotification({
-      title: type,
-      subject: 'Automated CRM Event',
-      message: details,
-      priority: type.toLowerCase().includes('cancelled') || type.toLowerCase().includes('exit') ? 'high' : 'normal',
-      category: type.toLowerCase().includes('candidate') ? 'Recruitment' : type.toLowerCase().includes('interview') ? 'Interview' : type.toLowerCase().includes('offer') ? 'Offer' : 'System',
-      targetRole: 'Everyone',
-      senderName: sender,
-      status: 'Sent'
-    });
-  }
-
-  // Direct Personal Messaging (Text Only)
-  public sendDirectMessage(recipientUsername: string, recipientName: string, text: string, senderUsername: string, senderName: string) {
-    const newDm: DirectMessage = {
-      id: 'dm-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-      senderUsername,
-      senderName,
-      recipientUsername,
-      recipientName,
-      text,
-      timestamp: new Date().toISOString(),
-      read: false,
-      delivered: true
-    };
-
-    this.directMessages.unshift(newDm);
-    this.saveDmsToStorage();
-    this.notifyDmListeners();
-    this.playSound('normal', 'General');
-  }
-
-  public acknowledgeRead(id: string, username: string) {
-    this.notifications = this.notifications.map(n => {
-      if (n.id === id) {
-        const list = n.acknowledgedBy || [];
-        if (!list.some(a => a.username === username)) {
-          list.push({ username, readTime: new Date().toISOString() });
-        }
-        return { ...n, read: true, acknowledgedBy: list };
-      }
-      return n;
-    });
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  public markAsRead(id: string) {
-    this.notifications = this.notifications.map(n => n.id === id ? { ...n, read: true } : n);
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  public markAllAsRead() {
-    this.notifications = this.notifications.map(n => ({ ...n, read: true }));
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  public toggleArchive(id: string) {
-    this.notifications = this.notifications.map(n => n.id === id ? { ...n, archived: !n.archived } : n);
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  public deleteNotification(id: string) {
-    this.notifications = this.notifications.filter(n => n.id !== id);
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  public togglePin(id: string) {
-    this.notifications = this.notifications.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n);
-    this.saveNotificationsToStorage();
-    this.notifyListeners();
-  }
-
-  // Web Audio Synthesizer Tone
-  public playSound(priority: 'low' | 'normal' | 'high' | 'critical' = 'normal', category = 'General') {
+  public playNotificationSound(priority: 'low' | 'normal' | 'high' | 'critical' = 'normal') {
     if (!this.settings.soundEnabled) return;
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.connect(gain);
       gain.connect(ctx.destination);
-
-      const now = ctx.currentTime;
-      const vol = this.settings.volume || 0.8;
-
-      if (priority === 'critical' || category === 'Emergency') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, now); // A5
-        osc.frequency.setValueAtTime(1046.50, now + 0.12); // C6
-        gain.gain.setValueAtTime(0.2 * vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        osc.start(now);
-        osc.stop(now + 0.4);
-      } else if (priority === 'high') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880, now + 0.1); // A5
-        gain.gain.setValueAtTime(0.15 * vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-        gain.gain.setValueAtTime(0.1 * vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.start(now);
-        osc.stop(now + 0.25);
+      
+      let freq1 = 440, freq2 = 880, duration = 0.1;
+      
+      switch(priority) {
+        case 'high': freq1 = 880; freq2 = 1760; duration = 0.15; break;
+        case 'critical': freq1 = 1200; freq2 = 2400; duration = 0.3; break;
+        case 'low': freq1 = 300; freq2 = 600; duration = 0.05; break;
       }
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq1, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq2, ctx.currentTime + duration);
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(this.settings.volume * 0.1, ctx.currentTime + 0.02);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
     } catch (e) {}
   }
 }

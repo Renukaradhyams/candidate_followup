@@ -13,7 +13,8 @@ const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
-
+const http = require('http');
+const { Server } = require('socket.io');
 // ── Directory References ──────────────────────────────────────────────────────
 const APP_ROOT = __dirname;
 const SERVER_DIR = path.join(APP_ROOT, 'server');
@@ -58,8 +59,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Static Uploads ────────────────────────────────────────────────────────────
-const primaryUploadsDir = path.join(APP_ROOT, 'uploads');
+const primaryUploadsDir = process.env.UPLOAD_DIR || path.join(APP_ROOT, 'uploads');
 const parentUploadsDir = path.join(APP_ROOT, '..', 'uploads');
+const grandParentUploadsDir = path.join(APP_ROOT, '..', '..', 'uploads');
 
 const subdirs = [
   'applicants',
@@ -72,13 +74,14 @@ const subdirs = [
   'misc'
 ];
 
-[primaryUploadsDir, parentUploadsDir].forEach((baseDir) => {
+[primaryUploadsDir, parentUploadsDir, grandParentUploadsDir].forEach((baseDir) => {
   try {
-    if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
-    subdirs.forEach((sub) => {
-      const subPath = path.join(baseDir, sub);
-      if (!fs.existsSync(subPath)) fs.mkdirSync(subPath, { recursive: true });
-    });
+    if (fs.existsSync(baseDir)) {
+      subdirs.forEach((sub) => {
+        const subPath = path.join(baseDir, sub);
+        if (!fs.existsSync(subPath)) fs.mkdirSync(subPath, { recursive: true });
+      });
+    }
   } catch (e) {}
 });
 
@@ -91,20 +94,29 @@ if (fs.existsSync(parentUploadsDir)) {
 app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee-documents/*', '/:file(*.pdf)', '/:file(*.jpg)', '/:file(*.jpeg)', '/:file(*.png)', '/:file(*.doc)', '/:file(*.docx)'], (req, res, next) => {
   const reqPath = req.params[0] || req.params.file || req.path.replace(/^\//, '');
   const fileName = path.basename(reqPath);
+  const candidateAppNo = req.query.appNo || '';
 
   const possiblePaths = [
-    path.join(primaryUploadsDir, reqPath),
-    path.join(parentUploadsDir, reqPath),
+    path.join(primaryUploadsDir, 'applicants', candidateAppNo, fileName),
+    path.join(primaryUploadsDir, fileName),
     path.join(primaryUploadsDir, 'candidate-resumes', fileName),
     path.join(primaryUploadsDir, 'candidate-photos', fileName),
     path.join(primaryUploadsDir, 'employee-documents', fileName),
     path.join(primaryUploadsDir, 'misc', fileName),
+
+    path.join(parentUploadsDir, 'applicants', candidateAppNo, fileName),
+    path.join(parentUploadsDir, fileName),
     path.join(parentUploadsDir, 'candidate-resumes', fileName),
     path.join(parentUploadsDir, 'candidate-photos', fileName),
     path.join(parentUploadsDir, 'employee-documents', fileName),
     path.join(parentUploadsDir, 'misc', fileName),
-    path.join(primaryUploadsDir, fileName),
-    path.join(parentUploadsDir, fileName)
+    
+    path.join(grandParentUploadsDir, 'applicants', candidateAppNo, fileName),
+    path.join(grandParentUploadsDir, fileName),
+    path.join(grandParentUploadsDir, 'candidate-resumes', fileName),
+    path.join(grandParentUploadsDir, 'candidate-photos', fileName),
+    path.join(grandParentUploadsDir, 'employee-documents', fileName),
+    path.join(grandParentUploadsDir, 'misc', fileName)
   ];
 
   for (const p of possiblePaths) {
@@ -199,7 +211,25 @@ autoInitializeDatabase(pool)
 // Passenger (PassengerAppType=node) REQUIRES app.listen(PORT) to be called.
 // Passenger sets PORT via its preload-timestamp.js script before this file runs.
 // The listen() call is what signals to Passenger that the app is ready.
-const server = app.listen(PORT, () => {
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+  }
+});
+
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log(`[Socket] Client connected: ${socket.id}`);
+  socket.on('disconnect', () => {
+    console.log(`[Socket] Client disconnected: ${socket.id}`);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`====================================================`);
   console.log(`  BSC HRMS running on port ${PORT}`);
   console.log(`  Health: http://localhost:${PORT}/health`);

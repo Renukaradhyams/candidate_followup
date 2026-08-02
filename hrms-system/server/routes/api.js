@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 const authController = require('../controllers/authController');
@@ -51,7 +51,7 @@ router.post('/candidates', candidateController.addCandidate);
 router.post('/candidates/add', candidateController.addCandidate);
 router.put('/candidates/:appNo', candidateController.updateCandidate);
 router.post('/candidates/update', candidateController.updateCandidate);
-router.delete('/candidates/:appNo', candidateController.deleteCandidate);
+router.delete('/candidates/:appNo', authenticate, authorize('Admin', 'Super Admin'), candidateController.deleteCandidate);
 router.get('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/next-app-no', candidateController.getNextAppNo);
 router.get('/candidates/kpis', candidateController.getKPIs);

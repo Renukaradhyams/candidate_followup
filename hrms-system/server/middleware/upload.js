@@ -2,12 +2,21 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-let uploadDir = path.join(__dirname, '../../../uploads');
-try {
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-} catch (e) {
-  // Fallback to local uploads if parent is not writable
-  uploadDir = path.join(__dirname, '../../uploads');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
+
+let uploadDir = process.env.UPLOAD_DIR;
+
+if (!uploadDir) {
+  uploadDir = path.join(__dirname, '../../../uploads'); // 1 level above BSC-Candidate-Followup-main
+  try {
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (e) {
+    // Fallback to local uploads if parent is not writable
+    uploadDir = path.join(__dirname, '../../uploads'); // hrms-system/uploads
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} else {
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 }
 const subdirs = [

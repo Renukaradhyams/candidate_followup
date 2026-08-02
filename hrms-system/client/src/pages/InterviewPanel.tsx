@@ -297,7 +297,7 @@ export default function InterviewPanelPage() {
                           )}
                           <button
                             onClick={() => {
-                              setScorePanel({ open: true, interview: iv, questions: getQuestionsByRound('Round 2', iv.desig), round: 'Management' });
+                              handleOpenScorePanel(iv, 'Round 2');
                             }}
                             className="px-2.5 py-1 rounded-lg bg-[#C9952A] text-white font-bold text-[11px] hover:bg-amber-600 shadow-xs"
                           >

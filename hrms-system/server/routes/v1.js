@@ -10,6 +10,7 @@ const offerController = require('../controllers/offerController');
 const onboardingController = require('../controllers/onboardingController');
 const exitController = require('../controllers/exitController');
 const settingsController = require('../controllers/settingsController');
+const broadcastController = require('../controllers/broadcastController');
 
 const { validateLogin } = require('../validators/authValidator');
 const { validateAddCandidate, validateUpdateCandidate } = require('../validators/candidateValidator');
@@ -23,7 +24,7 @@ router.get('/auth/me', authenticate, authController.getMe);
 // ── Candidates Module ────────────────────────────────────────
 router.get('/candidates', candidateController.getCandidates);
 router.post('/candidates', validateAddCandidate, candidateController.addCandidate);
-router.delete('/candidates/:appNo', candidateController.deleteCandidate);
+router.delete('/candidates/:appNo', authenticate, authorize('Admin', 'Super Admin'), candidateController.deleteCandidate);
 router.put('/candidates/:id', validateUpdateCandidate, candidateController.updateCandidate);
 router.post('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/kpis', candidateController.getKPIs);
@@ -76,14 +77,19 @@ router.get('/settings/page-visibility', settingsController.getPageSettings);
 router.put('/settings/page-visibility', settingsController.savePageSettings);
 router.get('/settings/designations', settingsController.getDesignations);
 router.post('/settings/designations', settingsController.addDesignation);
-router.delete('/settings/designations', settingsController.deleteDesignation);
+router.delete('/settings/designations', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteDesignation);
 router.get('/settings/questions', settingsController.getAllInterviewQuestions);
 router.post('/settings/questions', settingsController.addInterviewQuestion);
-router.delete('/settings/questions', settingsController.deleteInterviewQuestion);
+router.delete('/settings/questions', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteInterviewQuestion);
 
 // ── Public Routes ────────────────────────────────────────────
 router.get('/public/interview', interviewController.getInterviewByToken);
 router.post('/public/interview-score', interviewController.submitInterviewScore);
 router.post('/public/candidate-entry', validateAddCandidate, candidateController.addCandidate);
+
+// -- Broadcasts
+router.get('/broadcasts', broadcastController.getBroadcasts);
+router.post('/broadcasts', broadcastController.createBroadcast);
+router.delete('/broadcasts/:id', authenticate, authorize('Admin', 'Super Admin'), broadcastController.deleteBroadcast);
 
 module.exports = router;
