@@ -2,15 +2,18 @@
   "name": "hrms-client",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@tanstack/react-table": "^8.20.1",
+    "@types/node": "^20.16.1",
+    "@types/react": "^18.3.4",
+    "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "lucide-react": "^0.436.0",
@@ -23,10 +26,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4",
-    "zod": "^3.23.8",
-    "@types/node": "^20.16.1",
-    "@types/react": "^18.3.4",
-    "@types/react-dom": "^18.3.0"
+    "zod": "^3.23.8"
   },
   "overrides": {
     "tar": "^6.2.1",
@@ -35,5 +35,10 @@
     "glob": "^10.3.10",
     "gauge": "^5.0.1",
     "npmlog": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.5",
+    "react-router-dom": "^7.18.2",
+    "vite": "^8.2.0"
   }
 }
