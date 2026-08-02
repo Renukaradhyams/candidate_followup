@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
+import imageCompression from 'browser-image-compression';
 import { 
   User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
-  FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, Image, FileCheck
+  FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon, FileCheck
 } from 'lucide-react';
 
 export default function CandidateEntryPage() {
@@ -154,8 +155,31 @@ export default function CandidateEntryPage() {
         const formData = new FormData();
         if (name) formData.append('name', name);
         if (resumeFile) formData.append('resume', resumeFile);
-        if (photoFile) formData.append('photo', photoFile);
-        if (aadhaarFile) formData.append('aadhar', aadhaarFile);
+        
+        // Compression Options
+        const options = {
+          maxSizeMB: 0.5, // 500kb max size
+          maxWidthOrHeight: 1920,
+          useWebWorker: true
+        };
+
+        if (photoFile) {
+          try {
+            const compressedPhoto = photoFile.type.startsWith('image/') ? await imageCompression(photoFile, options) : photoFile;
+            formData.append('photo', compressedPhoto);
+          } catch (e) {
+            formData.append('photo', photoFile); // fallback
+          }
+        }
+        
+        if (aadhaarFile) {
+          try {
+            const compressedAadhaar = aadhaarFile.type.startsWith('image/') ? await imageCompression(aadhaarFile, options) : aadhaarFile;
+            formData.append('aadhar', compressedAadhaar);
+          } catch (e) {
+            formData.append('aadhar', aadhaarFile); // fallback
+          }
+        }
         
         const uploadRes = await API.uploadDocuments(formData, name);
         if (uploadRes.success) {
@@ -581,7 +605,7 @@ export default function CandidateEntryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Photo Upload */}
               <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
-                <Image className="w-8 h-8 text-[#C9952A] mx-auto" />
+                <ImageIcon className="w-8 h-8 text-[#C9952A] mx-auto" />
                 <div className="font-extrabold text-xs text-[#1E2D4E]">Candidate Passport Photo *</div>
                 <input
                   type="file"

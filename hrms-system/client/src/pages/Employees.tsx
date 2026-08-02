@@ -8,7 +8,7 @@ import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import {
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase,
-  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image, FileCheck
+  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image as ImageIcon, FileCheck
 } from 'lucide-react';
 
 export default function EmployeesPage() {
@@ -23,6 +23,7 @@ export default function EmployeesPage() {
 
   // Drawer
   const [drawerEmp, setDrawerEmp] = useState<any | null>(null);
+  const [drawerTab, setDrawerTab] = useState<'overview' | 'personal' | 'professional' | 'documents'>('overview');
 
   // Edit Modal State
   const [editModal, setEditModal] = useState<{ open: boolean; emp: any | null }>({ open: false, emp: null });
@@ -375,163 +376,244 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* 360° Complete Employee Detail Drawer */}
+      {/* 360° Complete Employee Detail Modal */}
       {drawerEmp && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-[#1E2D4E]/50 backdrop-blur-xs transition-opacity" onClick={() => setDrawerEmp(null)} />
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 space-y-4 animate-fade-in overflow-y-auto">
-            <div className="space-y-5">
-              {/* Header Profile Summary */}
-              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#1E2D4E] text-white font-black text-base flex items-center justify-center shadow-md border-2 border-[#C9952A]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1E2D4E]/60 backdrop-blur-md transition-all animate-fade-in">
+          <div className="relative w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden border border-[#C9952A]/40">
+            
+            {/* Sticky Header */}
+            <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
+              <div className="flex items-center gap-3.5">
+                {fileUrl(drawerEmp.photoUrl) ? (
+                  <img
+                    src={fileUrl(drawerEmp.photoUrl)!}
+                    alt={drawerEmp.name}
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-xl flex items-center justify-center border-2 border-[#C9952A] shadow-md">
                     {drawerEmp.initials || drawerEmp.name?.slice(0, 2).toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="font-extrabold text-[#1E2D4E] text-lg leading-tight">{drawerEmp.name}</h3>
-                    <div className="text-xs text-[#777777] font-mono mt-0.5">
-                      {drawerEmp.appNo} · <span className="font-bold text-[#1E2D4E]">{drawerEmp.desig}</span>
-                    </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{drawerEmp.name}</h2>
+                    <StatusBadge status={drawerEmp.status || 'Joined'} size="sm" />
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={drawerEmp.status || 'Joined'} />
-                  <button onClick={() => setDrawerEmp(null)} className="p-1 rounded-lg text-[#888888] hover:text-[#1E2D4E]">
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="text-xs text-[#C9952A] font-extrabold font-mono mt-1.5 flex flex-wrap items-center gap-2">
+                    <span>{drawerEmp.appNo}</span>
+                    <span>•</span>
+                    <span className="text-white font-bold">{drawerEmp.desig || '—'}</span>
+                    <span>•</span>
+                    <span className="text-white/80 font-normal">DOJ: {drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4 text-xs">
-                {/* Section 1: Employment & Compensation */}
-                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
-                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
-                    <DollarSign className="w-4 h-4 text-[#C9952A]" />
-                    <span>Employment &amp; Compensation</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Offered Monthly Salary:</span><span className="font-extrabold text-emerald-800 text-sm">₹ {drawerEmp.salary || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Date of Joining (DOJ):</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Salary:</span><span className="font-bold text-[#1E2D4E]">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Expected Salary:</span><span className="font-bold text-[#1E2D4E]">₹ {drawerEmp.expectedSalary || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Designation / Role:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.desig || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Notice Period:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span></div>
-                  </div>
-                </div>
-
-                {/* Section 2: Contact & Personal Details */}
-                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
-                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-[#C9952A]" />
-                    <span>Contact &amp; Personal Details</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Email Address:</span><span className="font-bold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Gender:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Date of Birth:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Blood Group:</span><span className="font-bold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
-                  </div>
-                  <div className="pt-2 border-t border-[#e2dfd7]/60">
-                    <span className="text-[#777777] block text-[10.5px] mb-0.5">Complete Residential Address:</span>
-                    <span className="font-semibold text-[#1E2D4E] block leading-relaxed">{drawerEmp.address || drawerEmp.cityState || '—'}</span>
-                  </div>
-                </div>
-
-                {/* Section 3: Professional Experience & Qualification */}
-                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
-                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
-                    <Briefcase className="w-4 h-4 text-[#C9952A]" />
-                    <span>Professional Experience &amp; Qualification</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Employer / Store:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
-                  </div>
-                </div>
-
-                {/* Section 4: Family Details & Languages */}
-                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
-                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-[#C9952A]" />
-                    <span>Family Details &amp; Languages</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Father's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.fatherDetails || drawerEmp.father_details || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Mother's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.motherDetails || drawerEmp.mother_details || '—'}</span></div>
-                  </div>
-                  <div className="pt-2 border-t border-[#e2dfd7]/60">
-                    <span className="text-[#777777] block text-[10.5px] mb-1">Languages Known:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {(Array.isArray(drawerEmp.languagesKnown) ? drawerEmp.languagesKnown : (drawerEmp.languagesKnown ? JSON.parse(drawerEmp.languagesKnown) : [])).map((lang: string) => (
-                        <span key={lang} className="px-2.5 py-1 rounded-lg bg-white border border-[#e2dfd7] font-bold text-[10px] text-[#1E2D4E] shadow-2xs">
-                          {lang}
-                        </span>
-                      )) || '—'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 5: Source & Internal Notes */}
-                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
-                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-[#C9952A]" />
-                    <span>Source &amp; Internal Notes</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Recruitment Source:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.source || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Referrer Info:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
-                  </div>
-                  {drawerEmp.remarks && (
-                    <div className="pt-2 border-t border-[#e2dfd7]/60">
-                      <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
-                      <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerEmp.remarks}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Section 6: Verified Documents */}
-                <div className="space-y-2">
-                  <span className="font-extrabold text-[#1E2D4E] block">Verified Employee Documents</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {fileUrl(drawerEmp.photoUrl) ? (
-                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
-                        <span>📷 Photo</span>
-                      </a>
-                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Photo</span>}
-                    {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
-                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
-                        <span>📄 Aadhaar</span>
-                      </a>
-                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Aadhaar</span>}
-                    {fileUrl(drawerEmp.resumeUrl) ? (
-                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
-                        <span>📑 Resume</span>
-                      </a>
-                    ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Resume</span>}
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDrawerEmp(null)}
+                  className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            {/* Action Bar */}
-            <div className="pt-4 border-t border-[#e2dfd7] flex gap-2">
+            {/* Tabs Navigation Bar */}
+            <div className="flex items-center gap-1.5 p-2 sm:px-5 bg-[#F9F7F4] border-b border-[#e2dfd7] overflow-x-auto text-xs font-bold scrollbar-none sticky top-[80px] z-10">
+              {[
+                { id: 'overview', label: '👤 Employment Overview' },
+                { id: 'personal', label: '📋 Personal & Contact' },
+                { id: 'professional', label: '💼 Professional Info' },
+                { id: 'documents', label: '📄 Verified Documents' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setDrawerTab(tab.id as any)}
+                  className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 text-xs font-extrabold ${
+                    drawerTab === tab.id
+                      ? 'bg-[#1E2D4E] text-white shadow-sm'
+                      : 'text-[#555555] hover:bg-white hover:text-[#1E2D4E]'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs bg-[#EDE8DE]">
+              
+              {/* Tab 1: Employment Overview */}
+              {drawerTab === 'overview' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Offered Salary</span>
+                      <div className="text-base font-mono font-black text-emerald-800">₹ {drawerEmp.salary || '—'}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Date of Joining (DOJ)</span>
+                      <div className="text-base font-extrabold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Recruitment Source</span>
+                      <div className="text-base font-extrabold text-[#C9952A]">{drawerEmp.source || '—'}</div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-[#C9952A]" />
+                      <span>Detailed Employment Info</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><span className="text-[#777777]">Previous Salary:</span> <span className="font-extrabold text-[#1E2D4E] ml-1">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || '—'}</span></div>
+                      <div><span className="text-[#777777]">Expected Salary:</span> <span className="font-extrabold text-[#1E2D4E] ml-1">₹ {drawerEmp.expectedSalary || '—'}</span></div>
+                      <div><span className="text-[#777777]">Notice Period:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerEmp.noticePeriod || '—'}</span></div>
+                      <div><span className="text-[#777777]">Referrer Info:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
+                    </div>
+                    {drawerEmp.remarks && (
+                      <div className="pt-2 border-t border-[#e2dfd7]/60">
+                        <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
+                        <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerEmp.remarks}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Personal & Contact */}
+              {drawerTab === 'personal' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#C9952A]" />
+                      <span>Contact &amp; Demographics</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Email Address</span><span className="font-extrabold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Gender</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Date of Birth</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Blood Group</span><span className="font-extrabold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
+                    </div>
+                    <div className="pt-2 border-t border-[#e2dfd7]/60">
+                      <span className="text-[#777777] block text-[10.5px] mb-0.5">Complete Residential Address:</span>
+                      <span className="font-semibold text-[#1E2D4E] block leading-relaxed bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]/50 mt-1">{drawerEmp.address || drawerEmp.cityState || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#C9952A]" />
+                      <span>Family &amp; Languages</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Father's Details</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.fatherDetails || drawerEmp.father_details || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Mother's Details</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.motherDetails || drawerEmp.mother_details || '—'}</span></div>
+                    </div>
+                    <div className="pt-2 border-t border-[#e2dfd7]/60">
+                      <span className="text-[#777777] block text-[10.5px] mb-1.5">Languages Known:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(Array.isArray(drawerEmp.languagesKnown) ? drawerEmp.languagesKnown : (drawerEmp.languagesKnown ? JSON.parse(drawerEmp.languagesKnown) : [])).map((lang: string) => (
+                          <span key={lang} className="px-3 py-1 rounded-lg bg-[#F9F7F4] border border-[#e2dfd7] font-extrabold text-[11px] text-[#1E2D4E] shadow-2xs">
+                            {lang}
+                          </span>
+                        )) || '—'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Professional Info */}
+              {drawerTab === 'professional' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                      <span>Professional Experience &amp; Qualification</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Employer / Store</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: Documents */}
+              {drawerTab === 'documents' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#C9952A]" />
+                    <span>Verified Employee Documents</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {fileUrl(drawerEmp.photoUrl) ? (
+                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
+                        <ImageIcon className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-[#1E2D4E] text-xs">📷 Photo</span>
+                      </a>
+                    ) : (
+                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
+                        <span className="font-bold text-[10px] uppercase">No Photo</span>
+                      </div>
+                    )}
+
+                    {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
+                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
+                        <FileCheck className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-[#1E2D4E] text-xs">📄 Aadhaar</span>
+                      </a>
+                    ) : (
+                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
+                        <span className="font-bold text-[10px] uppercase">No Aadhaar</span>
+                      </div>
+                    )}
+
+                    {fileUrl(drawerEmp.resumeUrl) ? (
+                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
+                        <FileText className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-[#1E2D4E] text-xs">📑 Resume</span>
+                      </a>
+                    ) : (
+                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
+                        <span className="font-bold text-[10px] uppercase">No Resume</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 border-t border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-end gap-3 z-20 sticky bottom-0">
               <button
-                onClick={() => handleOpenEdit(drawerEmp)}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-800 shadow-xs"
+                onClick={() => setDrawerEmp(null)}
+                className="px-5 py-2.5 rounded-xl border-2 border-[#e2dfd7] bg-white text-[#555555] font-extrabold hover:bg-black/5 transition-colors"
               >
-                <Edit3 className="w-4 h-4" /> Edit Employee Details
+                Close
               </button>
               <button
                 onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
-                className="py-2.5 px-4 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 shadow-xs"
+                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-black hover:bg-rose-700 transition-colors shadow-md flex items-center gap-2"
               >
-                Delete
+                <Trash2 className="w-4 h-4" /> Delete
+              </button>
+              <button
+                onClick={() => handleOpenEdit(drawerEmp)}
+                className="px-5 py-2.5 rounded-xl bg-[#1E2D4E] text-white font-black hover:bg-[#162340] transition-colors shadow-md flex items-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" /> Edit Details
               </button>
             </div>
           </div>

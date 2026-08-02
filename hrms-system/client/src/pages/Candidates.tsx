@@ -9,7 +9,7 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck
+  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -503,6 +503,7 @@ export default function CandidatesPage() {
                     src={fileUrl(drawerCandidate.photoUrl)!}
                     alt={drawerCandidate.name}
                     className="w-14 h-14 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 ) : (
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-xl flex items-center justify-center border-2 border-[#C9952A] shadow-md">
@@ -714,7 +715,7 @@ export default function CandidatesPage() {
               {(drawerTab as string) === 'documents' && (
                 <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
                   <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
-                    <Image className="w-4 h-4 text-[#C9952A]" />
+                    <ImageIcon className="w-4 h-4 text-[#C9952A]" />
                     <span>Verified Applicant Documents</span>
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
