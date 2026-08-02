@@ -18,7 +18,7 @@ const saveCallStep = async (req, res) => {
 
     const [cRows] = await db.query(`SELECT id, name, designation FROM candidates WHERE app_no = ?`, [appNo]);
     if (cRows.length === 0) {
-      return errorRes(res, 'Candidate not found', [], 404);
+      return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
     }
     const cand = cRows[0];
 
@@ -224,7 +224,7 @@ const saveScore = async (req, res) => {
     }
 
     const [cRows] = await db.query(`SELECT id FROM candidates WHERE app_no = ?`, [appNo]);
-    if (cRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
+    if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
     const candId = cRows[0].id;
 
     // Update Salary and DOJ if provided
@@ -284,7 +284,7 @@ const generateInterviewToken = async (req, res) => {
   try {
     const { appNo, candidate, desig, assignedName, assignedDesig } = req.body;
     const [cRows] = await db.query(`SELECT id FROM candidates WHERE app_no = ?`, [appNo]);
-    if (cRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
+    if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
 
     const token = generateToken();
 
@@ -402,7 +402,7 @@ const approveSelection = async (req, res) => {
     if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const [cRows] = await db.query(`SELECT * FROM candidates WHERE app_no = ?`, [appNo]);
-    if (cRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
+    if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
     const cand = cRows[0];
 
     const now = new Date();
@@ -456,7 +456,7 @@ const rejectCandidate = async (req, res) => {
     if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const [cRows] = await db.query(`SELECT * FROM candidates WHERE app_no = ?`, [appNo]);
-    if (cRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
+    if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
     const cand = cRows[0];
 
     const now = new Date();
