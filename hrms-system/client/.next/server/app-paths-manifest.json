@@ -1,0 +1,15 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/candidate-entry/page": "app/candidate-entry/page.js",
+  "/interview-form/page": "app/interview-form/page.js",
+  "/candidates/page": "app/candidates/page.js",
+  "/employee-exit/page": "app/employee-exit/page.js",
+  "/login/page": "app/login/page.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/interview-panel/page": "app/interview-panel/page.js",
+  "/page": "app/page.js",
+  "/offer-process/page": "app/offer-process/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/openings/page": "app/openings/page.js"
+}
