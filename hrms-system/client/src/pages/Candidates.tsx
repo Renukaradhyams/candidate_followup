@@ -97,11 +97,20 @@ export default function CandidatesPage() {
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
-    if (url.startsWith('http') || url.startsWith('/')) return url;
-    if (url.startsWith('photo')) return `/uploads/candidate-photos/${url}`;
-    if (url.startsWith('resume')) return `/uploads/candidate-resumes/${url}`;
-    if (url.startsWith('aadhar') || url.startsWith('pan') || url.startsWith('document')) return `/uploads/employee-documents/${url}`;
-    return `/uploads/${url}`;
+    const clean = url.trim();
+    if (!clean) return null;
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+
+    const filename = clean.split('/').pop() || clean;
+
+    if (filename.startsWith('photo')) return `/uploads/candidate-photos/${filename}`;
+    if (filename.startsWith('resume')) return `/uploads/candidate-resumes/${filename}`;
+    if (filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) return `/uploads/employee-documents/${filename}`;
+
+    if (clean.startsWith('/uploads/')) return clean;
+    if (clean.startsWith('uploads/')) return `/${clean}`;
+
+    return `/uploads/${filename}`;
   };
 
   const openDrawer = async (c: any) => {

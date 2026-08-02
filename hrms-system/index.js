@@ -87,21 +87,23 @@ if (fs.existsSync(parentUploadsDir)) {
 }
 
 // Smart Uploads Fallback Handler (prevents 404 for photos & documents across subfolders)
-app.get('/uploads/*', (req, res, next) => {
-  const reqPath = req.params[0] || '';
+app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee-documents/*', '/:file(*.pdf)', '/:file(*.jpg)', '/:file(*.jpeg)', '/:file(*.png)', '/:file(*.doc)', '/:file(*.docx)'], (req, res, next) => {
+  const reqPath = req.params[0] || req.params.file || req.path.replace(/^\//, '');
   const fileName = path.basename(reqPath);
 
   const possiblePaths = [
     path.join(primaryUploadsDir, reqPath),
     path.join(parentUploadsDir, reqPath),
-    path.join(primaryUploadsDir, 'candidate-photos', fileName),
     path.join(primaryUploadsDir, 'candidate-resumes', fileName),
+    path.join(primaryUploadsDir, 'candidate-photos', fileName),
     path.join(primaryUploadsDir, 'employee-documents', fileName),
     path.join(primaryUploadsDir, 'misc', fileName),
-    path.join(parentUploadsDir, 'candidate-photos', fileName),
     path.join(parentUploadsDir, 'candidate-resumes', fileName),
+    path.join(parentUploadsDir, 'candidate-photos', fileName),
     path.join(parentUploadsDir, 'employee-documents', fileName),
-    path.join(parentUploadsDir, 'misc', fileName)
+    path.join(parentUploadsDir, 'misc', fileName),
+    path.join(primaryUploadsDir, fileName),
+    path.join(parentUploadsDir, fileName)
   ];
 
   for (const p of possiblePaths) {
@@ -110,7 +112,7 @@ app.get('/uploads/*', (req, res, next) => {
     }
   }
 
-  return res.status(404).send('Uploaded file not found');
+  next();
 });
 
 // ── Health / Diagnostics ──────────────────────────────────────────────────────

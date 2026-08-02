@@ -3,11 +3,34 @@ const pool = require('../config/db');
 class CandidateService {
   async generateCandidateCode() {
     const year = new Date().getFullYear();
-    const [rows] = await pool.query(`SELECT id FROM candidates ORDER BY id DESC LIMIT 1`);
-    const nextId = rows.length > 0 ? rows[0].id + 1 : 1;
-    const nextNum = nextId.toString().padStart(4, '0');
+    const [rows] = await pool.query(`SELECT id, app_no FROM candidates`);
+
+    let maxNum = 0;
+    const existing = new Set();
+
+    for (const r of rows) {
+      if (!r.app_no) continue;
+      existing.add(r.app_no);
+
+      const matches = r.app_no.match(/\d+/g);
+      if (matches && matches.length > 0) {
+        const lastNum = parseInt(matches[matches.length - 1], 10);
+        if (!isNaN(lastNum) && lastNum > maxNum) {
+          maxNum = lastNum;
+        }
+      }
+    }
+
+    let nextNum = maxNum > 0 ? maxNum + 1 : (rows.length + 1);
+    let candidateCode = `BSC-${year}-${String(nextNum).padStart(4, '0')}`;
+
+    while (existing.has(candidateCode)) {
+      nextNum++;
+      candidateCode = `BSC-${year}-${String(nextNum).padStart(4, '0')}`;
+    }
+
     return {
-      appNo: `BSC-${year}-${nextNum}`
+      appNo: candidateCode
     };
   }
 
@@ -145,8 +168,17 @@ class CandidateService {
   }
 
   async addCandidate(data) {
-    const codes = await this.generateCandidateCode();
-    const appNo = data.appNo || codes.appNo;
+    let appNo = data.appNo;
+    if (!appNo) {
+      const codes = await this.generateCandidateCode();
+      appNo = codes.appNo;
+    } else {
+      const [existing] = await pool.query(`SELECT id FROM candidates WHERE app_no = ?`, [appNo]);
+      if (existing.length > 0) {
+        const codes = await this.generateCandidateCode();
+        appNo = codes.appNo;
+      }
+    }
 
     const [res] = await pool.query(
       `INSERT INTO candidates (
