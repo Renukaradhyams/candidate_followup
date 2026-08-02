@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 console.log('[Build] Starting client build...');
 execSync('cd client && npm install --legacy-peer-deps && npm run build', {stdio: 'inherit'});
 
-const src = fs.existsSync('client/out') ? 'client/out' : 'client/.next';
+const src = 'client/dist';
 if (fs.existsSync(src)) {
     // Always force-overwrite the dist folder to ensure UI updates are deployed
     if (fs.existsSync('dist')) {

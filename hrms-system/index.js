@@ -102,10 +102,7 @@ if (fs.existsSync(distDir)) {
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') ||
         req.path === '/health' || req.path === '/db-status') return next();
-    const clean = req.path.replace(/^\//, '').replace(/\/$/, '');
-    for (const p of [path.join(distDir, clean + '.html'), path.join(distDir, clean, 'index.html')]) {
-      if (fs.existsSync(p)) return res.sendFile(p);
-    }
+    
     const fallback = path.join(distDir, 'index.html');
     if (fs.existsSync(fallback)) return res.sendFile(fallback);
     return next();
