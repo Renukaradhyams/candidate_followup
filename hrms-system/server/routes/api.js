@@ -143,6 +143,7 @@ router.post('/legacy', async (req, res) => {
     deleteInterviewQuestion: settingsController.deleteInterviewQuestion,
     addDesignation: settingsController.addDesignation,
     deleteDesignation: settingsController.deleteDesignation,
+    getEmployees: candidateController.getEmployees,
     getOnboardingList: onboardingController.getOnboardingList,
     createOnboarding: onboardingController.createOnboarding,
     getOnboardingItems: onboardingController.getOnboardingItems,

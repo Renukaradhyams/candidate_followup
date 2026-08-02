@@ -59,7 +59,7 @@ router.post('/onboarding/update-item', onboardingController.updateOnboardingItem
 router.post('/onboarding/complete', onboardingController.completeOnboarding);
 
 // ── Employees Module ─────────────────────────────────────────
-router.get('/employees', offerController.getOffers); // Joined employee list mapping
+router.get('/employees', candidateController.getEmployees);
 
 // ── Exit Module ──────────────────────────────────────────────
 router.get('/exit', exitController.getExitList);

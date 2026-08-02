@@ -76,8 +76,8 @@ const logOfferCall = async (req, res) => {
 
 const updateOfferDetails = async (req, res) => {
   try {
-    const { appNo, noticePd, estDoj } = req.body;
-    if (!noticePd && !estDoj) return errorRes(res, 'Enter at least one field', [], 400);
+    const { appNo, noticePd, estDoj, salaryOffered } = req.body;
+    if (!noticePd && !estDoj && !salaryOffered) return errorRes(res, 'Enter at least one field', [], 400);
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
@@ -88,7 +88,16 @@ const updateOfferDetails = async (req, res) => {
     params.push(appNo);
     await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
 
-    await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_DETAILS', 'OFFER', { appNo, noticePd, estDoj });
+    // Sync with candidates table
+    const candUpd = ['updated_at = ?'];
+    const candParams = [new Date()];
+    if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
+    if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
+    if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
+    candParams.push(appNo);
+    await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
+
+    await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_DETAILS', 'OFFER', { appNo, noticePd, estDoj, salaryOffered });
 
     return res.json({ success: true });
   } catch (err) {

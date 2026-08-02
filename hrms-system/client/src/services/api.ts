@@ -129,6 +129,9 @@ export const API = {
     const query = new URLSearchParams(filters).toString();
     return apiFetch(`/candidates?${query}`);
   },
+  async getEmployees() {
+    return apiFetch('/employees');
+  },
   async addCandidate(data: any) {
     // Legacy route uses /add or we just map it in our generic call
     return apiFetch('/candidates', {

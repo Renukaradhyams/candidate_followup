@@ -18,6 +18,7 @@ export default function OfferProcessPage() {
   const [detailOffer, setDetailOffer] = useState<any | null>(null);
   const [noticePd, setNoticePd] = useState('');
   const [estDoj, setEstDoj] = useState('');
+  const [salaryOffered, setSalaryOffered] = useState('');
 
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -53,7 +54,7 @@ export default function OfferProcessPage() {
   const handleSaveDetails = async () => {
     if (!detailOffer) return;
     try {
-      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj });
+      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered });
       showToast('Offer joining details saved', 'success');
       loadOffers();
       setDetailOffer(null);
@@ -158,8 +159,9 @@ export default function OfferProcessPage() {
                             <button
                               onClick={() => {
                                 setDetailOffer(o);
-                                setNoticePd(o.noticePd);
-                                setEstDoj(o.estDoj);
+                                setNoticePd(o.noticePd || '');
+                                setEstDoj(o.estDoj || '');
+                                setSalaryOffered(o.salary || '');
                               }}
                               className="px-2.5 py-1 rounded bg-[#1E2D4E] text-white font-bold text-[11px]"
                             >
@@ -204,6 +206,17 @@ export default function OfferProcessPage() {
 
             <div className="space-y-3 text-xs flex-1">
               <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Salary Offered (₹)</label>
+                <input
+                  type="text"
+                  value={salaryOffered}
+                  onChange={(e) => setSalaryOffered(e.target.value)}
+                  placeholder="e.g. 25000"
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-emerald-800"
+                />
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Notice Period</label>
                 <input
                   type="text"
@@ -220,7 +233,7 @@ export default function OfferProcessPage() {
                   type="date"
                   value={estDoj}
                   onChange={(e) => setEstDoj(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-amber-800"
                 />
               </div>
             </div>

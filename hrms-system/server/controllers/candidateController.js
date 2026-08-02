@@ -148,20 +148,42 @@ class CandidateController {
       
       const [reqRows] = await db.query(`SELECT designation, required_count FROM manpower_requisitions`);
       const reqMap = {};
-      reqRows.forEach(r => reqMap[r.designation] = r.required_count);
+      reqRows.forEach(r => {
+        if (r.designation) reqMap[r.designation.trim().toLowerCase()] = r.required_count;
+      });
 
-      const [hiredRows] = await db.query(`SELECT designation, COUNT(*) as cnt FROM candidates WHERE status IN ('Selected', 'Offer Sent', 'Offer Accepted', 'Joined') GROUP BY designation`);
+      // Count hired candidates (status: Selected, Offer Sent, Offer Accepted, Joined, Hired)
+      const [hiredRows] = await db.query(
+        `SELECT designation, COUNT(*) as cnt FROM candidates 
+         WHERE LOWER(TRIM(status)) IN ('selected', 'offer sent', 'offer accepted', 'joined', 'hired') 
+         GROUP BY designation`
+      );
       const hiredMap = {};
-      hiredRows.forEach(r => hiredMap[r.designation] = r.cnt);
+      hiredRows.forEach(r => {
+        if (r.designation) {
+          const key = r.designation.trim().toLowerCase();
+          hiredMap[key] = (hiredMap[key] || 0) + r.cnt;
+        }
+      });
 
       const [desigRows] = await db.query(`SELECT name FROM designations WHERE active = TRUE`);
+      const desigSet = new Set(desigRows.map(d => d.name));
       
-      const openings = desigRows.map(d => ({
-        designation: d.name,
-        required: reqMap[d.name] || 0,
-        hired: hiredMap[d.name] || 0,
-        remaining: Math.max(0, (reqMap[d.name] || 0) - (hiredMap[d.name] || 0))
-      }));
+      // Also include any designations that exist in manpower_requisitions or candidates
+      reqRows.forEach(r => { if (r.designation) desigSet.add(r.designation); });
+      hiredRows.forEach(r => { if (r.designation) desigSet.add(r.designation); });
+
+      const openings = Array.from(desigSet).map(desigName => {
+        const key = desigName.trim().toLowerCase();
+        const required = reqMap[key] || 0;
+        const hired = hiredMap[key] || 0;
+        return {
+          designation: desigName,
+          required,
+          hired,
+          remaining: Math.max(0, required - hired)
+        };
+      });
 
       return res.json({ success: true, openings });
     } catch (err) {
@@ -184,6 +206,81 @@ class CandidateController {
       return res.json({ success: true });
     } catch (err) {
       return errorRes(res, 'Failed to update opening', [err.message], 500);
+    }
+  }
+
+  async getEmployees(req, res) {
+    try {
+      const db = require('../config/db');
+      
+      const [rows] = await db.query(
+        `SELECT c.*, 
+                so.notice_period as offer_notice_pd, 
+                so.est_doj as offer_est_doj, 
+                so.actual_doj as offer_actual_doj,
+                so.status as offer_status
+         FROM candidates c
+         LEFT JOIN selection_offers so ON c.app_no = so.app_no
+         WHERE LOWER(TRIM(c.status)) IN ('selected', 'offer sent', 'offer accepted', 'joined', 'hired')
+            OR so.id IS NOT NULL
+         ORDER BY c.updated_at DESC, c.created_at DESC`
+      );
+
+      const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
+
+      const employees = rows.map(r => {
+        const initials = r.name
+          ? r.name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase()
+          : 'E';
+        const colorIndex = ((r.name ? r.name.charCodeAt(0) : 0) + (r.name ? r.name.charCodeAt(1) || 0 : 0)) % colors.length;
+        
+        const createdDate = new Date(r.created_at || Date.now());
+
+        const offeredDoj = r.offered_doj 
+          ? new Date(r.offered_doj).toISOString().split('T')[0] 
+          : (r.offer_est_doj ? new Date(r.offer_est_doj).toISOString().split('T')[0] : (r.offer_actual_doj ? new Date(r.offer_actual_doj).toISOString().split('T')[0] : ''));
+
+        const salaryOffered = r.salary || r.expected_salary || '—';
+
+        return {
+          id: r.id,
+          appNo: r.app_no,
+          name: r.name,
+          initials,
+          color: colors[colorIndex],
+          phone: r.phone || '',
+          email: r.email || '',
+          dob: r.dob ? new Date(r.dob).toISOString().split('T')[0] : '',
+          gender: r.gender || '',
+          cityState: r.city_state || '',
+          address: r.address || '',
+          desig: r.designation,
+          status: r.status || r.offer_status || 'Joined',
+          salary: salaryOffered,
+          expectedSalary: r.expected_salary,
+          offeredDoj,
+          actualDoj: r.offer_actual_doj ? new Date(r.offer_actual_doj).toISOString().split('T')[0] : '',
+          estDoj: r.offer_est_doj ? new Date(r.offer_est_doj).toISOString().split('T')[0] : '',
+          noticePeriod: r.notice_period || r.offer_notice_pd || '',
+          experience: r.experience || '',
+          qualification: r.qualification || '',
+          previousCompany: r.previous_company || '',
+          previousDesignation: r.previous_designation || '',
+          aadhaarNumber: r.aadhaar_number || '',
+          fatherDetails: r.father_details || '',
+          motherDetails: r.mother_details || '',
+          religionCaste: r.religion_caste || '',
+          languagesKnown: r.languages_known ? (typeof r.languages_known === 'string' ? JSON.parse(r.languages_known) : r.languages_known) : [],
+          photoUrl: r.photo_url || '',
+          aadharUrl: r.aadhaar_url || '',
+          resumeUrl: r.resume_url || '',
+          date: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        };
+      });
+
+      return res.json({ success: true, employees, total: employees.length });
+    } catch (err) {
+      return errorRes(res, 'Failed to fetch employees', [err.message], 500);
     }
   }
 }

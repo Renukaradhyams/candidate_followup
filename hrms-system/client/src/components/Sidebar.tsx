@@ -33,7 +33,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form'],
     'Recruiter':   ['dashboard', 'candidates', 'interview', 'form'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -58,7 +58,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'offer', href: '/offer-process', label: 'Offer Process', icon: FileText, section: 'Main' },
     { key: 'openings', href: '/openings', label: 'Openings', icon: Briefcase, section: 'Main' },
     { key: 'onboarding', href: '/onboarding', label: 'Onboarding', icon: PartyPopper, section: 'HR Ops' },
-    { key: 'employees', href: '/offer-process', label: 'Employees', icon: UserCheck, section: 'HR Ops' },
+    { key: 'employees', href: '/employees', label: 'Employees', icon: UserCheck, section: 'HR Ops' },
     { key: 'exit', href: '/employee-exit', label: 'Exit / FnF', icon: DoorOpen, section: 'HR Ops' },
     { key: 'form', href: '/candidate-entry', label: 'Entry Form (QR)', icon: ClipboardList, section: 'Public', target: '_blank' },
     { key: 'settings', href: '/settings', label: 'Settings', icon: Settings, section: 'Admin' }

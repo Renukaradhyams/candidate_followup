@@ -394,6 +394,20 @@ export default function CandidatesPage() {
                                   📅 Schedule Interview
                                 </button>
                               )}
+                              <button
+                                onClick={() => navigate(`/candidate-entry?edit=${c.appNo}`)}
+                                className="px-2 py-1 rounded-md border border-emerald-700 text-emerald-700 font-bold hover:bg-emerald-700 hover:text-white transition-all text-[10px]"
+                                title="Edit Candidate"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCandidate(c.appNo)}
+                                className="px-2 py-1 rounded-md bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px]"
+                                title="Delete Candidate"
+                              >
+                                Delete
+                              </button>
                             </div>
                           )}
                         </td>
