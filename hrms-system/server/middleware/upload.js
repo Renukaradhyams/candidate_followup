@@ -23,7 +23,8 @@ subdirs.forEach((dir) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let appNo = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    let appNoRaw = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    let appNo = (appNoRaw && appNoRaw !== 'undefined' && appNoRaw !== 'null') ? appNoRaw : null;
     
     if (appNo) {
       // New structure: /uploads/applicants/BSC-2026-0001
@@ -55,7 +56,8 @@ const storage = multer.diskStorage({
     const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '');
     const prefixName = cleanName ? cleanName : 'Candidate';
 
-    let appNo = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    let appNoRaw = req.headers['x-app-no'] || req.body.appNo || req.query.appNo;
+    let appNo = (appNoRaw && appNoRaw !== 'undefined' && appNoRaw !== 'null') ? appNoRaw : null;
     const prefix = appNo ? `${appNo}_${prefixName}` : prefixName;
 
     let docType = 'Document';
@@ -66,7 +68,8 @@ const storage = multer.diskStorage({
     else if (file.fieldname === 'relievingLetter') docType = 'RelievingLetter';
     else if (file.fieldname === 'experienceCert') docType = 'ExperienceCert';
 
-    const ext = path.extname(file.originalname);
+    const originalName = file.originalname || 'unknown.file';
+    const ext = path.extname(originalName) || '.jpg';
     const baseFileName = `${prefix}_${docType}`;
     let finalFileName = `${baseFileName}${ext}`;
 
@@ -86,9 +89,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedExts = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowedExts.includes(ext)) {
+  const allowedExts = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', ''];
+  const ext = file.originalname ? path.extname(file.originalname).toLowerCase() : '.jpg';
+  if (allowedExts.includes(ext) || ext === '') {
     cb(null, true);
   } else {
     cb(new Error(`Invalid file format: ${ext}. Allowed formats: PDF, DOC, DOCX, JPG, JPEG, PNG.`));
