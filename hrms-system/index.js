@@ -208,6 +208,9 @@ if (fs.existsSync(distDir)) {
 app.use('/api/*', (req, res) => errorRes(res, `Not found: ${req.originalUrl}`, [], 404));
 app.use((err, req, res, next) => {
   console.error('[Error]', err.message);
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return errorRes(res, 'File exceeds the maximum allowed size of 500 KB.', [], 400);
+  }
   errorRes(res, err.message || 'Internal Server Error', [], err.status || 500);
 });
 

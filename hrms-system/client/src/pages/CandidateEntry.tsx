@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
-import imageCompression from 'browser-image-compression';
+import { optimizeFile } from '../utils/fileOptimizer';
 import { 
   User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
   FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon, FileCheck
@@ -50,6 +50,7 @@ export default function CandidateEntryPage() {
   const [declaration, setDeclaration] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('Submitting Registration...');
   const [successAppNo, setSuccessAppNo] = useState('');
 
   useEffect(() => {
@@ -146,6 +147,7 @@ export default function CandidateEntryPage() {
     }
 
     setLoading(true);
+    setLoadingText('Optimizing documents...');
     try {
       let resumeUrl = existingResume;
       let photoUrl = existingPhoto;
@@ -160,33 +162,28 @@ export default function CandidateEntryPage() {
       if (resumeFile || photoFile || aadhaarFile) {
         const formData = new FormData();
         if (name) formData.append('name', name);
-        if (resumeFile) formData.append('resume', resumeFile);
         
-        // Compression Options
-        const options = {
-          maxSizeMB: 0.5, // 500kb max size
-          maxWidthOrHeight: 1920,
-          useWebWorker: true
-        };
-
-        if (photoFile) {
-          try {
-            const compressedPhoto = photoFile.type.startsWith('image/') ? await imageCompression(photoFile, options) : photoFile;
-            formData.append('photo', compressedPhoto);
-          } catch (e) {
-            formData.append('photo', photoFile); // fallback
+        try {
+          if (resumeFile) {
+            const optimizedResume = await optimizeFile(resumeFile, 'Resume');
+            formData.append('resume', optimizedResume);
           }
+          if (photoFile) {
+            const optimizedPhoto = await optimizeFile(photoFile, 'Candidate Photo');
+            formData.append('photo', optimizedPhoto);
+          }
+          if (aadhaarFile) {
+            const optimizedAadhaar = await optimizeFile(aadhaarFile, 'Aadhaar Document');
+            formData.append('aadhar', optimizedAadhaar);
+          }
+        } catch (optimizationError: any) {
+          // If any file fails the 500KB validation, we stop the whole process and alert the user
+          showToast(optimizationError.message, 'error');
+          setLoading(false);
+          return;
         }
         
-        if (aadhaarFile) {
-          try {
-            const compressedAadhaar = aadhaarFile.type.startsWith('image/') ? await imageCompression(aadhaarFile, options) : aadhaarFile;
-            formData.append('aadhar', compressedAadhaar);
-          } catch (e) {
-            formData.append('aadhar', aadhaarFile); // fallback
-          }
-        }
-        
+        setLoadingText('Uploading files to server...');
         const uploadRes = await API.uploadDocuments(formData, name, targetAppNo);
         if (uploadRes.success) {
           if (uploadRes.resumeUrl) resumeUrl = uploadRes.resumeUrl;
@@ -195,6 +192,7 @@ export default function CandidateEntryPage() {
         }
       }
 
+      setLoadingText('Finalizing Registration...');
       const payload = {
         name,
         email,
@@ -701,7 +699,7 @@ export default function CandidateEntryPage() {
                 className="btn-gold flex items-center gap-2 shadow-lg disabled:opacity-50"
               >
                 {loading ? (
-                  <span>Submitting Registration...</span>
+                  <span>{loadingText}</span>
                 ) : (
                   <>
                     <span>Complete Candidate Registration</span>
