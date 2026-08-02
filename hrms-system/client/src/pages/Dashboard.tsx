@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeRange, setActiveRange] = useState('today');
@@ -73,7 +73,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     const sess = Auth.get();
@@ -358,7 +358,7 @@ export default function DashboardPage() {
                 </div>
 
                 <button
-                  onClick={() => router.push('/candidates')}
+                  onClick={() => navigate('/candidates')}
                   className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-1.5"
                 >
                   <span>View All</span>

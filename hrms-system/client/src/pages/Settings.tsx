@@ -9,7 +9,7 @@ import { API, Auth, UserSession } from '../services/api';
 import { Settings, Users, Eye, HelpCircle, Tag, Plus, Trash2, Key } from 'lucide-react';
 
 export default function SettingsPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'users' | 'visibility' | 'questions' | 'roles'>('users');
@@ -55,12 +55,12 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     const sess = Auth.get();
     if (sess?.role !== 'Admin') {
-      router.replace('/dashboard');
+      navigate('/dashboard', { replace: true });
       return;
     }
     setSession(sess);

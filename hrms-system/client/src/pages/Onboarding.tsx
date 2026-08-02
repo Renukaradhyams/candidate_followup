@@ -9,7 +9,7 @@ import { API, Auth, UserSession } from '../services/api';
 import { PartyPopper, Check, Plus, X } from 'lucide-react';
 
 export default function OnboardingPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -39,7 +39,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     setSession(Auth.get());

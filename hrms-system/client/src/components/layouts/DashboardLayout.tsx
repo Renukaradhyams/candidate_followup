@@ -20,13 +20,13 @@ export default function DashboardLayout({
   breadcrumbs = [],
   rightElement
 }: DashboardLayoutProps) {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     setSession(Auth.get());

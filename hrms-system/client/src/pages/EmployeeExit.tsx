@@ -9,7 +9,7 @@ import { API, Auth, UserSession } from '../services/api';
 import { DoorOpen, Plus, X } from 'lucide-react';
 
 export default function EmployeeExitPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -36,7 +36,7 @@ export default function EmployeeExitPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     setSession(Auth.get());

@@ -9,7 +9,7 @@ import { API, Auth, UserSession } from '../services/api';
 import { Target, Search, Share2, Copy, CheckCircle, XCircle, RefreshCw, X, Award } from 'lucide-react';
 
 export default function InterviewPanelPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -53,7 +53,7 @@ export default function InterviewPanelPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     const sess = Auth.get();

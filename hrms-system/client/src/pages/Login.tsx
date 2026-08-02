@@ -6,7 +6,7 @@ import { API, Auth } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
 
 export default function LoginPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (Auth.check()) {
-      router.replace('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [router]);
 
@@ -39,7 +39,7 @@ export default function LoginPage() {
           token: res.data.token
         });
         showToast('Login successful', 'success');
-        router.replace('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         setErrorMsg(res.message || 'Incorrect username or password. Please try again.');
       }
@@ -47,17 +47,17 @@ export default function LoginPage() {
       // Fallback demo support for offline testing
       if (username.toLowerCase() === 'hr@bsctextiles.com' && password === 'bsc@2026') {
         Auth.save({ username: 'HR Admin', role: 'HR', fullName: 'HR Admin', displayName: 'HR Admin' });
-        router.replace('/dashboard');
+        navigate('/dashboard', { replace: true });
         return;
       }
       if (username.toLowerCase() === 'manager@bsctextiles.com' && password === 'bsc@2026') {
         Auth.save({ username: 'Store Manager', role: 'Manager', fullName: 'Store Manager', displayName: 'Store Manager' });
-        router.replace('/dashboard');
+        navigate('/dashboard', { replace: true });
         return;
       }
       if (username.toLowerCase() === 'admin@bsctextiles.com' && password === 'bsc@2026') {
         Auth.save({ username: 'Admin', role: 'Admin', fullName: 'System Admin', displayName: 'Admin' });
-        router.replace('/dashboard');
+        navigate('/dashboard', { replace: true });
         return;
       }
       setErrorMsg(err.message || 'Incorrect username or password. Please try again.');

@@ -9,7 +9,7 @@ import { API, Auth, UserSession } from '../services/api';
 import { Users, Plus, Save } from 'lucide-react';
 
 export default function OpeningsPage() {
-  const router = useNavigate();
+  const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openings, setOpenings] = useState<any[]>([]);
@@ -26,12 +26,12 @@ export default function OpeningsPage() {
 
   useEffect(() => {
     if (!Auth.check()) {
-      router.replace('/login');
+      navigate('/login', { replace: true });
       return;
     }
     const sess = Auth.get();
     if (sess?.role !== 'Admin' && sess?.role !== 'HR') {
-      router.replace('/dashboard');
+      navigate('/dashboard', { replace: true });
       return;
     }
     setSession(sess);
