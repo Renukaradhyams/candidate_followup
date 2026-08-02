@@ -53,7 +53,7 @@ export default function CandidateEntryPage() {
   const [successAppNo, setSuccessAppNo] = useState('');
 
   useEffect(() => {
-    API.getDesignations().then(res => {
+    API.getPublicDesignations().then(res => {
       if (res && res.designations) setDesignations(res.designations);
     }).catch(() => {});
 

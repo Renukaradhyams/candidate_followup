@@ -110,11 +110,49 @@ const savePageSettings = async (req, res) => {
 
 const getDesignations = async (req, res) => {
   try {
-    const [rows] = await db.query(`SELECT name FROM designations WHERE active = TRUE ORDER BY id ASC`);
+    const [rows] = await db.query(`SELECT name FROM designations WHERE active = TRUE ORDER BY name ASC`);
     const designations = rows.map((r) => r.name);
     return res.json({ designations });
   } catch (err) {
-    return res.json({ designations: ['Sales Executive', 'Floor Manager', 'Cashier', 'Billing Executive', 'Store Keeper'] });
+    return res.json({ designations: [] });
+  }
+};
+
+const getPublicDesignations = async (req, res) => {
+  try {
+    // 1. Auto-close filled openings
+    const [hiredRows] = await db.query(`
+      SELECT designation, COUNT(*) as cnt FROM candidates 
+      WHERE LOWER(TRIM(status)) IN ('offer accepted', 'joined', 'offer finalized') 
+      GROUP BY designation
+    `);
+    const [reqRows] = await db.query(`SELECT id, designation, required_count, status FROM manpower_requisitions`);
+    
+    for (const r of reqRows) {
+      const match = hiredRows.find(h => h.designation && h.designation.trim().toLowerCase() === r.designation.trim().toLowerCase());
+      const hiredCount = match ? match.cnt : 0;
+      if (hiredCount >= r.required_count && r.required_count > 0 && r.status !== 'Filled' && r.status !== 'Closed') {
+        await db.query(`UPDATE manpower_requisitions SET status = 'Filled' WHERE id = ?`, [r.id]);
+        r.status = 'Filled';
+      }
+    }
+
+    // 2. Fetch designations that are active AND have open vacancies
+    const [rows] = await db.query(`
+      SELECT DISTINCT d.name 
+      FROM designations d
+      LEFT JOIN manpower_requisitions mr ON LOWER(TRIM(d.name)) = LOWER(TRIM(mr.designation))
+      WHERE d.active = TRUE 
+      AND (mr.status IS NULL OR mr.status = 'Open')
+      AND (mr.required_count IS NULL OR mr.required_count > 0)
+      ORDER BY d.name ASC
+    `);
+    
+    const designations = rows.map((r) => r.name);
+    return res.json({ designations });
+  } catch (err) {
+    console.error('[Public Designations Error]', err);
+    return res.json({ designations: [] });
   }
 };
 
@@ -217,6 +255,7 @@ module.exports = {
   getPageSettings,
   savePageSettings,
   getDesignations,
+  getPublicDesignations,
   addDesignation,
   deleteDesignation,
   getAllInterviewQuestions,

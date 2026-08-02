@@ -135,6 +135,7 @@ router.post('/legacy', async (req, res) => {
     getPendingActions: candidateController.getPendingActions,
     getSourceBreakdown: candidateController.getSourceBreakdown,
     getDesignations: settingsController.getDesignations,
+    getPublicDesignations: settingsController.getPublicDesignations,
     getOpenings: candidateController.getOpenings,
     updateOpening: candidateController.updateOpening,
     saveCallStep: interviewController.saveCallStep,

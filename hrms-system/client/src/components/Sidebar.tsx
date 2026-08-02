@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Auth, UserSession } from '../services/api';
 import { 
@@ -39,7 +39,26 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     'Guest':       ['form']
   };
 
-  const allowed = roleNavMap[role] || roleNavMap['HR'];
+  const [allowed, setAllowed] = useState<string[]>(roleNavMap[role] || roleNavMap['HR']);
+
+  useEffect(() => {
+    // Dynamically fetch page visibility from the database
+    API.getPageSettings().then(res => {
+      if (res && res.settings) {
+        // filter the ones where role matches and allowed is true
+        const dynamicAllowed = Object.entries(res.settings)
+          .filter(([key, isAllowed]) => isAllowed === true && key.startsWith(`${role}_`))
+          .map(([key]) => key.replace(`${role}_`, ''));
+        
+        if (dynamicAllowed.length > 0) {
+          // If we got settings from DB, override the hardcoded ones
+          setAllowed(dynamicAllowed);
+        }
+      }
+    }).catch(err => {
+      console.error('Failed to fetch page visibility', err);
+    });
+  }, [role]);
 
   const roleLabels: Record<string, string> = {
     'Super Admin': 'Super Administrator',

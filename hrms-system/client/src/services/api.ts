@@ -278,6 +278,7 @@ export const API = {
   async getPageSettings() { return apiFetch('/settings/page-visibility'); },
   async savePageSettings(settings: any) { return apiFetch('/settings/page-visibility', { method: 'POST', body: JSON.stringify({ settings }) }); },
   async getDesignations() { return apiFetch('/settings/designations'); },
+  async getPublicDesignations() { return API.call('getPublicDesignations'); },
   async addDesignation(name: string) { return apiFetch('/settings/designations/add', { method: 'POST', body: JSON.stringify({ name }) }); },
   async deleteDesignation(name: string) { return apiFetch('/settings/designations/delete', { method: 'POST', body: JSON.stringify({ name }) }); }
 };

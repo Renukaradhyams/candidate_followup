@@ -75,6 +75,10 @@ async function autoInitializeDatabase(pool) {
         \`username\` VARCHAR(100) NOT NULL UNIQUE,
         \`password\` VARCHAR(255) NOT NULL,
         \`full_name\` VARCHAR(150) NULL,
+        \`email\` VARCHAR(150) NULL,
+        \`phone\` VARCHAR(20) NULL,
+        \`department\` VARCHAR(150) NULL,
+        \`designation\` VARCHAR(150) NULL,
         \`role\` VARCHAR(50) NOT NULL DEFAULT 'HR',
         \`active\` BOOLEAN DEFAULT TRUE,
         \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -324,9 +328,31 @@ async function autoInitializeDatabase(pool) {
       `CREATE TABLE IF NOT EXISTS manpower_requisitions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         designation VARCHAR(150) NOT NULL UNIQUE,
+        department VARCHAR(150) NULL,
+        branch VARCHAR(150) NULL,
         required_count INT DEFAULT 0,
+        priority VARCHAR(50) DEFAULT 'Normal',
+        status VARCHAR(50) DEFAULT 'Open',
+        opening_date DATE NULL,
+        closing_date DATE NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+      `CREATE TABLE IF NOT EXISTS roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        description TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+      `CREATE TABLE IF NOT EXISTS role_permissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        role_name VARCHAR(100) NOT NULL,
+        module VARCHAR(100) NOT NULL,
+        can_view BOOLEAN DEFAULT FALSE,
+        can_create BOOLEAN DEFAULT FALSE,
+        can_edit BOOLEAN DEFAULT FALSE,
+        can_delete BOOLEAN DEFAULT FALSE,
+        UNIQUE KEY \`role_module_idx\` (\`role_name\`, \`module\`)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
       `CREATE TABLE IF NOT EXISTS audit_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -352,7 +378,23 @@ async function autoInitializeDatabase(pool) {
       "ALTER TABLE candidates ADD COLUMN religion VARCHAR(100) NULL",
       "ALTER TABLE candidates ADD COLUMN caste VARCHAR(100) NULL",
       "ALTER TABLE candidates ADD COLUMN department VARCHAR(150) NULL",
-      "ALTER TABLE selection_offers ADD COLUMN department VARCHAR(150) NULL"
+      "ALTER TABLE selection_offers ADD COLUMN department VARCHAR(150) NULL",
+      "ALTER TABLE candidates ADD COLUMN branch VARCHAR(150) NULL",
+      "ALTER TABLE selection_offers ADD COLUMN branch VARCHAR(150) NULL",
+      "ALTER TABLE candidates ADD COLUMN reporting_manager VARCHAR(150) NULL",
+      "ALTER TABLE selection_offers ADD COLUMN reporting_manager VARCHAR(150) NULL",
+      
+      "ALTER TABLE users ADD COLUMN email VARCHAR(150) NULL",
+      "ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL",
+      "ALTER TABLE users ADD COLUMN department VARCHAR(150) NULL",
+      "ALTER TABLE users ADD COLUMN designation VARCHAR(150) NULL",
+      
+      "ALTER TABLE manpower_requisitions ADD COLUMN department VARCHAR(150) NULL",
+      "ALTER TABLE manpower_requisitions ADD COLUMN branch VARCHAR(150) NULL",
+      "ALTER TABLE manpower_requisitions ADD COLUMN priority VARCHAR(50) DEFAULT 'Normal'",
+      "ALTER TABLE manpower_requisitions ADD COLUMN status VARCHAR(50) DEFAULT 'Open'",
+      "ALTER TABLE manpower_requisitions ADD COLUMN opening_date DATE NULL",
+      "ALTER TABLE manpower_requisitions ADD COLUMN closing_date DATE NULL"
     ];
 
     for (const sql of migrations) {

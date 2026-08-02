@@ -296,10 +296,12 @@ export default function InterviewPanelPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => handleOpenScorePanel(iv, 'Round 2')}
+                            onClick={() => {
+                              setScorePanel({ open: true, interview: iv, questions: getQuestionsByRound('Round 2', iv.desig), round: 'Management' });
+                            }}
                             className="px-2.5 py-1 rounded-lg bg-[#C9952A] text-white font-bold text-[11px] hover:bg-amber-600 shadow-xs"
                           >
-                            {iv.assignedScore ? 'Edit R2 Score' : 'Score Round 2'}
+                            {iv.assignedScore ? 'Edit Management Score' : 'Score Management Round'}
                           </button>
                           <button
                             onClick={() => setApproveModal({ open: true, interview: iv, probation: false })}
@@ -373,7 +375,7 @@ export default function InterviewPanelPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Evaluator Remarks &amp; Feedback *</label>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Evaluator Remarks &amp; Feedback</label>
                 <textarea
                   rows={3}
                   value={remarks}
@@ -385,11 +387,15 @@ export default function InterviewPanelPage() {
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Salary (₹ Monthly)</label>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">
+                    {scorePanel.round === 'HR' ? 'Expected Salary (₹)' : 'Recommended Salary (₹)'}
+                  </label>
                   <input type="text" value={offeredSalary} onChange={(e) => setOfferedSalary(e.target.value)} placeholder="e.g. 25,000" className="input-modern" />
                 </div>
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered DOJ</label>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">
+                    {scorePanel.round === 'HR' ? 'Expected DOJ' : 'Recommended DOJ'}
+                  </label>
                   <input type="date" value={offeredDoj} onChange={(e) => setOfferedDoj(e.target.value)} className="input-modern" />
                 </div>
               </div>
@@ -472,7 +478,7 @@ export default function InterviewPanelPage() {
             <div className="space-y-3 text-xs">
               <p className="text-[#555555] font-medium">Are you sure you want to approve candidate <strong>{approveModal.interview?.candidate}</strong> for final selection and offer issuance?</p>
               <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Approval Remarks *</label>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Approval Remarks</label>
                 <textarea rows={3} value={approveRemarks} onChange={(e) => setApproveRemarks(e.target.value)} placeholder="Final approval notes..." className="input-modern" />
               </div>
             </div>

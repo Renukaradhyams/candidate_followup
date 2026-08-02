@@ -543,6 +543,9 @@ export default function EmployeesPage() {
                       <span>Professional Experience &amp; Qualification</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div><span className="text-[#777777] block text-[10.5px]">Finalized Department</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Branch / Store</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.branch || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Reporting Manager</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.reportingManager || drawerEmp.reporting_manager || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>

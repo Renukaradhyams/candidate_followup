@@ -219,8 +219,8 @@ const saveScore = async (req, res) => {
     const { appNo, round, scores, offeredSalary, offeredDoj } = req.body;
     const user = req.user ? req.user.username : 'HR';
 
-    if (!scores || !scores.remarks) {
-      return errorRes(res, 'Remarks are mandatory — please add remarks before saving', [], 400);
+    if (!scores) {
+      return errorRes(res, 'Scores are missing', [], 400);
     }
 
     const [cRows] = await db.query(`SELECT id FROM candidates WHERE app_no = ?`, [appNo]);
@@ -354,7 +354,6 @@ const getInterviewByToken = async (req, res) => {
 const submitInterviewScore = async (req, res) => {
   try {
     const { token, scores, total, remarks } = req.body;
-    if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const [tokenRows] = await db.query(`SELECT * FROM interview_tokens WHERE token = ?`, [token]);
     if (tokenRows.length === 0) return errorRes(res, 'Token not found', [], 404);
@@ -398,8 +397,6 @@ const approveSelection = async (req, res) => {
   try {
     const { appNo, candidate, desig, remarks, probation, doneBy } = req.body;
     const user = doneBy || (req.user ? req.user.username : 'Store Manager');
-
-    if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const [cRows] = await db.query(`SELECT * FROM candidates WHERE app_no = ?`, [appNo]);
     if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
@@ -452,8 +449,6 @@ const rejectCandidate = async (req, res) => {
   try {
     const { appNo, remarks, doneBy } = req.body;
     const user = doneBy || (req.user ? req.user.username : 'HR');
-
-    if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const [cRows] = await db.query(`SELECT * FROM candidates WHERE app_no = ?`, [appNo]);
     if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
