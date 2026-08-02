@@ -9,7 +9,7 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon
+  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -141,10 +141,6 @@ export default function CandidatesPage() {
   };
 
   const handleConfirmRemark = async () => {
-    if (!remarksText.trim() || remarksText.trim().length < 5) {
-      showToast('Remarks are required (min 5 characters)', 'error');
-      return;
-    }
     const { action, candidate } = remarkModal;
     if (!candidate) return;
 
@@ -184,8 +180,8 @@ export default function CandidatesPage() {
   };
 
   const handleConfirmCallStep = async () => {
-    if (!callDate || !callRemarks.trim()) {
-      showToast('Date and remarks are required', 'error');
+    if (!callDate) {
+      showToast('Date is required', 'error');
       return;
     }
     const { candidate, step } = callModal;

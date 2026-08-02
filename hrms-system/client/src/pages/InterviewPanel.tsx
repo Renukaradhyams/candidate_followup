@@ -100,10 +100,6 @@ export default function InterviewPanelPage() {
   };
 
   const handleSaveScore = async () => {
-    if (!remarks.trim() || remarks.trim().length < 5) {
-      showToast('Remarks are mandatory before saving', 'error');
-      return;
-    }
     const { interview, questions, round } = scorePanel;
     if (!interview) return;
 
@@ -146,10 +142,6 @@ export default function InterviewPanelPage() {
   };
 
   const handleConfirmApprove = async () => {
-    if (!approveRemarks.trim()) {
-      showToast('Remarks are mandatory', 'error');
-      return;
-    }
     const { interview, probation } = approveModal;
     if (!interview) return;
 

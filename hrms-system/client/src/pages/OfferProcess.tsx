@@ -19,6 +19,8 @@ export default function OfferProcessPage() {
   const [noticePd, setNoticePd] = useState('');
   const [estDoj, setEstDoj] = useState('');
   const [salaryOffered, setSalaryOffered] = useState('');
+  const [department, setDepartment] = useState('');
+  const [otherSection, setOtherSection] = useState('');
 
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -53,8 +55,12 @@ export default function OfferProcessPage() {
 
   const handleSaveDetails = async () => {
     if (!detailOffer) return;
+    if (!salaryOffered || !estDoj || !department) {
+      showToast('Salary Offered, DOJ, and Allocated Department are mandatory fields.', 'error');
+      return;
+    }
     try {
-      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered });
+      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered, department, otherSection });
       showToast('Offer joining details saved', 'success');
       loadOffers();
       setDetailOffer(null);
@@ -175,6 +181,8 @@ export default function OfferProcessPage() {
                                 setNoticePd(o.noticePd || '');
                                 setEstDoj(o.estDoj || '');
                                 setSalaryOffered(o.salary || '');
+                                setDepartment('');
+                                setOtherSection('');
                               }}
                               className="px-2.5 py-1 rounded bg-[#1E2D4E] text-white font-bold text-[11px]"
                             >
@@ -256,6 +264,36 @@ export default function OfferProcessPage() {
                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-amber-800"
                 />
               </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Allocated Department</label>
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold"
+                >
+                  <option value="">Select Department</option>
+                  <option value="SAARE">SAARE</option>
+                  <option value="LADIES">LADIES</option>
+                  <option value="KIDS">KIDS</option>
+                  <option value="MENS">MENS</option>
+                  <option value="HOME FURNISHING">HOME FURNISHING</option>
+                  <option value="OTHERS">OTHERS</option>
+                </select>
+              </div>
+
+              {department === 'OTHERS' && (
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Other Section (Optional)</label>
+                  <input
+                    type="text"
+                    value={otherSection}
+                    onChange={(e) => setOtherSection(e.target.value)}
+                    placeholder="Enter section name"
+                    className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">

@@ -76,8 +76,8 @@ const logOfferCall = async (req, res) => {
 
 const updateOfferDetails = async (req, res) => {
   try {
-    const { appNo, noticePd, estDoj, salaryOffered } = req.body;
-    if (!noticePd && !estDoj && !salaryOffered) return errorRes(res, 'Enter at least one field', [], 400);
+    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection } = req.body;
+    if (!noticePd && !estDoj && !salaryOffered && !department) return errorRes(res, 'Enter at least one field', [], 400);
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
@@ -94,6 +94,7 @@ const updateOfferDetails = async (req, res) => {
     if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
     if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
+    if (department) { candUpd.push('desig = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     candParams.push(appNo);
     await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 
