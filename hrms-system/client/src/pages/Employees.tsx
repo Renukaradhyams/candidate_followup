@@ -4,9 +4,11 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
+import MetricCard from '../components/ui/MetricCard';
+import StatusBadge from '../components/ui/StatusBadge';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign
+  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image, FileCheck
 } from 'lucide-react';
 
 export default function EmployeesPage() {
@@ -146,193 +148,146 @@ export default function EmployeesPage() {
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
       <ToastContainer />
-
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         <Topbar
-          title="Employees Directory"
+          title="Employee Master Directory"
           breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Employees' }]}
           session={session}
           onMenuClick={() => setSidebarOpen(true)}
         />
 
-        <main className="p-4 lg:p-6 space-y-4 flex-1 overflow-y-auto">
-          {/* Header Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="card-glass p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#1E2D4E]/10 text-[#1E2D4E] flex items-center justify-center font-bold">
-                <UserCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Total Hired</div>
-                <div className="text-xl font-black text-[#1E2D4E]">{employees.length}</div>
-              </div>
+        <main className="p-4 lg:p-6 space-y-6 flex-1 overflow-y-auto">
+          {/* Header */}
+          <div className="card-glass p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-[#1E2D4E] tracking-tight flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-[#1a8a84]" />
+                <span>Onboarded Staff Directory</span>
+              </h2>
+              <p className="text-xs text-[#666666] font-medium mt-0.5 font-sans">Active company workforce records, offered DOJ, salary packages &amp; uploaded documents.</p>
             </div>
 
-            <div className="card-glass p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold">
-                <CheckCircle className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Joined</div>
-                <div className="text-xl font-black text-emerald-700">
-                  {employees.filter(e => e.status === 'Joined').length}
-                </div>
-              </div>
-            </div>
-
-            <div className="card-glass p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold">
-                <DollarSign className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Offer Accepted</div>
-                <div className="text-xl font-black text-amber-700">
-                  {employees.filter(e => e.status === 'Offer Accepted' || e.status === 'Selected').length}
-                </div>
-              </div>
-            </div>
-
-            <div className="card-glass p-3.5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-700 flex items-center justify-center font-bold">
-                <Briefcase className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-[#888888] uppercase tracking-wider">Roles Covered</div>
-                <div className="text-xl font-black text-purple-700">{uniqueDesigs.length}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Filters & Search */}
-          <div className="card-glass p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative flex-1 w-full">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]" />
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
                 <input
                   type="text"
-                  placeholder="Search by name, app no, phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e0ddd8] bg-[#F9F7F4] text-xs font-semibold"
+                  placeholder="Search employee, phone, app no..."
+                  className="pl-9 pr-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] w-56 shadow-xs"
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <select
-                  value={desigFilter}
-                  onChange={(e) => setDesigFilter(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-[#e0ddd8] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
-                >
-                  <option value="">All Designations</option>
-                  {uniqueDesigs.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={desigFilter}
+                onChange={(e) => setDesigFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
+              >
+                <option value="">All Designations</option>
+                {uniqueDesigs.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
             </div>
+          </div>
 
-            {/* Table */}
+          {/* Metric Cards Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MetricCard
+              title="Total Active Employees"
+              value={employees.length}
+              subtext="Fully onboarded staff"
+              icon={UserCheck}
+              color="teal"
+            />
+            <MetricCard
+              title="Designations Covered"
+              value={uniqueDesigs.length}
+              subtext="Active company roles"
+              icon={Briefcase}
+              color="navy"
+            />
+            <MetricCard
+              title="Newest Joined"
+              value={employees.length > 0 ? employees[0]?.name : '—'}
+              subtext={employees.length > 0 ? `DOJ: ${employees[0]?.actualDoj || employees[0]?.offeredDoj || 'Recent'}` : 'No records'}
+              icon={Users}
+              color="gold"
+            />
+          </div>
+
+          {/* Employee Directory DataGrid */}
+          <div className="card-glass p-5 space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888] tracking-wider">
-                    <th className="py-3 px-3">Employee</th>
-                    <th className="py-3 px-3">Designation</th>
-                    <th className="py-3 px-3">Contact</th>
-                    <th className="py-3 px-3 text-emerald-800">Salary Offered</th>
-                    <th className="py-3 px-3 text-amber-800">DOJ Offered</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3 text-right">Actions</th>
+                  <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
+                    <th className="py-3 px-4">App No</th>
+                    <th className="py-3 px-4">Employee Name</th>
+                    <th className="py-3 px-4">Designation</th>
+                    <th className="py-3 px-4">Phone / Contact</th>
+                    <th className="py-3 px-4">Offered Salary</th>
+                    <th className="py-3 px-4">DOJ Offered</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e0ddd8]/50">
-                  {filtered.length > 0 ? (
-                    filtered.map((emp) => (
-                      <tr key={emp.appNo} className="hover:bg-black/5 transition-colors font-medium">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-[#C9952A] font-black text-white flex items-center justify-center text-xs shadow-sm">
-                              {emp.initials}
-                            </div>
-                            <div>
-                              <button 
-                                onClick={() => setDrawerEmp(emp)}
-                                className="font-bold text-[#1E2D4E] hover:underline text-left"
-                              >
-                                {emp.name}
-                              </button>
-                              <div className="text-[10px] text-[#888888] font-mono">{emp.appNo}</div>
-                            </div>
+                <tbody className="divide-y divide-[#e2dfd7]/60">
+                  {filtered.map((emp) => (
+                    <tr key={emp.appNo} className="hover:bg-black/5 transition-colors font-medium">
+                      <td className="py-3.5 px-4 font-mono text-[#555555] font-bold">{emp.appNo}</td>
+                      <td className="py-3.5 px-4">
+                        <button
+                          onClick={() => setDrawerEmp(emp)}
+                          className="flex items-center gap-3 group text-left"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-[#1a8a84] text-white font-black text-xs flex items-center justify-center shadow-xs">
+                            {emp.initials}
                           </div>
-                        </td>
-
-                        <td className="py-3 px-3 font-semibold text-[#1E2D4E]">{emp.desig}</td>
-
-                        <td className="py-3 px-3">
-                          <div className="flex flex-col text-[11px]">
-                            <span className="font-bold text-[#1E2D4E]">{emp.phone}</span>
-                            <span className="text-[#888888] text-[10px]">{emp.email || '—'}</span>
+                          <div>
+                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{emp.name}</span>
+                            <span className="text-[10px] text-[#777777] font-medium">{emp.email || 'No Email'}</span>
                           </div>
-                        </td>
-
-                        <td className="py-3 px-3">
-                          <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            ₹{emp.salary}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-3">
-                          <span className="font-extrabold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-amber-700" />
-                            {emp.offeredDoj || emp.estDoj || emp.actualDoj || '—'}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            emp.status === 'Joined' 
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                              : emp.status === 'Offer Accepted' 
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300' 
-                                : 'bg-blue-100 text-blue-800 border border-blue-300'
-                          }`}>
-                            {emp.status}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => setDrawerEmp(emp)}
-                              className="px-2 py-1 rounded bg-[#1E2D4E] text-white font-bold text-[10px] hover:bg-[#162340]"
-                              title="View Details & Documents"
-                            >
-                              View
-                            </button>
-                            <button
-                              onClick={() => handleOpenEdit(emp)}
-                              className="px-2 py-1 rounded bg-emerald-700 text-white font-bold text-[10px] hover:bg-emerald-800 flex items-center gap-1"
-                              title="Edit Employee Details"
-                            >
-                              <Edit3 className="w-3 h-3" /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp.appNo, emp.name)}
-                              className="px-2 py-1 rounded bg-red-600 text-white font-bold text-[10px] hover:bg-red-700"
-                              title="Delete Employee"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{emp.desig}</td>
+                      <td className="py-3.5 px-4 font-mono text-[#555555]">{emp.phone}</td>
+                      <td className="py-3.5 px-4 font-extrabold text-emerald-700">
+                        {emp.salary && emp.salary !== '—' ? `₹ ${emp.salary}` : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-[#666666]">
+                        {emp.offeredDoj || emp.estDoj || emp.actualDoj || '—'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <StatusBadge status={emp.status || 'Joined'} size="sm" />
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(emp)}
+                            className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors shadow-xs"
+                            title="Edit Employee Details"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEmployee(emp.appNo, emp.name)}
+                            className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-colors shadow-xs"
+                            title="Delete Employee Record"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-xs text-[#888888] font-semibold">
-                        No employees found matching criteria
+                      <td colSpan={8} className="py-12 text-center text-xs text-[#888888] font-semibold">
+                        No employees found.
                       </td>
                     </tr>
                   )}
@@ -343,231 +298,102 @@ export default function EmployeesPage() {
         </main>
       </div>
 
-      {/* Employee Drawer */}
-      {drawerEmp && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDrawerEmp(null)} />
-
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col z-10 animate-fade-in">
-            <div className="bg-[#1E2D4E] p-5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#C9952A] font-black text-white flex items-center justify-center text-sm">
-                  {drawerEmp.initials}
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base leading-tight">{drawerEmp.name}</h3>
-                  <div className="text-[11px] text-white/60 mt-0.5">{drawerEmp.appNo} · {drawerEmp.desig}</div>
-                </div>
-              </div>
-
-              <button onClick={() => setDrawerEmp(null)} className="text-white/70 hover:text-white">
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Employee — {editModal.emp?.name}</h3>
+              <button onClick={() => setEditModal({ open: false, emp: null })} className="text-[#888888]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 grid grid-cols-2 gap-3">
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Full Name *</label>
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="input-modern" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-[10px] font-black uppercase text-emerald-800">Salary Offered</div>
-                  <div className="text-base font-black text-emerald-900">₹{drawerEmp.salary}</div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Phone Number *</label>
+                  <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="input-modern font-mono" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase text-amber-800">DOJ Offered</div>
-                  <div className="text-base font-black text-amber-900">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Email Address</label>
+                  <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="input-modern" />
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Contact &amp; Personal Info</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-[#888888]">Phone:</span> <b className="text-[#1E2D4E]">{drawerEmp.phone}</b></div>
-                  <div><span className="text-[#888888]">Email:</span> <b>{drawerEmp.email || '—'}</b></div>
-                  <div><span className="text-[#888888]">DOB:</span> <b>{drawerEmp.dob || '—'}</b></div>
-                  <div><span className="text-[#888888]">Gender:</span> <b>{drawerEmp.gender || '—'}</b></div>
-                  <div><span className="text-[#888888]">City / State:</span> <b>{drawerEmp.cityState || '—'}</b></div>
-                  <div><span className="text-[#888888]">Address:</span> <b>{drawerEmp.address || '—'}</b></div>
-                </div>
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Designation Role</label>
+                <input type="text" value={editForm.desig} onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })} className="input-modern" />
               </div>
 
-              <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Professional Info</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-[#888888]">Experience:</span> <b>{drawerEmp.experience || '—'}</b></div>
-                  <div><span className="text-[#888888]">Qualification:</span> <b>{drawerEmp.qualification || '—'}</b></div>
-                  <div><span className="text-[#888888]">Previous Company:</span> <b>{drawerEmp.previousCompany || '—'}</b></div>
-                  <div><span className="text-[#888888]">Aadhaar No:</span> <b>{drawerEmp.aadhaarNumber || '—'}</b></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Salary (₹)</label>
+                  <input type="text" value={editForm.salary} onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern" />
                 </div>
-              </div>
-
-              {/* Documents */}
-              <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-3">
-                <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Employee Documents</div>
-                <div className="flex flex-col gap-2">
-                  {fileUrl(drawerEmp.resumeUrl) ? (
-                    <a
-                      href={fileUrl(drawerEmp.resumeUrl)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs hover:bg-[#162340]"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>View Resume PDF</span>
-                    </a>
-                  ) : (
-                    <div className="text-[#888888] italic text-[11px]">No resume uploaded</div>
-                  )}
-
-                  {fileUrl(drawerEmp.photoUrl) ? (
-                    <a
-                      href={fileUrl(drawerEmp.photoUrl)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs hover:bg-[#162340]"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>View Photo</span>
-                    </a>
-                  ) : (
-                    <div className="text-[#888888] italic text-[11px]">No photo uploaded</div>
-                  )}
-
-                  {fileUrl(drawerEmp.aadharUrl || drawerEmp.aadhaarUrl) ? (
-                    <a
-                      href={fileUrl(drawerEmp.aadharUrl || drawerEmp.aadhaarUrl)!}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs hover:bg-[#162340]"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>View Aadhaar Card</span>
-                    </a>
-                  ) : (
-                    <div className="text-[#888888] italic text-[11px]">No Aadhaar uploaded</div>
-                  )}
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Date of Joining</label>
+                  <input type="date" value={editForm.offeredDoj} onChange={(e) => setEditForm({ ...editForm, offeredDoj: e.target.value })} className="input-modern" />
                 </div>
               </div>
             </div>
 
-            <div className="p-4 border-t border-[#e0ddd8] bg-[#F9F7F4] flex gap-2">
-              <button
-                onClick={() => handleOpenEdit(drawerEmp)}
-                className="flex-1 py-2.5 rounded-lg bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-800"
-              >
-                <Edit3 className="w-4 h-4" /> Edit Employee Details
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
+              <button onClick={() => setEditModal({ open: false, emp: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
+                Cancel
               </button>
-              <button
-                onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
-                className="py-2.5 px-4 rounded-lg bg-red-600 text-white font-bold text-xs hover:bg-red-700"
-              >
-                Delete
+              <button onClick={handleSaveEdit} disabled={saving} className="btn-primary text-xs shadow-md disabled:opacity-50">
+                {saving ? 'Saving Changes...' : 'Save Employee Details'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Employee Modal */}
-      {editModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white rounded-2xl p-5 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#e0ddd8] pb-3">
-              <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Employee — {editModal.emp?.appNo}</h3>
-              <button onClick={() => setEditModal({ open: false, emp: null })} className="text-[#888888] hover:text-[#1E2D4E]">
+      {/* Drawer */}
+      {drawerEmp && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setDrawerEmp(null)} />
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col z-10 space-y-4 animate-fade-in overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#1a8a84] text-white font-black text-sm flex items-center justify-center">
+                  {drawerEmp.initials}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-[#1E2D4E] text-base">{drawerEmp.name}</h3>
+                  <div className="text-xs text-[#777777] font-mono">{drawerEmp.appNo} · {drawerEmp.desig}</div>
+                </div>
+              </div>
+              <button onClick={() => setDrawerEmp(null)} className="text-[#888888]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
-                />
+            <div className="space-y-4 text-xs">
+              <div className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2">
+                <div className="flex justify-between"><span className="text-[#777777]">Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
+                <div className="flex justify-between"><span className="text-[#777777]">Email:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.email || '—'}</span></div>
+                <div className="flex justify-between"><span className="text-[#777777]">Salary Package:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.salary || '—'}</span></div>
+                <div className="flex justify-between"><span className="text-[#777777]">Offered DOJ:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Phone Number *</label>
-                <input
-                  type="text"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
-                />
+              <div className="space-y-2">
+                <span className="font-extrabold text-[#1E2D4E] block">Uploaded Documents</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {fileUrl(drawerEmp.photoUrl) ? (
+                    <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E]">📷 Photo</a>
+                  ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
+                  {fileUrl(drawerEmp.aadhaarUrl) ? (
+                    <a href={fileUrl(drawerEmp.aadhaarUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E]">📄 Aadhaar</a>
+                  ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
+                </div>
               </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Designation</label>
-                <input
-                  type="text"
-                  value={editForm.desig}
-                  onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Salary Offered (₹)</label>
-                <input
-                  type="text"
-                  value={editForm.salary}
-                  onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })}
-                  placeholder="e.g. 25000"
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-emerald-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">DOJ Offered</label>
-                <input
-                  type="date"
-                  value={editForm.offeredDoj}
-                  onChange={(e) => setEditForm({ ...editForm, offeredDoj: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold text-amber-800"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold"
-                >
-                  <option value="Joined">Joined</option>
-                  <option value="Offer Accepted">Offer Accepted</option>
-                  <option value="Selected">Selected</option>
-                  <option value="Offer Sent">Offer Sent</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#e0ddd8]">
-              <button
-                onClick={() => setEditModal({ open: false, emp: null })}
-                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={saving}
-                className="px-4 py-2 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
             </div>
           </div>
         </div>

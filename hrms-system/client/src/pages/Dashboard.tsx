@@ -2,8 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
-import ToastContainer, { showToast } from '../components/Toast';
+import ToastContainer from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
+import MetricCard from '../components/ui/MetricCard';
+import StatusBadge from '../components/ui/StatusBadge';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, 
   UserCheck, 
@@ -14,7 +18,12 @@ import {
   AlertTriangle, 
   ArrowRight,
   Search,
-  Filter
+  Filter,
+  BarChart3,
+  Sparkles,
+  TrendingUp,
+  Percent,
+  CalendarCheck
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -117,11 +126,11 @@ export default function DashboardPage() {
   const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const stages = [
-    { label: 'Applied', val: kpis.total || 0, color: '#1E2D4E' },
-    { label: 'Shortlisted', val: kpis.shortlisted || 0, color: '#2a3f6e' },
-    { label: 'Interview Scheduled', val: kpis.interviewsToday || 0, color: '#C9952A' },
-    { label: 'Selected', val: kpis.selected || 0, color: '#2d8a4e' },
-    { label: 'Joined', val: kpis.joined || 0, color: '#1a8a84' }
+    { label: 'Applied Candidates', val: kpis.total || 0, color: '#1E2D4E' },
+    { label: 'Shortlisted Pool', val: kpis.shortlisted || 0, color: '#2a3f6e' },
+    { label: 'Interview Round', val: kpis.interviewsToday || 0, color: '#C9952A' },
+    { label: 'Offers & Selection', val: kpis.selected || 0, color: '#2d8a4e' },
+    { label: 'Onboarded Employees', val: kpis.joined || 0, color: '#1a8a84' }
   ];
 
   return (
@@ -136,118 +145,149 @@ export default function DashboardPage() {
 
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         <Topbar 
-          title="Dashboard" 
-          breadcrumbs={[{ label: 'Dashboard' }]}
+          title="Executive ATS Dashboard" 
+          breadcrumbs={[{ label: 'Overview' }]}
           session={session}
           onMenuClick={() => setSidebarOpen(true)}
         />
 
-        <main className="p-4 lg:p-6 space-y-5 flex-1 overflow-y-auto">
-          {/* Date Filter Bar */}
-          <div className="card-glass p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-1.5 font-bold">
-              {[
-                { key: 'today', label: 'Today' },
-                { key: 'week', label: 'This Week' },
-                { key: 'month', label: 'This Month' },
-                { key: 'last_month', label: 'Last Month' }
-              ].map(r => (
-                <button
-                  key={r.key}
-                  onClick={() => { setActiveRange(r.key); setFromDate(''); setToDate(''); }}
-                  className={`
-                    px-3 py-1.5 rounded-lg border transition-all
-                    ${activeRange === r.key 
-                      ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm' 
-                      : 'bg-white text-[#666666] border-[#e0ddd8] hover:bg-black/5'}
-                  `}
-                >
-                  {r.label}
-                </button>
-              ))}
+        <main className="p-4 lg:p-6 space-y-6 flex-1 overflow-y-auto">
+          {/* Header & Date Range Filter Bar */}
+          <div className="card-glass p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-[#1E2D4E] tracking-tight flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-[#C9952A]" />
+                <span>Recruitment Analytics &amp; Pipeline</span>
+              </h2>
+              <p className="text-xs text-[#666666] font-medium mt-0.5">Real-time candidate metrics, funnel conversion &amp; team performance.</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => { setFromDate(e.target.value); setActiveRange('custom'); }}
-                className="px-2.5 py-1 rounded-md border border-[#e0ddd8] bg-white text-[#1E2D4E] font-medium"
-              />
-              <span className="text-[#888888]">to</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => { setToDate(e.target.value); setActiveRange('custom'); }}
-                className="px-2.5 py-1 rounded-md border border-[#e0ddd8] bg-white text-[#1E2D4E] font-medium"
-              />
-            </div>
-          </div>
-
-          {/* Primary KPI Grid Row 1 */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            <div className="card-glass p-4 border-l-4 border-l-[#C9952A] space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Total Pipeline</div>
-              <div className="text-2xl lg:text-3xl font-black text-[#1E2D4E]">{kpis.total}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">All registered candidates</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-[#1E2D4E] space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Shortlisted</div>
-              <div className="text-2xl lg:text-3xl font-black text-[#1E2D4E]">{kpis.shortlisted}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">Awaiting interview</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-[#2d8a4e] space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Selected</div>
-              <div className="text-2xl lg:text-3xl font-black text-[#2d8a4e]">{kpis.selected}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">Passed all rounds</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-[#1a8a84] space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Joined</div>
-              <div className="text-2xl lg:text-3xl font-black text-[#1a8a84]">{kpis.joined}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">Onboarded staff</div>
-            </div>
-          </div>
-
-          {/* Primary KPI Grid Row 2 */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            <div className="card-glass p-4 border-l-4 border-l-blue-600 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Acceptance Rate</div>
-              <div className="text-2xl lg:text-3xl font-black text-blue-700">{kpis.acceptanceRate}<span className="text-sm">%</span></div>
-              <div className="text-[10px] text-[#888888] font-semibold">of offers accepted</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-amber-500 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Avg Days to Hire</div>
-              <div className="text-2xl lg:text-3xl font-black text-amber-600">{kpis.avgDays}<span className="text-sm">d</span></div>
-              <div className="text-[10px] text-[#888888] font-semibold">Applied → Joined</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-purple-600 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Awaiting Joining</div>
-              <div className="text-2xl lg:text-3xl font-black text-purple-700">{kpis.onboarding}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">Offer accepted</div>
-            </div>
-
-            <div className="card-glass p-4 border-l-4 border-l-red-600 space-y-1">
-              <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#888888]">Interviews Today</div>
-              <div className="text-2xl lg:text-3xl font-black text-red-600">{kpis.interviewsToday}</div>
-              <div className="text-[10px] text-[#888888] font-semibold">Scheduled today</div>
-            </div>
-          </div>
-
-          {/* Middle Layout: Funnel + Source + Pending Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Hiring Funnel Card */}
-            <div className="card-glass p-5 lg:col-span-2 space-y-4">
-              <div>
-                <h3 className="font-extrabold text-[#1E2D4E] text-sm">Hiring Funnel</h3>
-                <p className="text-[11px] text-[#888888]">Conversion at each stage &amp; drop-off %</p>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center bg-[#F9F7F4] p-1 rounded-xl border border-[#e2dfd7]">
+                {[
+                  { key: 'today', label: 'Today' },
+                  { key: 'week', label: 'Week' },
+                  { key: 'month', label: 'Month' },
+                  { key: 'last_month', label: 'Last Month' }
+                ].map(r => (
+                  <button
+                    key={r.key}
+                    onClick={() => { setActiveRange(r.key); setFromDate(''); setToDate(''); }}
+                    className={`
+                      px-3 py-1.5 rounded-lg text-xs font-bold transition-all
+                      ${activeRange === r.key 
+                        ? 'bg-[#1E2D4E] text-white shadow-xs' 
+                        : 'text-[#666666] hover:text-[#1E2D4E]'}
+                    `}
+                  >
+                    {r.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="space-y-2.5">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => { setFromDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs text-[#1E2D4E] font-semibold"
+                />
+                <span className="text-[#888888] text-xs font-bold">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => { setToDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs text-[#1E2D4E] font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Primary Metric Cards Grid - Row 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              title="Total Pipeline"
+              value={kpis.total}
+              subtext="All registered applicants"
+              icon={Users}
+              color="gold"
+              onClick={() => navigate('/candidates')}
+            />
+            <MetricCard
+              title="Shortlisted"
+              value={kpis.shortlisted}
+              subtext="Screened & ready for interview"
+              icon={Clock}
+              color="navy"
+              onClick={() => navigate('/candidates?status=Shortlisted')}
+            />
+            <MetricCard
+              title="Selected Pool"
+              value={kpis.selected}
+              subtext="Passed technical & HR rounds"
+              icon={CheckCircle}
+              color="emerald"
+              onClick={() => navigate('/offer-process')}
+            />
+            <MetricCard
+              title="Joined Staff"
+              value={kpis.joined}
+              subtext="Successfully onboarded"
+              icon={UserCheck}
+              color="teal"
+              onClick={() => navigate('/employees')}
+            />
+          </div>
+
+          {/* Secondary Metric Cards Grid - Row 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              title="Acceptance Rate"
+              value={`${kpis.acceptanceRate}%`}
+              subtext="Offer accept conversion"
+              icon={Percent}
+              color="indigo"
+            />
+            <MetricCard
+              title="Avg Days To Hire"
+              value={`${kpis.avgDays} days`}
+              subtext="Applied to final DOJ"
+              icon={TrendingUp}
+              color="amber"
+            />
+            <MetricCard
+              title="Awaiting Joining"
+              value={kpis.onboarding}
+              subtext="Offers accepted by candidates"
+              icon={UserPlus}
+              color="emerald"
+              onClick={() => navigate('/onboarding')}
+            />
+            <MetricCard
+              title="Interviews Today"
+              value={kpis.interviewsToday}
+              subtext="Scheduled for today"
+              icon={CalendarCheck}
+              color="rose"
+              onClick={() => navigate('/interview-panel')}
+            />
+          </div>
+
+          {/* Middle Layout: Funnel Breakdown + Pending Action Alerts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Hiring Funnel Card */}
+            <div className="card-glass p-5 lg:col-span-2 space-y-5 flex flex-col justify-between">
+              <div>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight flex items-center justify-between">
+                  <span>Hiring Pipeline &amp; Conversion Funnel</span>
+                  <span className="text-xs font-bold text-[#C9952A] bg-[#C9952A]/10 px-2.5 py-1 rounded-full">
+                    {kpis.total} Total Applications
+                  </span>
+                </h3>
+                <p className="text-xs text-[#777777] font-medium mt-1">Stage-by-stage candidate progression and drop-off percentages.</p>
+              </div>
+
+              <div className="space-y-3.5 my-2">
                 {stages.map((s, idx) => {
                   const pct = kpis.total > 0 ? Math.round((s.val / kpis.total) * 100) : 0;
                   const prev = stages[idx - 1]?.val || 0;
@@ -255,29 +295,29 @@ export default function DashboardPage() {
 
                   return (
                     <div key={s.label} className="funnel-row">
-                      <div className="f-lbl">{s.label}</div>
+                      <div className="f-lbl text-xs font-bold">{s.label}</div>
                       <div className="f-bg">
                         <div 
-                          className="f-bar" 
-                          style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: s.color }}
+                          className="f-bar shadow-xs" 
+                          style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: s.color }}
                         >
-                          {s.val}
+                          {pct > 5 && `${pct}%`}
                         </div>
                       </div>
-                      <div className="f-num">{s.val}</div>
-                      <div className="f-drop">{dropPct}</div>
+                      <div className="f-num font-black text-[#1E2D4E] text-xs">{s.val}</div>
+                      <div className="f-drop font-extrabold text-xs">{dropPct}</div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Pipeline Loss */}
-              <div className="pt-3 border-t border-dashed border-[#e0ddd8] flex items-center gap-4 text-xs font-bold">
-                <span className="text-[10px] uppercase text-[#888888] tracking-wider">Pipeline Loss:</span>
-                <span className="px-2.5 py-1 rounded-md bg-red-100 text-red-800 text-[11px]">
+              {/* Pipeline Loss Summary */}
+              <div className="pt-4 border-t border-[#e2dfd7] flex flex-wrap items-center gap-3 text-xs font-bold">
+                <span className="text-[10px] uppercase text-[#777777] tracking-widest font-black">Drop-Off Metrics:</span>
+                <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs">
                   🔴 Rejected: {kpis.rejected}
                 </span>
-                <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 text-[11px]">
+                <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs">
                   🟡 On Hold: {kpis.hold}
                 </span>
               </div>
@@ -285,19 +325,21 @@ export default function DashboardPage() {
 
             {/* Pending Actions Feed */}
             <div className="card-glass p-5 space-y-4 flex flex-col">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
                 <div>
                   <h3 className="font-extrabold text-[#1E2D4E] text-sm flex items-center gap-2">
                     <span>Pending Actions</span>
-                    <span className="w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">
-                      {pendingActions.filter(i => i.priority === 'urgent').length}
-                    </span>
+                    {pendingActions.filter(i => i.priority === 'urgent').length > 0 && (
+                      <span className="w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center animate-pulse">
+                        {pendingActions.filter(i => i.priority === 'urgent').length}
+                      </span>
+                    )}
                   </h3>
-                  <p className="text-[11px] text-[#888888]">Requires your attention</p>
+                  <p className="text-xs text-[#777777] font-medium mt-0.5">Tasks requiring prompt HR action</p>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto max-h-64">
+              <div className="flex-1 space-y-2.5 overflow-y-auto max-h-72 pr-1">
                 {pendingActions.length > 0 ? (
                   pendingActions.map((item, idx) => {
                     const isUrgent = item.priority === 'urgent';
@@ -307,28 +349,28 @@ export default function DashboardPage() {
                       <div
                         key={idx}
                         className={`
-                          p-2.5 rounded-xl border text-xs flex items-center justify-between gap-2
+                          p-3 rounded-xl border text-xs flex items-center justify-between gap-3 shadow-xs transition-all
                           ${isUrgent 
-                            ? 'bg-red-50/70 border-red-200 text-red-900 font-semibold' 
+                            ? 'bg-rose-50/80 border-rose-200 text-rose-900 font-semibold' 
                             : isWarn 
-                            ? 'bg-amber-50/70 border-amber-200 text-amber-900 font-medium' 
-                            : 'bg-blue-50/70 border-blue-200 text-blue-900'}
+                            ? 'bg-amber-50/80 border-amber-200 text-amber-900 font-medium' 
+                            : 'bg-sky-50/80 border-sky-200 text-sky-900'}
                         `}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${isUrgent ? 'bg-red-600' : isWarn ? 'bg-amber-500' : 'bg-blue-600'}`} />
-                          <span>{item.text}</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isUrgent ? 'bg-rose-600' : isWarn ? 'bg-amber-500' : 'bg-sky-600'}`} />
+                          <span className="leading-snug">{item.text}</span>
                         </div>
-                        <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded ${isUrgent ? 'bg-red-200 text-red-900' : 'bg-white/80'}`}>
+                        <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${isUrgent ? 'bg-rose-200 text-rose-900' : 'bg-white/90 border border-slate-200'}`}>
                           {item.priority}
                         </span>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="text-center py-8 text-xs text-[#888888] font-semibold space-y-1">
-                    <div className="text-xl">✅</div>
-                    <div>All clear! No pending alerts</div>
+                  <div className="text-center py-10 text-xs text-[#777777] font-semibold space-y-1">
+                    <div className="text-2xl">🎉</div>
+                    <div>All caught up! No pending alerts</div>
                   </div>
                 )}
               </div>
@@ -337,29 +379,29 @@ export default function DashboardPage() {
 
           {/* Recent Candidates Table */}
           <div className="card-glass p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e2dfd7] pb-3">
               <div>
-                <h3 className="font-extrabold text-[#1E2D4E] text-sm">Recent Candidates</h3>
-                <p className="text-[11px] text-[#888888]">Showing {filteredCandidates.length} candidate(s)</p>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight">Recent Candidate Applications</h3>
+                <p className="text-xs text-[#777777] font-medium mt-0.5">Showing {filteredCandidates.length} filtered candidate records</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]" />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search name, phone, app no..."
-                    className="pl-8 pr-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-xs text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] w-48"
+                    placeholder="Search candidate, phone, app no..."
+                    className="pl-9 pr-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs text-[#1E2D4E] font-semibold focus:outline-none focus:border-[#1E2D4E] w-56 shadow-xs"
                   />
                 </div>
 
                 <button
                   onClick={() => navigate('/candidates')}
-                  className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-1.5"
+                  className="btn-primary text-xs flex items-center gap-1.5 shadow-sm"
                 >
-                  <span>View All</span>
+                  <span>Candidate Directory</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -368,50 +410,45 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888] tracking-wider">
-                    <th className="py-2.5 px-3">App No</th>
-                    <th className="py-2.5 px-3">Candidate</th>
-                    <th className="py-2.5 px-3">Designation</th>
-                    <th className="py-2.5 px-3">Source</th>
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">Days In</th>
+                  <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/50">
+                    <th className="py-3 px-4">App No</th>
+                    <th className="py-3 px-4">Candidate Name</th>
+                    <th className="py-3 px-4">Designation</th>
+                    <th className="py-3 px-4">Source</th>
+                    <th className="py-3 px-4">Applied Date</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Days In Pipeline</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e0ddd8]/50">
+                <tbody className="divide-y divide-[#e2dfd7]/60">
                   {paginatedCandidates.length > 0 ? (
                     paginatedCandidates.map((c) => (
                       <tr key={c.appNo} className="hover:bg-black/5 transition-colors font-medium">
-                        <td className="py-3 px-3 font-mono text-[11px] text-[#666666]">{c.appNo}</td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-[#1E2D4E] text-white font-black text-[10px] flex items-center justify-center">
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
                               {c.initials}
                             </div>
-                            <span className="font-bold text-[#1E2D4E]">{c.name}</span>
+                            <div>
+                              <span className="font-extrabold text-[#1E2D4E] block">{c.name}</span>
+                              <span className="text-[10px] text-[#777777] font-medium">{c.phone}</span>
+                            </div>
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-[#555555]">{c.desig}</td>
-                        <td className="py-3 px-3 text-[#555555]">{c.source}</td>
-                        <td className="py-3 px-3 text-[#666666] whitespace-nowrap">{c.date}</td>
-                        <td className="py-3 px-3">
-                          <span className={`badge ${
-                            c.status === 'New' ? 'b-new' :
-                            c.status === 'Shortlisted' ? 'b-short' :
-                            c.status === 'Selected' ? 'b-sel' :
-                            c.status === 'Joined' ? 'b-sel' :
-                            c.status === 'Rejected' ? 'b-rej' : 'b-info'
-                          }`}>
-                            {c.status}
-                          </span>
+                        <td className="py-3.5 px-4 text-[#555555] font-bold">{c.desig}</td>
+                        <td className="py-3.5 px-4 text-[#555555] font-medium">{c.source}</td>
+                        <td className="py-3.5 px-4 text-[#666666] whitespace-nowrap">{c.date}</td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={c.status} size="sm" />
                         </td>
-                        <td className="py-3 px-3 font-bold text-[#666666]">{c.daysIn}d</td>
+                        <td className="py-3.5 px-4 text-right font-extrabold text-[#1E2D4E]">{c.daysIn} days</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-xs text-[#888888] font-semibold">
-                        No recent candidates found
+                      <td colSpan={7} className="py-12 text-center text-xs text-[#777777] font-semibold">
+                        No matching candidate records found.
                       </td>
                     </tr>
                   )}
@@ -420,24 +457,24 @@ export default function DashboardPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex items-center justify-between text-xs pt-2">
-              <span className="text-[#888888]">
-                Showing {paginatedCandidates.length} of {filteredCandidates.length}
+            <div className="flex items-center justify-between text-xs pt-3 border-t border-[#e2dfd7]">
+              <span className="text-[#777777] font-semibold">
+                Showing {paginatedCandidates.length} of {filteredCandidates.length} entries
               </span>
 
               <div className="flex items-center gap-2 font-bold">
                 <button
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => p - 1)}
-                  className="px-3 py-1 rounded-md border border-[#e0ddd8] bg-white text-[#1E2D4E] disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-lg border border-[#e2dfd7] bg-white text-[#1E2D4E] hover:bg-[#F9F7F4] disabled:opacity-40 transition-colors shadow-xs"
                 >
-                  ← Prev
+                  ← Previous
                 </button>
-                <span>{currentPage} / {totalPages}</span>
+                <span className="px-2 py-1 bg-[#F9F7F4] rounded-lg border border-[#e2dfd7]">{currentPage} / {totalPages}</span>
                 <button
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage(p => p + 1)}
-                  className="px-3 py-1 rounded-md border border-[#e0ddd8] bg-white text-[#1E2D4E] disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-lg border border-[#e2dfd7] bg-white text-[#1E2D4E] hover:bg-[#F9F7F4] disabled:opacity-40 transition-colors shadow-xs"
                 >
                   Next →
                 </button>

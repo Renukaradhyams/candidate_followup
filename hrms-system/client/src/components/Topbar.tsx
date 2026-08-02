@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Bell, Clock } from 'lucide-react';
+import { Menu, Bell, Clock, ChevronRight, ShieldCheck } from 'lucide-react';
 import { UserSession } from '../services/api';
 
 interface TopbarProps {
@@ -17,7 +17,7 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
     const updateTime = () => {
       const now = new Date();
       setClock(
-        now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) +
+        now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' }) +
         ' · ' +
         now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       );
@@ -28,25 +28,26 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
   }, []);
 
   return (
-    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-[#e0ddd8] px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+    <header className="h-16 bg-white/95 backdrop-blur-md border-b border-[#e2dfd7] px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="p-2 rounded-lg text-[#1E2D4E] hover:bg-black/5 lg:hidden"
+          className="p-2 rounded-xl text-[#1E2D4E] hover:bg-[#1E2D4E]/5 lg:hidden transition-colors border border-[#e2dfd7]"
+          aria-label="Toggle menu"
         >
           <Menu className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-lg font-black text-[#1E2D4E] leading-none">{title}</h1>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#888888] font-medium mt-1">
-            <span>BSC CRM</span>
+          <h1 className="text-base sm:text-lg font-black text-[#1E2D4E] tracking-tight leading-none">{title}</h1>
+          <div className="flex items-center gap-1.5 text-[11px] text-[#777777] font-semibold mt-1">
+            <span className="text-[#1E2D4E]">BSC ATS</span>
             {breadcrumbs.map((b, idx) => (
               <React.Fragment key={idx}>
-                <span className="text-[#bbb]">›</span>
+                <ChevronRight className="w-3 h-3 text-[#aaaaaa]" />
                 {b.href ? (
-                  <a href={b.href} className="hover:underline text-[#1E2D4E]">{b.label}</a>
+                  <a href={b.href} className="hover:text-[#C9952A] transition-colors">{b.label}</a>
                 ) : (
-                  <span>{b.label}</span>
+                  <span className="text-[#1E2D4E] font-bold">{b.label}</span>
                 )}
               </React.Fragment>
             ))}
@@ -54,20 +55,20 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#666666] bg-[#F9F7F4] px-3 py-1.5 rounded-lg border border-[#e0ddd8] font-mono">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="hidden md:flex items-center gap-2 text-xs text-[#555555] bg-[#F9F7F4] px-3 py-1.5 rounded-xl border border-[#e2dfd7] font-mono shadow-xs">
           <Clock className="w-3.5 h-3.5 text-[#C9952A]" />
-          <span>{clock}</span>
+          <span className="font-semibold">{clock}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+        <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-800 bg-emerald-50/80 px-3 py-1 rounded-full border border-emerald-200 shadow-xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Live</span>
+          <span>Live Sync</span>
         </div>
 
-        <button className="relative p-2 rounded-lg text-[#1E2D4E] hover:bg-black/5">
+        <button className="relative p-2 rounded-xl text-[#1E2D4E] hover:bg-[#1E2D4E]/5 border border-transparent hover:border-[#e2dfd7] transition-all">
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-600" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
         </button>
 
         {rightElement}

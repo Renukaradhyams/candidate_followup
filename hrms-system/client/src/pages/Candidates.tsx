@@ -4,9 +4,12 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
+import StatusBadge from '../components/ui/StatusBadge';
+import PageHeader from '../components/ui/PageHeader';
+import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X
+  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -21,9 +24,6 @@ export default function CandidatesPage() {
   const [desigFilter, setDesigFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  
-  // Selection
-  const [selectedAppNos, setSelectedAppNos] = useState<string[]>([]);
 
   // Drawer
   const [drawerCandidate, setDrawerCandidate] = useState<any | null>(null);
@@ -95,11 +95,9 @@ export default function CandidatesPage() {
     return p ? p.slice(0, 5) + ' XXXXX' : '—';
   };
 
-  // Build the correct URL for uploaded files (handle bare filenames vs full paths)
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
     if (url.startsWith('http') || url.startsWith('/')) return url;
-    // Determine correct upload subdirectory from filename prefix
     if (url.startsWith('photo')) return `/uploads/candidate-photos/${url}`;
     if (url.startsWith('resume')) return `/uploads/candidate-resumes/${url}`;
     if (url.startsWith('aadhar') || url.startsWith('pan') || url.startsWith('document')) return `/uploads/employee-documents/${url}`;
@@ -185,7 +183,7 @@ export default function CandidatesPage() {
     if (!candidate) return;
 
     try {
-      const res = await API.saveCallStep({
+      await API.saveCallStep({
         appNo: candidate.appNo,
         candidate: candidate.name,
         desig: candidate.desig,
@@ -223,72 +221,78 @@ export default function CandidatesPage() {
 
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         <Topbar
-          title="Candidates"
+          title="Candidate CRM"
           breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Candidates' }]}
           session={session}
           onMenuClick={() => setSidebarOpen(true)}
           rightElement={
             <button
               onClick={() => window.open('/candidate-entry', '_blank')}
-              className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-1"
+              className="btn-primary text-xs flex items-center gap-1.5 shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Walk-in</span>
+              <span>Register Candidate</span>
             </button>
           }
         />
 
-        <main className="p-4 lg:p-6 space-y-4 flex-1 overflow-y-auto">
+        <main className="p-4 lg:p-6 space-y-5 flex-1 overflow-y-auto">
           {/* Status Pills Bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 text-xs font-bold scrollbar-none">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-bold scrollbar-none">
             {[
-              { key: 'all', label: 'All' },
-              { key: 'New', label: 'New' },
+              { key: 'all', label: 'All Candidates' },
+              { key: 'New', label: 'New Applicants' },
               { key: 'Shortlisted', label: 'Shortlisted' },
-              { key: '1st Call', label: '1st Call' },
+              { key: '1st Call', label: '1st Call Logged' },
               { key: 'Interview Scheduled', label: 'Interview Scheduled' },
-              { key: 'Interviewed', label: 'Interviewed' },
+              { key: 'Interviewed', label: 'Interview Completed' },
               { key: 'Selected', label: 'Selected' },
               { key: 'Offer Sent', label: 'Offer Sent' },
-              { key: 'Hold', label: 'Hold' },
+              { key: 'Hold', label: 'On Hold' },
               { key: 'Rejected', label: 'Rejected' }
-            ].map(p => (
-              <button
-                key={p.key}
-                onClick={() => setActiveStatus(p.key)}
-                className={`
-                  px-3 py-1.5 rounded-full border whitespace-nowrap transition-all
-                  ${activeStatus === p.key 
-                    ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm' 
-                    : 'bg-white text-[#666666] border-[#e0ddd8] hover:bg-black/5'}
-                `}
-              >
-                {p.label}
-              </button>
-            ))}
+            ].map(p => {
+              const count = p.key === 'all' ? candidates.length : candidates.filter(c => c.status === p.key).length;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => setActiveStatus(p.key)}
+                  className={`
+                    px-3.5 py-1.5 rounded-full border whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shadow-xs
+                    ${activeStatus === p.key 
+                      ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm font-black' 
+                      : 'bg-white text-[#555555] border-[#e2dfd7] hover:bg-[#F9F7F4] hover:text-[#1E2D4E] font-semibold'}
+                  `}
+                >
+                  <span>{p.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeStatus === p.key ? 'bg-white/20 text-white' : 'bg-black/5 text-[#777777]'}`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Filter Bar */}
-          <div className="card-glass p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-2 flex-1">
-              <div className="relative min-w-[220px]">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#888888]" />
+          {/* Filter Toolbar */}
+          <div className="card-glass p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="relative min-w-[240px]">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search name, phone, app no..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] shadow-xs"
                 />
               </div>
 
               <select
                 value={desigFilter}
                 onChange={(e) => setDesigFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-[#1E2D4E] font-medium"
+                className="px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
               >
                 <option value="">All Designations</option>
-                {['Sales Executive', 'Floor Manager', 'Cashier', 'Billing Executive', 'Store Keeper'].map(d => (
+                {Array.from(new Set(candidates.map(c => c.desig).filter(Boolean))).map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -296,7 +300,7 @@ export default function CandidatesPage() {
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-[#1E2D4E] font-medium"
+                className="px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
               >
                 <option value="">All Sources</option>
                 <option value="Walk-in">Walk-in</option>
@@ -309,71 +313,63 @@ export default function CandidatesPage() {
             <div className="flex items-center gap-2 font-bold">
               <button
                 onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-1.5 rounded-lg border border-[#e0ddd8] bg-white text-[#1E2D4E] hover:bg-black/5"
+                className="px-3.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-[#1E2D4E] hover:bg-[#F9F7F4] transition-colors shadow-xs"
               >
-                {sortDir === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
+                {sortDir === 'asc' ? '↑ Date Applied (Asc)' : '↓ Date Applied (Desc)'}
               </button>
             </div>
           </div>
 
-          {/* Table Card */}
-          <div className="card-glass p-4 space-y-4">
+          {/* Candidate Table Grid */}
+          <div className="card-glass p-5 space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888] tracking-wider">
-                    <th className="py-2.5 px-3">App No</th>
-                    <th className="py-2.5 px-3">Candidate</th>
-                    <th className="py-2.5 px-3">Phone</th>
-                    <th className="py-2.5 px-3">Gender</th>
-                    <th className="py-2.5 px-3">Designation</th>
-                    <th className="py-2.5 px-3">Source</th>
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3">Actions</th>
+                  <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
+                    <th className="py-3 px-4">App No</th>
+                    <th className="py-3 px-4">Candidate Name</th>
+                    <th className="py-3 px-4">Phone Number</th>
+                    <th className="py-3 px-4">Gender</th>
+                    <th className="py-3 px-4">Designation</th>
+                    <th className="py-3 px-4">Source</th>
+                    <th className="py-3 px-4">Applied Date</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e0ddd8]/50">
+                <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filtered.length > 0 ? (
                     filtered.map((c) => (
                       <tr key={c.appNo} className="hover:bg-black/5 transition-colors font-medium">
-                        <td className="py-3 px-3 font-mono text-[11px] text-[#666666]">{c.appNo}</td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
+                        <td className="py-3.5 px-4">
                           <button
                             onClick={() => openDrawer(c)}
-                            className="flex items-center gap-2.5 hover:underline text-[#1E2D4E] font-bold text-left"
+                            className="flex items-center gap-3 group text-left"
                           >
-                            <div className="w-7 h-7 rounded-full bg-[#1E2D4E] text-white font-black text-[10px] flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
                               {c.initials}
                             </div>
-                            <span>{c.name}</span>
+                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline">{c.name}</span>
                           </button>
                         </td>
-                        <td className="py-3 px-3 font-mono text-[#666666]">{maskPhone(c.phone)}</td>
-                        <td className="py-3 px-3 text-[#555555]">{c.gender || '—'}</td>
-                        <td className="py-3 px-3 text-[#555555]">{c.desig}</td>
-                        <td className="py-3 px-3 text-[#555555]">{c.source}</td>
-                        <td className="py-3 px-3 text-[#666666] whitespace-nowrap">{c.date}</td>
-                        <td className="py-3 px-3">
-                          <span className={`badge ${
-                            c.status === 'New' ? 'b-new' :
-                            c.status === 'Shortlisted' ? 'b-short' :
-                            c.status === 'Selected' ? 'b-sel' :
-                            c.status === 'Joined' ? 'b-sel' :
-                            c.status === 'Rejected' ? 'b-rej' : 'b-info'
-                          }`}>
-                            {c.status}
-                          </span>
+                        <td className="py-3.5 px-4 font-mono text-[#555555]">{maskPhone(c.phone)}</td>
+                        <td className="py-3.5 px-4 text-[#555555] font-semibold">{c.gender || '—'}</td>
+                        <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{c.desig}</td>
+                        <td className="py-3.5 px-4 text-[#555555] font-medium">{c.source}</td>
+                        <td className="py-3.5 px-4 text-[#666666] whitespace-nowrap font-medium">{c.date}</td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={c.status} size="sm" />
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 px-4 text-right">
                           {isViewOnly ? (
                             <span className="text-[10px] text-[#aaa] italic">View only</span>
                           ) : (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center justify-end gap-1.5">
                               {c.status === 'New' && (
                                 <button
                                   onClick={() => handleOpenRemarkModal('shortlist', c)}
-                                  className="px-2.5 py-1 rounded-md border border-[#1E2D4E] text-[#1E2D4E] font-bold hover:bg-[#1E2D4E] hover:text-white transition-all text-[11px]"
+                                  className="px-2.5 py-1 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold hover:bg-[#1E2D4E] hover:text-white transition-all text-[11px]"
                                 >
                                   Shortlist
                                 </button>
@@ -381,7 +377,7 @@ export default function CandidatesPage() {
                               {(c.status === 'Shortlisted') && (
                                 <button
                                   onClick={() => handleOpenCallModal(c)}
-                                  className="px-2.5 py-1 rounded-md bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px]"
+                                  className="px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px] shadow-xs"
                                 >
                                   📞 1st Call
                                 </button>
@@ -389,24 +385,24 @@ export default function CandidatesPage() {
                               {(c.status === '1st Call') && (
                                 <button
                                   onClick={() => handleOpenCallModal(c)}
-                                  className="px-2.5 py-1 rounded-md bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px]"
+                                  className="px-2.5 py-1 rounded-lg bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px] shadow-xs"
                                 >
                                   📅 Schedule Interview
                                 </button>
                               )}
                               <button
                                 onClick={() => navigate(`/candidate-entry?edit=${c.appNo}`)}
-                                className="px-2 py-1 rounded-md border border-emerald-700 text-emerald-700 font-bold hover:bg-emerald-700 hover:text-white transition-all text-[10px]"
-                                title="Edit Candidate"
+                                className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors"
+                                title="Edit Candidate Details"
                               >
-                                Edit
+                                <Edit3 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteCandidate(c.appNo)}
-                                className="px-2 py-1 rounded-md bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px]"
-                                title="Delete Candidate"
+                                className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-colors"
+                                title="Delete Candidate Record"
                               >
-                                Delete
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           )}
@@ -415,8 +411,8 @@ export default function CandidatesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-xs text-[#888888] font-semibold">
-                        No candidates found matching criteria
+                      <td colSpan={9} className="py-12 text-center text-xs text-[#777777] font-semibold">
+                        No candidates found matching criteria.
                       </td>
                     </tr>
                   )}
@@ -424,62 +420,59 @@ export default function CandidatesPage() {
               </table>
             </div>
 
-            {/* Bottom View Selected / Rejected Buttons */}
-            <div className="pt-3 border-t border-[#e0ddd8] flex items-center gap-3">
+            {/* Bottom Panel Views */}
+            <div className="pt-3 border-t border-[#e2dfd7] flex items-center gap-3">
               <button
                 onClick={() => handleViewSelRej('selected')}
-                className="px-3 py-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 text-xs flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 text-xs flex items-center gap-1.5 transition-colors shadow-xs"
               >
-                <CheckCircle className="w-3.5 h-3.5" />
+                <CheckCircle className="w-4 h-4" />
                 <span>View Selected Candidates</span>
               </button>
               <button
                 onClick={() => handleViewSelRej('rejected')}
-                className="px-3 py-1.5 rounded-lg border border-red-600 text-red-700 font-bold hover:bg-red-50 text-xs flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-xl border border-rose-600 text-rose-700 font-bold hover:bg-rose-50 text-xs flex items-center gap-1.5 transition-colors shadow-xs"
               >
-                <XCircle className="w-3.5 h-3.5" />
+                <XCircle className="w-4 h-4" />
                 <span>View Rejected Candidates</span>
               </button>
             </div>
           </div>
 
-          {/* Selected / Rejected Panel Modal */}
+          {/* Selected / Rejected Quick View Modal */}
           {selRejPanel && (
-            <div className="card-glass p-5 space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between border-b border-[#e0ddd8] pb-3">
-                <h3 className="font-black text-[#1E2D4E] text-sm capitalize">{selRejPanel} Candidates</h3>
-                <button
-                  onClick={() => setSelRejPanel(null)}
-                  className="p-1 text-[#888888] hover:text-[#1E2D4E]"
-                >
-                  <X className="w-4 h-4" />
+            <div className="card-glass p-5 space-y-4 animate-fade-in border-2 border-[#1E2D4E]/20">
+              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+                <h3 className="font-extrabold text-[#1E2D4E] text-base capitalize flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-[#C9952A]" />
+                  <span>{selRejPanel} Candidates</span>
+                </h3>
+                <button onClick={() => setSelRejPanel(null)} className="text-[#888888] hover:text-[#1E2D4E] p-1">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-64">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888]">
+                    <tr className="border-b border-[#e2dfd7] text-[10px] font-black uppercase text-[#777777]">
                       <th className="py-2.5 px-3">App No</th>
                       <th className="py-2.5 px-3">Name</th>
                       <th className="py-2.5 px-3">Designation</th>
-                      <th className="py-2.5 px-3">Source</th>
-                      <th className="py-2.5 px-3">Remarks</th>
+                      <th className="py-2.5 px-3">Phone</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#e0ddd8]/50">
-                    {selRejData.length > 0 ? (
-                      selRejData.map((r) => (
-                        <tr key={r.appNo} className="hover:bg-black/5 font-medium">
-                          <td className="py-2.5 px-3 font-mono">{r.appNo}</td>
-                          <td className="py-2.5 px-3 font-bold">{r.name}</td>
-                          <td className="py-2.5 px-3">{r.desig}</td>
-                          <td className="py-2.5 px-3">{r.source}</td>
-                          <td className="py-2.5 px-3 text-[#666666] italic">{r.remarks || '—'}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan={5} className="py-6 text-center text-[#888888]">No records found</td></tr>
+                  <tbody className="divide-y divide-[#e2dfd7]/50">
+                    {selRejData.map((c, idx) => (
+                      <tr key={idx} className="hover:bg-black/5 font-medium">
+                        <td className="py-2.5 px-3 font-mono">{c.appNo}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#1E2D4E]">{c.name}</td>
+                        <td className="py-2.5 px-3">{c.desig}</td>
+                        <td className="py-2.5 px-3 font-mono">{c.phone}</td>
+                      </tr>
+                    ))}
+                    {selRejData.length === 0 && (
+                      <tr><td colSpan={4} className="py-6 text-center text-[#888888]">No records found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -489,324 +482,181 @@ export default function CandidatesPage() {
         </main>
       </div>
 
-      {/* Candidate Profile Drawer */}
+      {/* Candidate Details Drawer */}
       {drawerCandidate && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDrawerCandidate(null)} />
-          
-          <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col z-10 animate-fade-in">
-            {/* Drawer Header */}
-            <div className="bg-[#1E2D4E] p-5 text-white flex items-center justify-between">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setDrawerCandidate(null)} />
+          <div className="relative w-full max-w-lg bg-white h-full shadow-2xl p-6 flex flex-col z-10 space-y-5 animate-fade-in overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#C9952A] font-black text-white flex items-center justify-center text-sm">
+                <div className="w-10 h-10 rounded-full bg-[#1E2D4E] text-white font-black text-sm flex items-center justify-center shadow-md">
                   {drawerCandidate.initials}
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base leading-tight">{drawerCandidate.name}</h3>
-                  <div className="text-[11px] text-white/60 mt-0.5">{drawerCandidate.appNo} · Applied {drawerCandidate.date}</div>
+                  <h3 className="font-extrabold text-[#1E2D4E] text-base leading-tight">{drawerCandidate.name}</h3>
+                  <div className="text-xs text-[#777777] font-mono mt-0.5">{drawerCandidate.appNo} · {drawerCandidate.desig}</div>
                 </div>
               </div>
-
-              <button onClick={() => setDrawerCandidate(null)} className="text-white/70 hover:text-white">
+              <button onClick={() => setDrawerCandidate(null)} className="text-[#888888] hover:text-[#1E2D4E] p-1.5 rounded-lg border border-[#e2dfd7]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Drawer Tabs */}
-            <div className="flex border-b border-[#e0ddd8] bg-[#F9F7F4] text-xs font-bold text-[#888888]">
-              {['overview', 'details', 'questions', 'activity'].map(tab => (
+            <div className="flex items-center gap-2 border-b border-[#e2dfd7] pb-2 text-xs font-bold">
+              {['overview', 'details', 'activity'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setDrawerTab(tab as any)}
-                  className={`
-                    flex-1 py-3 text-center border-b-2 capitalize transition-all
-                    ${drawerTab === tab 
-                      ? 'border-[#1E2D4E] text-[#1E2D4E] bg-white' 
-                      : 'border-transparent hover:text-[#1E2D4E]'}
-                  `}
+                  className={`px-3 py-1.5 rounded-lg capitalize transition-all ${drawerTab === tab ? 'bg-[#1E2D4E] text-white' : 'text-[#666666] hover:bg-[#F9F7F4]'}`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
 
-            {/* Drawer Body */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
-              {drawerTab === 'overview' && (
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Personal Overview</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><span className="text-[#888888]">Phone:</span> <b className="text-[#1E2D4E]">{drawerCandidate.phone}</b></div>
-                      <div><span className="text-[#888888]">Email:</span> <b className="text-[#1E2D4E]">{drawerCandidate.email || '—'}</b></div>
-                      <div><span className="text-[#888888]">DOB:</span> <b>{drawerCandidate.dob || '—'}</b></div>
-                      <div><span className="text-[#888888]">Gender:</span> <b>{drawerCandidate.gender || '—'}</b></div>
-                    </div>
+            {drawerTab === 'overview' && (
+              <div className="space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7]">
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-[#777777] block">Status</span>
+                    <StatusBadge status={drawerCandidate.status} size="sm" />
                   </div>
-
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Application Details</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div><span className="text-[#888888]">Position:</span> <b className="text-[#1E2D4E]">{drawerCandidate.desig}</b></div>
-                      <div><span className="text-[#888888]">Expected Salary:</span> <b className="text-emerald-700">₹{drawerCandidate.salary}</b></div>
-                      <div><span className="text-[#888888]">Experience:</span> <b>{drawerCandidate.experience || '—'}</b></div>
-                      <div><span className="text-[#888888]">Notice Period:</span> <b>{drawerCandidate.noticePeriod || '—'}</b></div>
-                    </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-[#777777] block">Phone</span>
+                    <span className="font-bold text-[#1E2D4E] font-mono">{drawerCandidate.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-[#777777] block">Email</span>
+                    <span className="font-bold text-[#1E2D4E]">{drawerCandidate.email || '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-black text-[#777777] block">Qualification</span>
+                    <span className="font-bold text-[#1E2D4E]">{drawerCandidate.qualification || '—'}</span>
                   </div>
                 </div>
-              )}
 
-              {drawerTab === 'details' && (
-                <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-1">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E]">Location</div>
-                    <div>{drawerCandidate.address || '—'}, {drawerCandidate.cityState}</div>
-                  </div>
+                <div className="space-y-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#1E2D4E] block">Uploaded Documents</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {fileUrl(drawerCandidate.photoUrl) ? (
+                      <a href={fileUrl(drawerCandidate.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
+                        📷 Photo
+                      </a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
 
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-3">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E]">Documents</div>
-                    <div className="flex flex-col gap-2">
-                      {fileUrl(drawerCandidate.resumeUrl) ? (
-                        <a
-                          href={fileUrl(drawerCandidate.resumeUrl)!}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>View Resume PDF</span>
-                        </a>
-                      ) : (
-                        <div className="text-[#888888] italic text-[11px]">No resume uploaded</div>
-                      )}
+                    {fileUrl(drawerCandidate.aadhaarUrl) ? (
+                      <a href={fileUrl(drawerCandidate.aadhaarUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
+                        📄 Aadhaar
+                      </a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
 
-                      {fileUrl(drawerCandidate.photoUrl) ? (
-                        <a
-                          href={fileUrl(drawerCandidate.photoUrl)!}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>View Photo</span>
-                        </a>
-                      ) : (
-                        <div className="text-[#888888] italic text-[11px]">No photo uploaded</div>
-                      )}
-
-                      {fileUrl(drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl) ? (
-                        <a
-                          href={fileUrl(drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl)!}
-                          target="_blank"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>View Aadhaar Card</span>
-                        </a>
-                      ) : (
-                        <div className="text-[#888888] italic text-[11px]">No Aadhaar uploaded</div>
-                      )}
-                    </div>
+                    {fileUrl(drawerCandidate.resumeUrl) ? (
+                      <a href={fileUrl(drawerCandidate.resumeUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
+                        📑 Resume
+                      </a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Resume</span>}
                   </div>
-                </div>
-              )}
-
-              {drawerTab === 'questions' && (
-                <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Retail Experience</div>
-                    <div className="text-[#1E2D4E] font-semibold">{drawerCandidate.retailExperience || '—'}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Qualification</div>
-                    <div>{drawerCandidate.qualification || '—'}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Total Experience</div>
-                    <div>{drawerCandidate.experience || '—'}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Previous Company</div>
-                    <div>{drawerCandidate.previousCompany || '—'} {drawerCandidate.previousDesignation ? `(${drawerCandidate.previousDesignation})` : ''}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                    <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider">Languages Known</div>
-                    <div>{Array.isArray(drawerCandidate.languagesKnown) ? drawerCandidate.languagesKnown.join(', ') : drawerCandidate.languagesKnown || '—'}</div>
-                  </div>
-                </div>
-              )}
-
-              {drawerTab === 'activity' && (
-                <div className="space-y-3">
-                  {activityLog.length > 0 ? (
-                    activityLog.map((act, idx) => (
-                      <div key={idx} className="flex items-start gap-3 p-2.5 rounded-lg bg-[#F9F7F4] border border-[#e0ddd8]">
-                        <span className="text-base">{act.icon || '📋'}</span>
-                        <div className="flex-1">
-                          <div className="font-bold text-[#1E2D4E]">{act.label}</div>
-                          {act.remarks && <div className="text-[#666666] italic mt-0.5">"{act.remarks}"</div>}
-                          <div className="text-[10px] text-[#888888] mt-1">{act.date} {act.by ? `by ${act.by}` : ''}</div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-6 text-[#888888]">No activity log recorded</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Drawer Actions */}
-            {!isViewOnly && (
-              <div className="p-4 border-t border-[#e0ddd8] bg-[#F9F7F4] flex flex-wrap gap-2">
-                {drawerCandidate.status === 'New' && (
-                  <>
-                    <button
-                      onClick={() => handleOpenRemarkModal('shortlist', drawerCandidate)}
-                      className="flex-1 py-2.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
-                    >
-                      Shortlist
-                    </button>
-                    <button
-                      onClick={() => handleOpenRemarkModal('hold', drawerCandidate)}
-                      className="flex-1 py-2.5 rounded-lg bg-amber-500 text-white font-bold text-xs"
-                    >
-                      Hold
-                    </button>
-                    <button
-                      onClick={() => handleOpenRemarkModal('reject', drawerCandidate)}
-                      className="flex-1 py-2.5 rounded-lg bg-red-600 text-white font-bold text-xs"
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-                <div className="flex w-full gap-2 mt-2 pt-2 border-t border-[#e0ddd8]/50">
-                  <button
-                    onClick={() => window.location.href = '/candidate-entry?edit=' + drawerCandidate.appNo}
-                    className="flex-1 py-2.5 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-xs hover:bg-[#1E2D4E]/5"
-                  >
-                    Edit Profile
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCandidate(drawerCandidate.appNo)}
-                    className="flex-1 py-2.5 rounded-lg border border-red-600 text-red-600 font-bold text-xs hover:bg-red-50"
-                  >
-                    Delete Profile
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* Call Step button for shortlisted / called candidates */}
-            {(drawerCandidate.status === 'Shortlisted' ||
-              drawerCandidate.status === '1st Call') && !isViewOnly && (
-              <div className="p-4 border-t border-amber-200 bg-amber-50">
-                <div className="text-[10px] font-black uppercase text-amber-700 tracking-wider mb-2">
-                  {drawerCandidate.status === '1st Call' ? '📅 Schedule Interview' : '📞 Call Step'}
-                </div>
-                <button
-                  onClick={() => handleOpenCallModal(drawerCandidate)}
-                  className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg text-white ${
-                    drawerCandidate.status === '1st Call'
-                      ? 'bg-[#1E2D4E] hover:bg-[#162340]'
-                      : 'bg-amber-500 hover:bg-amber-600'
-                  }`}
-                >
-                  {drawerCandidate.status === 'Shortlisted' && '☎ Log 1st Call'}
-                  {drawerCandidate.status === '1st Call' && '📅 Schedule Interview'}
-                </button>
+            {drawerTab === 'activity' && (
+              <div className="space-y-3 text-xs overflow-y-auto max-h-80 pr-1">
+                {activityLog.length > 0 ? (
+                  activityLog.map((a, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-1">
+                      <div className="flex items-center justify-between font-bold text-[#1E2D4E]">
+                        <span>{a.label || a.action_type}</span>
+                        <span className="text-[10px] text-[#777777] font-mono">{a.created_at ? new Date(a.created_at).toLocaleDateString() : ''}</span>
+                      </div>
+                      {a.remarks && <p className="text-[#666666] italic">{a.remarks}</p>}
+                    </div>
+                  ))
+                ) : <p className="text-center py-6 text-[#888888]">No activity logged yet.</p>}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Mandatory Remarks Modal */}
+      {/* Remark Modal */}
       {remarkModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
-            <h3 className="font-black text-[#1E2D4E] text-base capitalize">
-              {remarkModal.action} Candidate — {remarkModal.candidate?.name}
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base capitalize">
+                {remarkModal.action} — {remarkModal.candidate?.name}
+              </h3>
+              <button onClick={() => setRemarkModal({ open: false, action: '', candidate: null })} className="text-[#888888] hover:text-[#1E2D4E]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-extrabold uppercase text-[#777777]">
-                Mandatory Remarks <span className="text-red-600">*</span>
-              </label>
+            <div>
+              <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Enter HR Remarks / Feedback *</label>
               <textarea
+                rows={3}
                 value={remarksText}
                 onChange={(e) => setRemarksText(e.target.value)}
-                placeholder="Enter remarks (min 5 characters)..."
-                rows={3}
-                className="w-full p-3 text-xs rounded-xl border border-[#e0ddd8] bg-[#F9F7F4] focus:outline-none focus:border-[#1E2D4E]"
+                placeholder="Reasoning for this status update..."
+                className="input-modern"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setRemarkModal({ open: false, action: '', candidate: null })}
-                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold text-[#666666]"
-              >
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#e2dfd7]">
+              <button onClick={() => setRemarkModal({ open: false, action: '', candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold">
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmRemark}
-                className="px-4 py-2 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold"
-              >
-                Confirm
+              <button onClick={handleConfirmRemark} className="btn-primary text-xs">
+                Confirm Update
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Call Setup Modal */}
+      {/* Call Log Modal */}
       {callModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
-            <h3 className="font-black text-[#1E2D4E] text-base">
-              Call Setup — {callModal.candidate?.name}
-            </h3>
-            
-            <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e0ddd8] text-xs space-y-2">
-               <div className="font-bold text-[#1E2D4E] mb-2">
-                  {callModal.step === 1 && 'Step 1: Log 1st Call'}
-                  {callModal.step === 2 && 'Step 2: Schedule Interview'}
-               </div>
-               
-               <div className="space-y-1.5">
-                 <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Date <span className="text-red-600">*</span></label>
-                 <input 
-                   type="date"
-                   value={callDate}
-                   onChange={(e) => setCallDate(e.target.value)}
-                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] focus:outline-none focus:border-[#1E2D4E]"
-                 />
-               </div>
-
-               <div className="space-y-1.5 pt-2">
-                 <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Remarks <span className="text-red-600">*</span></label>
-                 <textarea
-                   value={callRemarks}
-                   onChange={(e) => setCallRemarks(e.target.value)}
-                   placeholder="Call summary or feedback..."
-                   rows={3}
-                   className="w-full p-2.5 rounded-lg border border-[#e0ddd8] focus:outline-none focus:border-[#1E2D4E]"
-                 />
-               </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">
+                Log {callModal.step === 1 ? '1st Call' : 'Interview Schedule'} — {callModal.candidate?.name}
+              </h3>
+              <button onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })} className="text-[#888888]">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })}
-                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold text-[#666666]"
-              >
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Date *</label>
+                <input
+                  type="date"
+                  value={callDate}
+                  onChange={(e) => setCallDate(e.target.value)}
+                  className="input-modern"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Call Notes / Schedule Remarks *</label>
+                <textarea
+                  rows={3}
+                  value={callRemarks}
+                  onChange={(e) => setCallRemarks(e.target.value)}
+                  placeholder="Candidate availability, expected timing, interview details..."
+                  className="input-modern"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#e2dfd7]">
+              <button onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold">
                 Cancel
               </button>
-              <button
-                onClick={handleConfirmCallStep}
-                className="px-4 py-2 rounded-lg bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340]"
-              >
-                Save
+              <button onClick={handleConfirmCallStep} className="btn-primary text-xs">
+                Save Call Step
               </button>
             </div>
           </div>

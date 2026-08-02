@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
+import { 
+  User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
+  FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, Image, FileCheck
+} from 'lucide-react';
 
 export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
@@ -28,8 +32,6 @@ export default function CandidateEntryPage() {
   const [motherDetails, setMotherDetails] = useState('');
   const [religionCaste, setReligionCaste] = useState('');
   const [languagesKnown, setLanguagesKnown] = useState<string[]>([]);
-  
-  // No screening questions in BSC Registration Form v2
 
   // Files
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -78,7 +80,7 @@ export default function CandidateEntryPage() {
           setMotherDetails(c.motherDetails || '');
           setReligionCaste(c.religionCaste || '');
           setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? JSON.parse(c.languagesKnown) : c.languagesKnown) : []);
-          setDeclaration(true); // Assuming they declared it earlier
+          setDeclaration(true);
           setExistingResume(c.resumeUrl || '');
           setExistingPhoto(c.photoUrl || '');
           setExistingAadhaar(c.aadharUrl || c.aadhaarUrl || '');
@@ -99,7 +101,7 @@ export default function CandidateEntryPage() {
     try {
       const d = await API.checkDuplicate(ph);
       if (d.exists) {
-        setDupWarn(`⚠️ This number was already used by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
+        setDupWarn(`⚠️ This phone number was already registered by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
       } else {
         setDupWarn('');
       }
@@ -114,7 +116,7 @@ export default function CandidateEntryPage() {
 
   const handleGoStep2 = () => {
     if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber || !fatherDetails || !motherDetails) {
-      showToast('Please fill out all mandatory fields in Step 1', 'error');
+      showToast('Please fill out all mandatory fields marked with (*)', 'error');
       return;
     }
     setStep(2);
@@ -148,17 +150,13 @@ export default function CandidateEntryPage() {
           if (uploadRes.resumeUrl) resumeUrl = uploadRes.resumeUrl;
           if (uploadRes.photoUrl) photoUrl = uploadRes.photoUrl;
           if (uploadRes.aadhaarUrl) aadhaarUrl = uploadRes.aadhaarUrl;
-        } else {
-          showToast('Failed to upload documents', 'error');
-          setLoading(false);
-          return;
         }
       }
 
       const payload = {
         name,
         email,
-        phone: phone.startsWith('+91') ? phone : '+91' + phone,
+        phone,
         address,
         gender,
         bloodGroup,
@@ -175,27 +173,27 @@ export default function CandidateEntryPage() {
         motherDetails,
         religionCaste,
         languagesKnown,
-        resumeUrl, photoUrl, aadhaarUrl
+        resumeUrl,
+        photoUrl,
+        aadhaarUrl,
+        source: 'Walk-in',
+        status: 'New'
       };
 
       if (editAppNo) {
-        await API.updateCandidate(editAppNo, { ...payload, isFullEdit: true });
-        showToast('Candidate Profile Updated Successfully!', 'success');
-        setTimeout(() => {
-          window.location.href = '/candidates';
-        }, 1500);
+        await API.call('updateCandidateFull', { appNo: editAppNo, ...payload });
+        showToast('Registration details updated successfully!', 'success');
+        setSuccessAppNo(editAppNo);
       } else {
         const res = await API.addCandidate(payload);
-        if (res && res.success) {
-          setSuccessAppNo(res.appNo || res.candidateCode);
-          setStep(3);
-          window.scrollTo(0, 0);
-        } else {
-          showToast('Registration failed: ' + (res.error || 'Unknown error'), 'error');
-        }
+        setSuccessAppNo(res.appNo);
+        showToast(`Registration Successful! App No: ${res.appNo}`, 'success');
       }
+
+      setStep(3);
+      window.scrollTo(0, 0);
     } catch (err: any) {
-      showToast('Error: ' + err.message, 'error');
+      showToast('Error submitting registration: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -208,262 +206,453 @@ export default function CandidateEntryPage() {
   const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi'];
 
   return (
-    <div className="min-h-screen bg-[#EDE8DE]">
+    <div className="min-h-screen bg-[#EDE8DE] pb-12">
       <ToastContainer />
 
-      {/* Header */}
-      <div className="bg-[#1E2D4E] p-4 text-white flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="BSC Logo" className="w-10 h-10 object-contain rounded-lg bg-white p-1 shadow" />
-          <div>
-            <h1 className="font-extrabold text-base leading-tight">BSC Candidate Registration</h1>
-            <div className="text-[10px] text-white/50 uppercase tracking-widest">BSC The Textile Mall · Since 1938</div>
+      {/* Modern Header */}
+      <header className="bg-[#1E2D4E] p-4 sm:p-5 text-white shadow-lg sticky top-0 z-30 border-b border-[#C9952A]/30">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="BSC Logo" className="w-11 h-11 object-contain rounded-xl bg-white p-1 shadow-md border border-white/20" />
+            <div>
+              <h1 className="font-extrabold text-base sm:text-lg leading-tight tracking-tight">BSC Applicant Registration</h1>
+              <div className="text-[10px] text-[#C9952A] font-bold uppercase tracking-widest mt-0.5">
+                BSC The Textile Mall · Since 1938
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+            <ShieldCheck className="w-4 h-4 text-[#C9952A]" />
+            <span>Official Recruitment Portal</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-2xl mx-auto p-4 lg:p-6">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Step Stepper Indicator */}
         {step !== 3 && (
-          <div className="flex items-center justify-between text-xs font-bold mb-4 bg-white p-3 rounded-xl border border-[#e0ddd8]">
-            <span className={step === 1 ? 'text-[#1E2D4E]' : 'text-[#888888]'}>Step 1: Personal Details</span>
-            <span className={step === 2 ? 'text-[#1E2D4E]' : 'text-[#888888]'}>Step 2: Documents &amp; Screening</span>
+          <div className="card-glass p-4 flex items-center justify-between text-xs font-extrabold">
+            <div className={`flex items-center gap-2 ${step === 1 ? 'text-[#1E2D4E]' : 'text-[#888888]'}`}>
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-[#1E2D4E] text-white shadow-xs' : 'bg-[#F9F7F4] border'}`}>
+                1
+              </span>
+              <span className="hidden sm:inline">Step 1: Personal &amp; Career Info</span>
+              <span className="sm:hidden">Step 1</span>
+            </div>
+
+            <div className="h-0.5 flex-1 mx-4 bg-[#e2dfd7]" />
+
+            <div className={`flex items-center gap-2 ${step === 2 ? 'text-[#1E2D4E]' : 'text-[#888888]'}`}>
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-[#1E2D4E] text-white shadow-xs' : 'bg-[#F9F7F4] border'}`}>
+                2
+              </span>
+              <span className="hidden sm:inline">Step 2: Documents &amp; Declaration</span>
+              <span className="sm:hidden">Step 2</span>
+            </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl p-6 shadow-xl border border-[#e0ddd8] space-y-5 text-xs">
-          {step === 1 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="text-xs font-black uppercase text-[#1E2D4E] tracking-wider border-b border-[#e0ddd8] pb-2">
-                Personal Information
+        {/* STEP 1 FORM */}
+        {step === 1 && (
+          <div className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
+            {/* Section 1: Personal Details */}
+            <div className="space-y-4">
+              <div className="border-b border-[#e2dfd7] pb-3 flex items-center gap-2">
+                <User className="w-5 h-5 text-[#C9952A]" />
+                <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
+                  1. Personal &amp; Contact Details
+                </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Full Name (As per Aadhaar) *</label>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Full Name (As per Aadhaar) *</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter full name"
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Phone Number *</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Mobile Phone Number *</label>
                   <div className="flex">
-                    <span className="p-2.5 bg-[#F9F7F4] border border-r-0 border-[#e0ddd8] rounded-l-lg font-bold text-[#555555]">+91</span>
-                    <input type="tel" maxLength={10} value={phone} onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '')); checkDuplicate(e.target.value); }} placeholder="10-digit number" className="w-full p-2.5 rounded-r-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                    <span className="p-2.5 bg-[#e2dfd7]/50 border border-r-0 border-[#e2dfd7] rounded-l-xl font-extrabold text-xs text-[#555555] flex items-center">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '')); checkDuplicate(e.target.value); }}
+                      placeholder="10-digit mobile number"
+                      className="input-modern rounded-l-none"
+                    />
                   </div>
-                  {dupWarn && <div className="p-2 mt-1 rounded bg-amber-50 border border-amber-300 text-amber-800 text-[11px] font-medium">{dupWarn}</div>}
+                  {dupWarn && (
+                    <div className="p-2.5 mt-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold">
+                      {dupWarn}
+                    </div>
+                  )}
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Email *</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Gender *</label>
-                  <select value={gender} onChange={(e) => setGender(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                    <option value="">Select</option>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Gender *</label>
+                  <select value={gender} onChange={(e) => setGender(e.target.value)} className="select-modern">
+                    <option value="">Select Gender</option>
                     <option value="MALE">MALE</option>
                     <option value="FEMALE">FEMALE</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Date of Birth *</label>
-                  <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Date of Birth *</label>
+                  <input
+                    type="date"
+                    value={dob}
+                    onChange={(e) => setDob(e.target.value)}
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Blood Group</label>
-                  <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                    <option value="">Select</option>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Blood Group</label>
+                  <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="select-modern">
+                    <option value="">Select Blood Group</option>
                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Current/Permanent Address *</label>
-                <textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full Address" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Complete Residential Address *</label>
+                <textarea
+                  rows={2}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House No, Street, Area, City, Pin Code"
+                  className="textarea-modern"
+                />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Aadhaar Number *</label>
-                  <input type="text" value={aadhaarNumber} onChange={(e) => setAadhaarNumber(e.target.value)} placeholder="12-digit Aadhaar" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Aadhaar Number (12 Digits) *</label>
+                  <input
+                    type="text"
+                    maxLength={12}
+                    value={aadhaarNumber}
+                    onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ''))}
+                    placeholder="12-digit Aadhaar number"
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Religion &amp; Caste / Category</label>
-                  <input type="text" value={religionCaste} onChange={(e) => setReligionCaste(e.target.value)} placeholder="Religion & Caste" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion &amp; Caste / Category</label>
+                  <input
+                    type="text"
+                    value={religionCaste}
+                    onChange={(e) => setReligionCaste(e.target.value)}
+                    placeholder="e.g. Hindu / General"
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Father's Name &amp; Occupation *</label>
-                  <input type="text" value={fatherDetails} onChange={(e) => setFatherDetails(e.target.value)} placeholder="Father details" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Father's Name &amp; Occupation *</label>
+                  <input
+                    type="text"
+                    value={fatherDetails}
+                    onChange={(e) => setFatherDetails(e.target.value)}
+                    placeholder="Father details"
+                    className="input-modern"
+                  />
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Mother's Name &amp; Occupation *</label>
-                  <input type="text" value={motherDetails} onChange={(e) => setMotherDetails(e.target.value)} placeholder="Mother details" className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Mother's Name &amp; Occupation *</label>
+                  <input
+                    type="text"
+                    value={motherDetails}
+                    onChange={(e) => setMotherDetails(e.target.value)}
+                    placeholder="Mother details"
+                    className="input-modern"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Languages Known *</label>
+                <label className="block text-xs font-bold text-[#1E2D4E] mb-2">Languages Known *</label>
                 <div className="flex flex-wrap gap-2">
                   {LANGUAGES.map(lang => (
-                    <label key={lang} className="flex items-center gap-1 bg-[#F9F7F4] border border-[#e0ddd8] px-3 py-1.5 rounded-lg cursor-pointer">
-                      <input type="checkbox" checked={languagesKnown.includes(lang)} onChange={() => handleLangToggle(lang)} />
-                      {lang}
+                    <label key={lang} className="flex items-center gap-1.5 bg-[#F9F7F4] border border-[#e2dfd7] px-3.5 py-2 rounded-xl cursor-pointer font-semibold text-xs text-[#1E2D4E] hover:bg-white transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={languagesKnown.includes(lang)}
+                        onChange={() => handleLangToggle(lang)}
+                        className="rounded accent-[#1E2D4E]"
+                      />
+                      <span>{lang}</span>
                     </label>
                   ))}
                 </div>
               </div>
+            </div>
 
-              <div className="text-xs font-black uppercase text-[#1E2D4E] tracking-wider border-b border-[#e0ddd8] pb-2 pt-2">
-                Professional Information
+            {/* Section 2: Professional Information */}
+            <div className="space-y-4 pt-4 border-t border-[#e2dfd7]">
+              <div className="border-b border-[#e2dfd7] pb-3 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-[#C9952A]" />
+                <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
+                  2. Position &amp; Professional Details
+                </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Position Selected For *</label>
-                  <select value={desig} onChange={(e) => setDesig(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                    <option value="">Select</option>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Position Applied For *</label>
+                  <select value={desig} onChange={(e) => setDesig(e.target.value)} className="select-modern font-extrabold">
+                    <option value="">Select Desired Role</option>
                     {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Highest Qualification *</label>
-                  <select value={qualification} onChange={(e) => setQualification(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                    <option value="">Select</option>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Highest Qualification *</label>
+                  <select value={qualification} onChange={(e) => setQualification(e.target.value)} className="select-modern">
+                    <option value="">Select Qualification</option>
                     {QUALIFICATIONS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Total Work Experience *</label>
-                  <select value={experience} onChange={(e) => setExperience(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]">
-                    <option value="">Select</option>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Total Work Experience *</label>
+                  <select value={experience} onChange={(e) => setExperience(e.target.value)} className="select-modern">
+                    <option value="">Select Experience Level</option>
                     {EXP_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
+
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Offered Date of Joining *</label>
-                  <input type="date" value={offeredDoj} onChange={(e) => setOfferedDoj(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Offered / Expected Date of Joining</label>
+                  <input
+                    type="date"
+                    value={offeredDoj}
+                    onChange={(e) => setOfferedDoj(e.target.value)}
+                    className="input-modern"
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Do you have prior retail sales experience? *</label>
+                <label className="block text-xs font-bold text-[#1E2D4E]">Prior Retail Sales Experience? *</label>
                 <div className="space-y-2">
                   {[
                     'Yes, in a clothing/apparel store',
                     'Yes, in another type of retail store',
-                    'No, I do not have retail experience'
-                  ].map(opt => (
-                    <label key={opt} className="flex items-center gap-2 p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] cursor-pointer hover:bg-[#f0ece4]">
+                    'No, fresher / no prior retail experience'
+                  ].map((opt) => (
+                    <label key={opt} className="flex items-center gap-2 p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] cursor-pointer text-xs font-semibold text-[#1E2D4E] hover:bg-white transition-colors">
                       <input
                         type="radio"
-                        name="retailExperience"
+                        name="retailExp"
                         value={opt}
                         checked={retailExperience === opt}
-                        onChange={() => setRetailExperience(opt)}
+                        onChange={(e) => setRetailExperience(e.target.value)}
                         className="accent-[#1E2D4E]"
                       />
-                      <span className="text-xs font-medium text-[#1E2D4E]">{opt}</span>
+                      <span>{opt}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {experience !== 'Fresher' && experience !== '' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Previous Company Name</label>
-                    <input type="text" value={previousCompany} onChange={(e) => setPreviousCompany(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Previous Designation</label>
-                    <input type="text" value={previousDesignation} onChange={(e) => setPreviousDesignation(e.target.value)} className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]" />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Previous Company / Store Name</label>
+                  <input
+                    type="text"
+                    value={previousCompany}
+                    onChange={(e) => setPreviousCompany(e.target.value)}
+                    placeholder="Previous employer name"
+                    className="input-modern"
+                  />
                 </div>
-              )}
 
-              <div className="pt-3">
-                <button type="button" onClick={handleGoStep2} className="w-full py-3 rounded-xl bg-[#1E2D4E] text-white font-bold text-xs shadow-lg hover:bg-[#162340]">
-                  Continue to Documents & Questions →
-                </button>
+                <div>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Previous Designation / Role</label>
+                  <input
+                    type="text"
+                    value={previousDesignation}
+                    onChange={(e) => setPreviousDesignation(e.target.value)}
+                    placeholder="Previous role title"
+                    className="input-modern"
+                  />
+                </div>
               </div>
             </div>
-          )}
 
-          {step === 2 && (
-            <div className="space-y-4 animate-fade-in">
-              <div className="text-xs font-black uppercase text-[#1E2D4E] tracking-wider border-b border-[#e0ddd8] pb-2">
-                Document Uploads
-              </div>
+            {/* Actions */}
+            <div className="flex justify-end pt-4 border-t border-[#e2dfd7]">
+              <button
+                type="button"
+                onClick={handleGoStep2}
+                className="btn-primary flex items-center gap-2 shadow-md"
+              >
+                <span>Proceed to Step 2: Documents</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 border border-[#e0ddd8] rounded-xl bg-[#F9F7F4]">
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Upload Resume *</label>
-                  <input type="file" onChange={(e) => setResumeFile(e.target.files?.[0] || null)} className="text-[10px] w-full" />
-                  <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
-                  {existingResume && (
-                    <a href={existingResume} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Resume</a>
-                  )}
-                </div>
-                <div className="p-4 border border-[#e0ddd8] rounded-xl bg-[#F9F7F4]">
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Passport Size Photo *</label>
-                  <input type="file" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} accept="image/*" className="text-[10px] w-full" />
-                  <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
-                  {existingPhoto && (
-                    <a href={existingPhoto} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Photo</a>
-                  )}
-                </div>
-                <div className="p-4 border border-[#e0ddd8] rounded-xl bg-[#F9F7F4]">
-                  <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-2">Aadhaar Card *</label>
-                  <input type="file" onChange={(e) => setAadhaarFile(e.target.files?.[0] || null)} accept="image/*,.pdf" className="text-[10px] w-full" />
-                  <p className="text-[9px] text-[#888] mt-1">1 supported file. Max 10 MB.</p>
-                  {existingAadhaar && (
-                    <a href={existingAadhaar} target="_blank" className="text-[10px] text-blue-600 font-bold mt-2 inline-block">View Current Aadhaar</a>
-                  )}
-                </div>
-              </div>
+        {/* STEP 2 FORM */}
+        {step === 2 && (
+          <div className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
+            <div className="border-b border-[#e2dfd7] pb-3 flex items-center gap-2">
+              <Upload className="w-5 h-5 text-[#C9952A]" />
+              <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
+                3. Mandatory Document Uploads &amp; Declaration
+              </h2>
+            </div>
 
-              {/* No additional screening questions - all questions captured in Step 1 */}
-
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mt-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" checked={declaration} onChange={(e) => setDeclaration(e.target.checked)} className="mt-1" />
-                  <span className="text-[11px] leading-tight text-amber-900 font-medium">
-                    <b>Declaration *</b><br/>
-                    I hereby declare that all the information provided in this form is true, complete, and accurate to the best of my knowledge. I understand that any false or misleading information may lead to the cancellation of my employment offer or termination of employment. I also authorize BSC Textiles to verify the information and documents submitted by me for employment purposes.
-                  </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Photo Upload */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
+                <Image className="w-8 h-8 text-[#C9952A] mx-auto" />
+                <div className="font-extrabold text-xs text-[#1E2D4E]">Candidate Passport Photo *</div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhotoFile(e.target.files ? e.target.files[0] : null)}
+                  className="hidden"
+                  id="photo-input"
+                />
+                <label htmlFor="photo-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
+                  {photoFile ? photoFile.name : (existingPhoto ? 'Change Photo' : 'Choose Image')}
                 </label>
               </div>
 
-              <div className="flex gap-[#3px] pt-3 gap-3">
-                <button type="button" onClick={() => setStep(1)} className="px-5 py-3 rounded-xl border border-[#e0ddd8] font-bold text-xs">
-                  ← Back
-                </button>
-                <button type="button" disabled={loading} onClick={handleSubmit} className="flex-1 py-3 rounded-xl bg-[#1E2D4E] text-white font-bold text-xs shadow-lg hover:bg-[#162340] disabled:opacity-50">
-                  {loading ? 'Submitting...' : 'Submit Application'}
-                </button>
+              {/* Aadhaar Upload */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
+                <FileCheck className="w-8 h-8 text-[#C9952A] mx-auto" />
+                <div className="font-extrabold text-xs text-[#1E2D4E]">Aadhaar Card (Front/Back) *</div>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setAadhaarFile(e.target.files ? e.target.files[0] : null)}
+                  className="hidden"
+                  id="aadhar-input"
+                />
+                <label htmlFor="aadhar-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
+                  {aadhaarFile ? aadhaarFile.name : (existingAadhaar ? 'Change Aadhaar' : 'Choose Document')}
+                </label>
+              </div>
+
+              {/* Resume Upload */}
+              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
+                <FileText className="w-8 h-8 text-[#C9952A] mx-auto" />
+                <div className="font-extrabold text-xs text-[#1E2D4E]">Resume / CV Document *</div>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,image/*"
+                  onChange={(e) => setResumeFile(e.target.files ? e.target.files[0] : null)}
+                  className="hidden"
+                  id="resume-input"
+                />
+                <label htmlFor="resume-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
+                  {resumeFile ? resumeFile.name : (existingResume ? 'Change Resume' : 'Choose File')}
+                </label>
               </div>
             </div>
-          )}
 
-          {step === 3 && (
-            <div className="text-center py-8 space-y-4 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl font-black mx-auto">
-                ✓
-              </div>
-              <h2 className="text-xl font-black text-[#1E2D4E]">Registration Successful!</h2>
-              <p className="text-xs text-[#888888]">Your application has been submitted to BSC Exclusive</p>
-
-              <div className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] inline-block">
-                <div className="text-[10px] text-[#888888] font-bold uppercase">Application Number</div>
-                <div className="text-2xl font-black text-[#1E2D4E] font-mono mt-1">{successAppNo}</div>
-              </div>
-
-              <div>
-                <button onClick={() => window.location.reload()} className="px-6 py-3 rounded-xl bg-[#1E2D4E] text-white font-bold text-xs shadow-lg hover:bg-[#162340]">
-                  Register Another Candidate
-                </button>
-              </div>
+            {/* Declaration Checkbox */}
+            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+              <label className="flex items-start gap-3 cursor-pointer text-xs font-semibold text-[#1E2D4E]">
+                <input
+                  type="checkbox"
+                  checked={declaration}
+                  onChange={(e) => setDeclaration(e.target.checked)}
+                  className="mt-0.5 rounded accent-[#1E2D4E]"
+                />
+                <span>
+                  I hereby declare that all information provided in this registration form is true, correct, and complete to the best of my knowledge. I understand that any false statement or omission may lead to immediate disqualification.
+                </span>
+              </label>
             </div>
-          )}
-        </div>
+
+            {/* Step 2 Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#e2dfd7]">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] flex items-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Step 1</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="btn-gold flex items-center gap-2 shadow-lg disabled:opacity-50"
+              >
+                {loading ? (
+                  <span>Submitting Registration...</span>
+                ) : (
+                  <>
+                    <span>Complete Candidate Registration</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3 SUCCESS SCREEN */}
+        {step === 3 && (
+          <div className="card-glass p-8 sm:p-12 text-center space-y-5 animate-fade-in shadow-2xl my-8">
+            <div className="w-20 h-20 rounded-full bg-emerald-50 border-4 border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-black text-[#1E2D4E] tracking-tight">Registration Successfully Submitted! 🎉</h2>
+              <p className="text-sm text-[#777777] font-medium mt-1">Thank you for submitting your application to BSC The Textile Mall.</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#1E2D4E]/5 border border-[#1E2D4E]/10 inline-block">
+              <span className="text-xs uppercase font-black text-[#777777] block">Application Reference Number</span>
+              <span className="text-2xl font-mono font-black text-[#1E2D4E] tracking-wider">{successAppNo}</span>
+            </div>
+
+            <div className="pt-4 border-t border-[#e2dfd7] flex justify-center gap-3">
+              <button
+                onClick={() => window.location.href = '/candidate-entry'}
+                className="btn-primary text-xs"
+              >
+                Submit Another Candidate Form
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
