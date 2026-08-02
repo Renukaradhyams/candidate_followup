@@ -478,6 +478,11 @@ class CandidateService {
     return { success: true, activity };
   }
 
+  async getSystemActivity(limit = 10) {
+    const [acts] = await pool.query(`SELECT * FROM candidate_activities ORDER BY created_at DESC LIMIT ?`, [parseInt(limit, 10)]);
+    return { success: true, activity: acts };
+  }
+
   async getPendingActions() {
     try {
       const [rows] = await pool.query(

@@ -174,6 +174,9 @@ export const API = {
   async getActivityFull(appNo: string) {
     return apiFetch(`/candidates/activity-full?appNo=${encodeURIComponent(appNo)}`);
   },
+  async getActivity(params: { limit?: number } = {}) {
+    return apiFetch(`/candidates/activity?limit=${params.limit || 10}`);
+  },
 
   // Interviews
   async getInterviews() {

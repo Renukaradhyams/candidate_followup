@@ -61,6 +61,7 @@ router.get('/candidates/source-breakdown', candidateController.getSourceBreakdow
 router.get('/candidates/activity-full', candidateController.getActivityFull);
 router.post('/candidates/upload-resume', upload.single('resume'), candidateController.uploadResume);
 router.post('/candidates/upload-documents', upload.fields([{ name: 'resume' }, { name: 'photo' }, { name: 'aadhar' }]), candidateController.uploadDocuments);
+router.get('/candidates/activity', candidateController.getSystemActivity);
 router.get('/openings', candidateController.getOpenings);
 router.post('/openings/update', authenticate, authorize('Admin', 'Super Admin'), candidateController.updateOpening);
 router.get('/employees', candidateController.getEmployees);
@@ -134,6 +135,7 @@ router.post('/legacy', async (req, res) => {
     getCandidates: candidateController.getCandidates,
     addCandidate: candidateController.addCandidate,
     getActivityFull: candidateController.getActivityFull,
+    getActivity: candidateController.getSystemActivity,
     updateCandidate: candidateController.updateCandidate,
     checkDuplicate: candidateController.checkDuplicate,
     getNextAppNo: candidateController.getNextAppNo,

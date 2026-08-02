@@ -85,6 +85,16 @@ class CandidateController {
     }
   }
 
+  async getSystemActivity(req, res) {
+    try {
+      const limit = req.query.limit || 10;
+      const result = await candidateService.getSystemActivity(limit);
+      return res.json(result);
+    } catch (err) {
+      return res.json({ success: false, error: err.message });
+    }
+  }
+
   async uploadResume(req, res) {
     try {
       if (!req.file) {

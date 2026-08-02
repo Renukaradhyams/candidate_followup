@@ -11,13 +11,20 @@ export default function ActivityPanel({ isOpen, onClose }: ActivityPanelProps) {
   const [activities, setActivities] = useState<any[]>([]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    
+    const fetchActivity = () => {
       API.getActivity({ limit: 10 }).then(res => {
         if (res && res.activity) {
           setActivities(res.activity);
         }
       }).catch(() => {});
-    }
+    };
+
+    fetchActivity();
+    const intervalId = setInterval(fetchActivity, 10000); // 10 seconds
+
+    return () => clearInterval(intervalId);
   }, [isOpen]);
 
   if (!isOpen) return null;
