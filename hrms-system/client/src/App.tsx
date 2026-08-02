@@ -13,6 +13,8 @@ import EmployeeExit from './pages/EmployeeExit';
 import Employees from './pages/Employees';
 import Openings from './pages/Openings';
 import Settings from './pages/Settings';
+import BroadcastCenter from './pages/BroadcastCenter';
+import QuickActionCenter from './components/ui/QuickActionCenter';
 
 export default function App() {
   return (
@@ -30,10 +32,11 @@ export default function App() {
         <Route path="/employees" element={<Employees />} />
         <Route path="/employee-exit" element={<EmployeeExit />} />
         <Route path="/openings" element={<Openings />} />
+        <Route path="/broadcast-center" element={<BroadcastCenter />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <QuickActionCenter />
     </Router>
   );
 }
-

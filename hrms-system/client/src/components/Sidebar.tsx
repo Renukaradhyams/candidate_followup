@@ -14,7 +14,8 @@ import {
   UserCheck,
   Briefcase,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Megaphone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,12 +29,12 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   const role = session?.role || 'HR';
 
   const roleNavMap: Record<string, string[]> = {
-    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings'],
-    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings'],
-    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form'],
-    'Recruiter':   ['dashboard', 'candidates', 'interview', 'form'],
+    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings', 'broadcast'],
+    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings', 'broadcast'],
+    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'broadcast'],
+    'Recruiter':   ['dashboard', 'candidates', 'interview', 'form', 'broadcast'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'broadcast'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -61,6 +62,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'employees', href: '/employees', label: 'Employee Directory', icon: UserCheck, section: 'Talent Management' },
     { key: 'exit', href: '/employee-exit', label: 'Exit & FnF Desk', icon: DoorOpen, section: 'Talent Management' },
     { key: 'form', href: '/candidate-entry', label: 'Applicant Registration', icon: ClipboardList, section: 'Public Portal', target: '_blank' },
+    { key: 'broadcast', href: '/broadcast-center', label: 'Broadcast Center', icon: Megaphone, section: 'Administration' },
     { key: 'settings', href: '/settings', label: 'System Settings', icon: Settings, section: 'Administration' }
   ];
 
