@@ -540,20 +540,48 @@ export default function CandidatesPage() {
                     <div>{drawerCandidate.address || '—'}, {drawerCandidate.cityState}</div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-3">
                     <div className="text-[10px] font-black uppercase text-[#1E2D4E]">Documents</div>
-                    {drawerCandidate.resumeUrl ? (
-                      <a
-                        href={drawerCandidate.resumeUrl}
-                        target="_blank"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>View Resume PDF</span>
-                      </a>
-                    ) : (
-                      <div className="text-[#888888] italic">No resume uploaded</div>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      {drawerCandidate.resumeUrl ? (
+                        <a
+                          href={drawerCandidate.resumeUrl}
+                          target="_blank"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>View Resume PDF</span>
+                        </a>
+                      ) : (
+                        <div className="text-[#888888] italic text-[11px]">No resume uploaded</div>
+                      )}
+
+                      {drawerCandidate.photoUrl ? (
+                        <a
+                          href={drawerCandidate.photoUrl}
+                          target="_blank"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View Photo</span>
+                        </a>
+                      ) : (
+                        <div className="text-[#888888] italic text-[11px]">No photo uploaded</div>
+                      )}
+
+                      {drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl ? (
+                        <a
+                          href={drawerCandidate.aadharUrl || drawerCandidate.aadhaarUrl}
+                          target="_blank"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>View Aadhaar Card</span>
+                        </a>
+                      ) : (
+                        <div className="text-[#888888] italic text-[11px]">No Aadhaar uploaded</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
