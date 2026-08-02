@@ -57,12 +57,61 @@ app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Static ────────────────────────────────────────────────────────────────────
-const uploadsDir = fs.existsSync(path.join(APP_ROOT, '..', 'uploads'))
-  ? path.join(APP_ROOT, '..', 'uploads')
-  : path.join(APP_ROOT, 'uploads');
-try { if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
-app.use('/uploads', express.static(uploadsDir));
+// ── Static Uploads ────────────────────────────────────────────────────────────
+const primaryUploadsDir = path.join(APP_ROOT, 'uploads');
+const parentUploadsDir = path.join(APP_ROOT, '..', 'uploads');
+
+const subdirs = [
+  'candidate-resumes',
+  'candidate-photos',
+  'employee-documents',
+  'offer-letters',
+  'relieving-letters',
+  'experience-certificates',
+  'misc'
+];
+
+[primaryUploadsDir, parentUploadsDir].forEach((baseDir) => {
+  try {
+    if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
+    subdirs.forEach((sub) => {
+      const subPath = path.join(baseDir, sub);
+      if (!fs.existsSync(subPath)) fs.mkdirSync(subPath, { recursive: true });
+    });
+  } catch (e) {}
+});
+
+app.use('/uploads', express.static(primaryUploadsDir));
+if (fs.existsSync(parentUploadsDir)) {
+  app.use('/uploads', express.static(parentUploadsDir));
+}
+
+// Smart Uploads Fallback Handler (prevents 404 for photos & documents across subfolders)
+app.get('/uploads/*', (req, res, next) => {
+  const reqPath = req.params[0] || '';
+  const fileName = path.basename(reqPath);
+
+  const possiblePaths = [
+    path.join(primaryUploadsDir, reqPath),
+    path.join(parentUploadsDir, reqPath),
+    path.join(primaryUploadsDir, 'candidate-photos', fileName),
+    path.join(primaryUploadsDir, 'candidate-resumes', fileName),
+    path.join(primaryUploadsDir, 'employee-documents', fileName),
+    path.join(primaryUploadsDir, 'misc', fileName),
+    path.join(parentUploadsDir, 'candidate-photos', fileName),
+    path.join(parentUploadsDir, 'candidate-resumes', fileName),
+    path.join(parentUploadsDir, 'employee-documents', fileName),
+    path.join(parentUploadsDir, 'misc', fileName)
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+      return res.sendFile(p);
+    }
+  }
+
+  return res.status(404).send('Uploaded file not found');
+});
 
 // ── Health / Diagnostics ──────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
