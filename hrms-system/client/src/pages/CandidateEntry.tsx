@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';

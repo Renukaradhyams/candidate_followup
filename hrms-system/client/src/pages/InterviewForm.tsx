@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useState, useEffect, Suspense } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
 

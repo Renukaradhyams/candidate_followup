@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
@@ -44,7 +42,7 @@ export default function OnboardingPage() {
     }
     setSession(Auth.get());
     loadList();
-  }, [router, loadList]);
+  }, [navigate, loadList]);
 
   useEffect(() => {
     let list = [...records];

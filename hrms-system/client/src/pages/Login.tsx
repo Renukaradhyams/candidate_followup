@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { API, Auth } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
 
@@ -16,7 +14,7 @@ export default function LoginPage() {
     if (Auth.check()) {
       navigate('/dashboard', { replace: true });
     }
-  }, [router]);
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

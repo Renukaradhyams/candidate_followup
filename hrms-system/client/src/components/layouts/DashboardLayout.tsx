@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../Sidebar';
 import Topbar from '../Topbar';
 import ToastContainer from '../Toast';
@@ -30,7 +28,7 @@ export default function DashboardLayout({
       return;
     }
     setSession(Auth.get());
-  }, [router]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">

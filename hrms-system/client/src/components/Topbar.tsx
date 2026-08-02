@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { Menu, Bell, Clock } from 'lucide-react';
 import { UserSession } from '../services/api';
