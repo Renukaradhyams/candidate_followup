@@ -6,8 +6,8 @@ import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
-import { 
-  Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
+import {
+  Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase,
   FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image, FileCheck
 } from 'lucide-react';
 
@@ -246,21 +246,18 @@ export default function EmployeesPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filtered.map((emp) => (
-                    <tr key={emp.appNo} className="hover:bg-black/5 transition-colors font-medium">
+                    <tr key={emp.appNo} onClick={() => setDrawerEmp(emp)} className="hover:bg-black/5 cursor-pointer transition-colors font-medium">
                       <td className="py-3.5 px-4 font-mono text-[#555555] font-bold">{emp.appNo}</td>
                       <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => setDrawerEmp(emp)}
-                          className="flex items-center gap-3 group text-left"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-[#1a8a84] text-white font-black text-xs flex items-center justify-center shadow-xs">
+                        <div className="flex items-center gap-3 group text-left">
+                          <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
                             {emp.initials}
                           </div>
                           <div>
                             <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{emp.name}</span>
                             <span className="text-[10px] text-[#777777] font-medium">{emp.email || 'No Email'}</span>
                           </div>
-                        </button>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{emp.desig}</td>
                       <td className="py-3.5 px-4 font-mono text-[#555555]">{emp.phone}</td>
@@ -273,7 +270,7 @@ export default function EmployeesPage() {
                       <td className="py-3.5 px-4">
                         <StatusBadge status={emp.status || 'Joined'} size="sm" />
                       </td>
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEdit(emp)}
@@ -412,11 +409,13 @@ export default function EmployeesPage() {
                     <DollarSign className="w-4 h-4 text-[#C9952A]" />
                     <span>Employment &amp; Compensation</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
                     <div><span className="text-[#777777] block text-[10.5px]">Offered Monthly Salary:</span><span className="font-extrabold text-emerald-800 text-sm">₹ {drawerEmp.salary || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Date of Joining (DOJ):</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Salary:</span><span className="font-bold text-[#1E2D4E]">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Expected Salary:</span><span className="font-bold text-[#1E2D4E]">₹ {drawerEmp.expectedSalary || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Designation / Role:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.desig || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Current Status:</span><span className="font-bold text-emerald-700">{drawerEmp.status || 'Joined'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Notice Period:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span></div>
                   </div>
                 </div>
 
@@ -426,7 +425,7 @@ export default function EmployeesPage() {
                     <Users className="w-4 h-4 text-[#C9952A]" />
                     <span>Contact &amp; Personal Details</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
                     <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Email Address:</span><span className="font-bold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Gender:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span></div>
@@ -447,13 +446,12 @@ export default function EmployeesPage() {
                     <Briefcase className="w-4 h-4 text-[#C9952A]" />
                     <span>Professional Experience &amp; Qualification</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div><span className="text-[#777777] block text-[10.5px]">Qualification:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Total Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Employer:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Role:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
-                    <div><span className="text-[#777777] block text-[10.5px]">Previous Salary:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || drawerEmp.current_salary || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Employer / Store:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
                   </div>
                 </div>
 
@@ -463,7 +461,7 @@ export default function EmployeesPage() {
                     <FileText className="w-4 h-4 text-[#C9952A]" />
                     <span>Family Details &amp; Languages</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
                     <div><span className="text-[#777777] block text-[10.5px]">Father's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.fatherDetails || drawerEmp.father_details || '—'}</span></div>
                     <div><span className="text-[#777777] block text-[10.5px]">Mother's Details:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.motherDetails || drawerEmp.mother_details || '—'}</span></div>
                   </div>
@@ -471,7 +469,7 @@ export default function EmployeesPage() {
                     <span className="text-[#777777] block text-[10.5px] mb-1">Languages Known:</span>
                     <div className="flex flex-wrap gap-1">
                       {(Array.isArray(drawerEmp.languagesKnown) ? drawerEmp.languagesKnown : (drawerEmp.languagesKnown ? JSON.parse(drawerEmp.languagesKnown) : [])).map((lang: string) => (
-                        <span key={lang} className="px-2 py-0.5 rounded-lg bg-white border border-[#e2dfd7] font-bold text-[10px] text-[#1E2D4E]">
+                        <span key={lang} className="px-2.5 py-1 rounded-lg bg-white border border-[#e2dfd7] font-bold text-[10px] text-[#1E2D4E] shadow-2xs">
                           {lang}
                         </span>
                       )) || '—'}
@@ -479,22 +477,40 @@ export default function EmployeesPage() {
                   </div>
                 </div>
 
-                {/* Section 5: Verified Documents */}
+                {/* Section 5: Source & Internal Notes */}
+                <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2.5">
+                  <div className="font-extrabold text-[#1E2D4E] uppercase text-[10px] tracking-wider border-b border-[#e2dfd7] pb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-[#C9952A]" />
+                    <span>Source &amp; Internal Notes</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <div><span className="text-[#777777] block text-[10.5px]">Recruitment Source:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.source || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Referrer Info:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
+                  </div>
+                  {drawerEmp.remarks && (
+                    <div className="pt-2 border-t border-[#e2dfd7]/60">
+                      <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
+                      <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerEmp.remarks}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 6: Verified Documents */}
                 <div className="space-y-2">
                   <span className="font-extrabold text-[#1E2D4E] block">Verified Employee Documents</span>
                   <div className="grid grid-cols-3 gap-2">
                     {fileUrl(drawerEmp.photoUrl) ? (
-                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
                         <span>📷 Photo</span>
                       </a>
                     ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Photo</span>}
                     {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
-                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
                         <span>📄 Aadhaar</span>
                       </a>
                     ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Aadhaar</span>}
                     {fileUrl(drawerEmp.resumeUrl) ? (
-                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1">
+                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors flex flex-col items-center gap-1 shadow-2xs">
                         <span>📑 Resume</span>
                       </a>
                     ) : <span className="p-3 text-center text-[#aaa] border rounded-xl bg-[#F9F7F4]">No Resume</span>}
