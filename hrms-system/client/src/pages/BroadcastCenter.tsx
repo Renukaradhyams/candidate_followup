@@ -104,6 +104,7 @@ export default function BroadcastCenterPage() {
   const readCount = broadcasts.filter(b => b.read).length;
   const readPercent = total > 0 ? Math.round((readCount / total) * 100) : 100;
   const ackRequiredCount = broadcasts.filter(b => b.requireAcknowledgement).length;
+  const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
 
   const RECIPIENT_ROLES = [
     'Everyone',
@@ -210,9 +211,11 @@ export default function BroadcastCenterPage() {
                           <td className="py-3 px-3 font-extrabold text-emerald-700">{b.status || 'Sent'}</td>
                           <td className="py-3 px-3 font-mono font-bold text-[#1E2D4E]">{b.acknowledgedBy?.length || 0}</td>
                           <td className="py-3 px-3 text-right">
+                            {isAdmin && (
                             <button onClick={() => handleDelete(b.id)} className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50">
                               <Trash2 className="w-4 h-4" />
                             </button>
+                            )}
                           </td>
                         </tr>
                       ))}

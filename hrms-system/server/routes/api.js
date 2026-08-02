@@ -62,7 +62,7 @@ router.get('/candidates/activity-full', candidateController.getActivityFull);
 router.post('/candidates/upload-resume', upload.single('resume'), candidateController.uploadResume);
 router.post('/candidates/upload-documents', upload.fields([{ name: 'resume' }, { name: 'photo' }, { name: 'aadhar' }]), candidateController.uploadDocuments);
 router.get('/openings', candidateController.getOpenings);
-router.post('/openings/update', candidateController.updateOpening);
+router.post('/openings/update', authenticate, authorize('Admin', 'Super Admin'), candidateController.updateOpening);
 router.get('/employees', candidateController.getEmployees);
 
 // ── Interview Routes ─────────────────────────────────────────
@@ -102,16 +102,16 @@ router.post('/exit/complete', exitController.completeExit);
 
 // ── Settings Routes ──────────────────────────────────────────
 router.get('/settings/users', settingsController.getUsers);
-router.post('/settings/users/add', settingsController.addUser);
-router.post('/settings/users/update', settingsController.updateUser);
+router.post('/settings/users/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addUser);
+router.post('/settings/users/update', authenticate, authorize('Admin', 'Super Admin'), settingsController.updateUser);
 router.get('/settings/page-visibility', settingsController.getPageSettings);
-router.post('/settings/page-visibility', settingsController.savePageSettings);
+router.post('/settings/page-visibility', authenticate, authorize('Admin', 'Super Admin'), settingsController.savePageSettings);
 router.get('/settings/designations', settingsController.getDesignations);
-router.post('/settings/designations/add', settingsController.addDesignation);
-router.post('/settings/designations/delete', settingsController.deleteDesignation);
+router.post('/settings/designations/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addDesignation);
+router.post('/settings/designations/delete', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteDesignation);
 router.get('/settings/questions', settingsController.getAllInterviewQuestions);
-router.post('/settings/questions/add', settingsController.addInterviewQuestion);
-router.post('/settings/questions/delete', settingsController.deleteInterviewQuestion);
+router.post('/settings/questions/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addInterviewQuestion);
+router.post('/settings/questions/delete', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteInterviewQuestion);
 
 // ── Broadcast Routes ─────────────────────────────────────────
 router.get('/broadcasts', broadcastController.getBroadcasts);

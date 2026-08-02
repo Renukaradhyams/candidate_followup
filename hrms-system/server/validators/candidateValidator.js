@@ -28,6 +28,21 @@ const validateAddCandidate = (req, res, next) => {
     errors.push('Expected salary must be a valid number of at least ₹8,000');
   }
 
+  const religion = d.religion;
+  if (!religion || typeof religion !== 'string' || !religion.trim()) {
+    errors.push('Religion is required');
+  }
+
+  const caste = d.caste || d.category;
+  if (!caste || typeof caste !== 'string' || !caste.trim()) {
+    errors.push('Caste/Category is required');
+  }
+
+  const bloodGroup = d.blood_group || d.bloodGroup;
+  if (!bloodGroup || typeof bloodGroup !== 'string' || !bloodGroup.trim()) {
+    errors.push('Blood Group is required');
+  }
+
   if (errors.length > 0) {
     return errorRes(res, 'Validation Failed', errors, 400);
   }

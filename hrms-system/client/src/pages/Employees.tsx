@@ -155,6 +155,7 @@ export default function EmployeesPage() {
     }
   };
 
+  const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
 
   return (
@@ -275,6 +276,7 @@ export default function EmployeesPage() {
                       </td>
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
+                          {isAdmin && (
                           <button
                             onClick={() => handleOpenEdit(emp)}
                             className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors shadow-xs"
@@ -282,6 +284,8 @@ export default function EmployeesPage() {
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
+                          )}
+                          {isAdmin && (
                           <button
                             onClick={() => handleDeleteEmployee(emp.appNo, emp.name)}
                             className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-colors shadow-xs"
@@ -289,6 +293,7 @@ export default function EmployeesPage() {
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -609,18 +614,22 @@ export default function EmployeesPage() {
               >
                 Close
               </button>
+              {isAdmin && (
               <button
                 onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
                 className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-black hover:bg-rose-700 transition-colors shadow-md flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" /> Delete
               </button>
+              )}
+              {isAdmin && (
               <button
                 onClick={() => handleOpenEdit(drawerEmp)}
                 className="px-5 py-2.5 rounded-xl bg-[#1E2D4E] text-white font-black hover:bg-[#162340] transition-colors shadow-md flex items-center gap-2"
               >
                 <Edit3 className="w-4 h-4" /> Edit Details
               </button>
+              )}
             </div>
           </div>
         </div>

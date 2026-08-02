@@ -101,6 +101,8 @@ export default function OpeningsPage() {
     }
   };
 
+  const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
+
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
       <ToastContainer />
@@ -124,6 +126,7 @@ export default function OpeningsPage() {
               <p className="text-sm text-[#666666] mt-1">Define manpower requisitions for each role and track fulfillment across the company.</p>
             </div>
 
+            {isAdmin && (
             <button
               onClick={() => setAddModalOpen(true)}
               className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-2 shadow-md transition-all"
@@ -131,6 +134,7 @@ export default function OpeningsPage() {
               <Plus className="w-4 h-4" />
               <span>Add New Role / Designation</span>
             </button>
+            )}
           </div>
 
           <div className="card-glass p-4 overflow-x-auto">
@@ -197,12 +201,15 @@ export default function OpeningsPage() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
+                            {isAdmin && (
                             <button
                               onClick={() => setEditMode({ ...editMode, [op.designation]: op.required })}
                               className="px-3 py-1.5 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-xs hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center gap-1"
                             >
                               <Edit3 className="w-3.5 h-3.5" /> Edit Requirement
                             </button>
+                            )}
+                            {isAdmin && (
                             <button
                               onClick={() => handleDeleteRole(op.designation)}
                               className="p-1.5 rounded-lg border border-red-200 text-red-600 font-bold text-xs hover:bg-red-50 transition-colors"
@@ -210,6 +217,7 @@ export default function OpeningsPage() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                            )}
                           </div>
                         )}
                       </td>

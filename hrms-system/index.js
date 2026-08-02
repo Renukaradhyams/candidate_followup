@@ -63,6 +63,15 @@ const primaryUploadsDir = process.env.UPLOAD_DIR || path.join(APP_ROOT, 'uploads
 const parentUploadsDir = path.join(APP_ROOT, '..', 'uploads');
 const grandParentUploadsDir = path.join(APP_ROOT, '..', '..', 'uploads');
 
+if (process.env.UPLOAD_DIR) {
+  console.log(`[Uploads] Using UPLOAD_DIR from environment: ${primaryUploadsDir}`);
+} else {
+  console.warn(`[Uploads] WARNING: UPLOAD_DIR not set. Falling back to: ${primaryUploadsDir}`);
+  console.warn(`[Uploads] WARNING: Files in this directory may be lost during deployments!`);
+  console.warn(`[Uploads] Set UPLOAD_DIR to a persistent path outside the app folder.`);
+}
+
+
 const subdirs = [
   'applicants',
   'candidate-resumes',

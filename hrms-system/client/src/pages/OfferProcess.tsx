@@ -111,6 +111,8 @@ export default function OfferProcessPage() {
     }
   };
 
+  const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
+
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
       <ToastContainer />
@@ -214,6 +216,7 @@ export default function OfferProcessPage() {
                                 Mark Joined
                               </button>
                             )}
+                            {isAdmin && (
                             <button
                               onClick={() => handleDeleteOffer(o.appNo, o.name)}
                               className="p-1.5 rounded border border-red-200 text-red-600 font-bold text-[11px] hover:bg-red-50 transition-colors"
@@ -221,6 +224,7 @@ export default function OfferProcessPage() {
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>
