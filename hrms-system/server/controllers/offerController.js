@@ -94,7 +94,7 @@ const updateOfferDetails = async (req, res) => {
     if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
     if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
-    if (department) { candUpd.push('desig = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
+    if (department) { candUpd.push('designation = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     candParams.push(appNo);
     await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 

@@ -12,8 +12,8 @@ const saveCallStep = async (req, res) => {
     const { appNo, candidate, desig, step, date, remarks, doneBy } = req.body;
     const user = doneBy || (req.user ? req.user.username : 'HR');
 
-    if (!appNo || !step || !date || !remarks) {
-      return errorRes(res, 'AppNo, step, date, and mandatory remarks are required', [], 400);
+    if (!appNo || !step || !date) {
+      return errorRes(res, 'AppNo, step, and date are required', [], 400);
     }
 
     const [cRows] = await db.query(`SELECT id, name, designation FROM candidates WHERE app_no = ?`, [appNo]);
