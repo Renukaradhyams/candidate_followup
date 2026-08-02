@@ -341,6 +341,20 @@ export default function EmployeesPage() {
                   <input type="date" value={editForm.offeredDoj} onChange={(e) => setEditForm({ ...editForm, offeredDoj: e.target.value })} className="input-modern" />
                 </div>
               </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Employee Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="select-modern font-bold"
+                >
+                  <option value="Joined">Joined</option>
+                  <option value="Offer Accepted">Offer Accepted</option>
+                  <option value="Selected">Selected</option>
+                  <option value="Offer Sent">Offer Sent</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
@@ -359,41 +373,61 @@ export default function EmployeesPage() {
       {drawerEmp && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setDrawerEmp(null)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col z-10 space-y-4 animate-fade-in overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1a8a84] text-white font-black text-sm flex items-center justify-center">
-                  {drawerEmp.initials}
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 space-y-4 animate-fade-in overflow-y-auto">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#1a8a84] text-white font-black text-sm flex items-center justify-center">
+                    {drawerEmp.initials}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-[#1E2D4E] text-base">{drawerEmp.name}</h3>
+                    <div className="text-xs text-[#777777] font-mono">{drawerEmp.appNo} · {drawerEmp.desig}</div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-[#1E2D4E] text-base">{drawerEmp.name}</h3>
-                  <div className="text-xs text-[#777777] font-mono">{drawerEmp.appNo} · {drawerEmp.desig}</div>
+                <button onClick={() => setDrawerEmp(null)} className="text-[#888888]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2">
+                  <div className="flex justify-between"><span className="text-[#777777]">Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
+                  <div className="flex justify-between"><span className="text-[#777777]">Email:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.email || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-[#777777]">Salary Package:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.salary || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-[#777777]">Offered DOJ:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="font-extrabold text-[#1E2D4E] block">Uploaded Documents</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {fileUrl(drawerEmp.photoUrl) ? (
+                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📷 Photo</a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
+                    {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
+                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📄 Aadhaar</a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
+                    {fileUrl(drawerEmp.resumeUrl) ? (
+                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">📑 Resume</a>
+                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Resume</span>}
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setDrawerEmp(null)} className="text-[#888888]">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2">
-                <div className="flex justify-between"><span className="text-[#777777]">Phone:</span><span className="font-bold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
-                <div className="flex justify-between"><span className="text-[#777777]">Email:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.email || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-[#777777]">Salary Package:</span><span className="font-bold text-emerald-700">₹ {drawerEmp.salary || '—'}</span></div>
-                <div className="flex justify-between"><span className="text-[#777777]">Offered DOJ:</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</span></div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="font-extrabold text-[#1E2D4E] block">Uploaded Documents</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {fileUrl(drawerEmp.photoUrl) ? (
-                    <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E]">📷 Photo</a>
-                  ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
-                  {fileUrl(drawerEmp.aadhaarUrl) ? (
-                    <a href={fileUrl(drawerEmp.aadhaarUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E]">📄 Aadhaar</a>
-                  ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
-                </div>
-              </div>
+            <div className="pt-4 border-t border-[#e2dfd7] flex gap-2">
+              <button
+                onClick={() => handleOpenEdit(drawerEmp)}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-emerald-800 shadow-xs"
+              >
+                <Edit3 className="w-4 h-4" /> Edit Employee
+              </button>
+              <button
+                onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
+                className="py-2.5 px-4 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 shadow-xs"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
