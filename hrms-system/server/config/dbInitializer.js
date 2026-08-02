@@ -120,6 +120,8 @@ async function autoInitializeDatabase(pool) {
         \`father_details\` VARCHAR(255) NULL,
         \`mother_details\` VARCHAR(255) NULL,
         \`religion_caste\` VARCHAR(150) NULL,
+        \`religion\` VARCHAR(100) NULL,
+        \`caste\` VARCHAR(100) NULL,
         \`languages_known\` VARCHAR(255) NULL,
         \`photo_url\` TEXT NULL,
         \`aadhaar_url\` TEXT NULL,
@@ -346,7 +348,9 @@ async function autoInitializeDatabase(pool) {
       "ALTER TABLE selection_offers ADD COLUMN notice_period VARCHAR(100) NULL",
       "ALTER TABLE selection_offers ADD COLUMN est_doj DATE NULL",
       "ALTER TABLE selection_offers ADD COLUMN actual_doj DATE NULL",
-      "ALTER TABLE selection_offers ADD COLUMN updated_at DATETIME NULL"
+      "ALTER TABLE selection_offers ADD COLUMN updated_at DATETIME NULL",
+      "ALTER TABLE candidates ADD COLUMN religion VARCHAR(100) NULL",
+      "ALTER TABLE candidates ADD COLUMN caste VARCHAR(100) NULL"
     ];
 
     for (const sql of migrations) {

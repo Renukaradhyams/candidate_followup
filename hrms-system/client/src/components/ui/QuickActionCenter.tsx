@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, UserPlus, Calendar, Send, UserCheck, Briefcase, FileText, X } from 'lucide-react';
 
 export default function QuickActionCenter() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  // Hide the quick actions menu entirely on the Candidate Entry page
+  if (location.pathname === '/candidate-entry') {
+    return null;
+  }
 
   const actions = [
     { label: 'Register Candidate', icon: UserPlus, href: '/candidate-entry', target: '_blank', color: 'bg-[#1E2D4E]' },
