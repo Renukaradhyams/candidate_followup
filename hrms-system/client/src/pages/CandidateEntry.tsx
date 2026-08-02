@@ -449,7 +449,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Offered / Expected Date of Joining</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Earliest Date of Joining (Earliest Availability)</label>
                   <input
                     type="date"
                     value={offeredDoj}
