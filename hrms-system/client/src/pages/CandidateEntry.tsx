@@ -32,6 +32,8 @@ export default function CandidateEntryPage() {
   const [motherDetails, setMotherDetails] = useState('');
   const [religionCaste, setReligionCaste] = useState('');
   const [languagesKnown, setLanguagesKnown] = useState<string[]>([]);
+  const [previousSalary, setPreviousSalary] = useState('');
+  const [expectedSalary, setExpectedSalary] = useState('');
 
   // Files
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -75,6 +77,8 @@ export default function CandidateEntryPage() {
           setRetailExperience(c.retailExperience || '');
           setPreviousCompany(c.previousCompany || '');
           setPreviousDesignation(c.previousDesignation || '');
+          setPreviousSalary(c.previousSalary || c.currentSalary || c.current_salary || '');
+          setExpectedSalary(c.expectedSalary || c.expected_salary || '');
           setAadhaarNumber(c.aadhaarNumber || '');
           setFatherDetails(c.fatherDetails || '');
           setMotherDetails(c.motherDetails || '');
@@ -115,7 +119,7 @@ export default function CandidateEntryPage() {
   };
 
   const handleGoStep2 = () => {
-    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber || !fatherDetails || !motherDetails) {
+    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber) {
       showToast('Please fill out all mandatory fields marked with (*)', 'error');
       return;
     }
@@ -168,6 +172,8 @@ export default function CandidateEntryPage() {
         retailExperience,
         previousCompany,
         previousDesignation,
+        previousSalary,
+        expectedSalary,
         aadhaarNumber,
         fatherDetails,
         motherDetails,
@@ -300,7 +306,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Email Address *</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Email Address (Optional)</label>
                   <input
                     type="email"
                     value={email}
@@ -374,7 +380,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Father's Name &amp; Occupation *</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Father's Name &amp; Occupation (Optional)</label>
                   <input
                     type="text"
                     value={fatherDetails}
@@ -385,7 +391,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Mother's Name &amp; Occupation *</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Mother's Name &amp; Occupation (Optional)</label>
                   <input
                     type="text"
                     value={motherDetails}
@@ -460,12 +466,13 @@ export default function CandidateEntryPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-[#1E2D4E]">Prior Retail Sales Experience? *</label>
+                <label className="block text-xs font-bold text-[#1E2D4E]">Prior work experience? *</label>
                 <div className="space-y-2">
                   {[
                     'Yes, in a clothing/apparel store',
                     'Yes, in another type of retail store',
-                    'No, fresher / no prior retail experience'
+                    'Worked but not in the retail field',
+                    'No, fresher / no prior work experience'
                   ].map((opt) => (
                     <label key={opt} className="flex items-center gap-2 p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] cursor-pointer text-xs font-semibold text-[#1E2D4E] hover:bg-white transition-colors">
                       <input
@@ -502,6 +509,28 @@ export default function CandidateEntryPage() {
                     onChange={(e) => setPreviousDesignation(e.target.value)}
                     placeholder="Previous role title"
                     className="input-modern"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Previous Salary (₹ Monthly)</label>
+                  <input
+                    type="text"
+                    value={previousSalary}
+                    onChange={(e) => setPreviousSalary(e.target.value)}
+                    placeholder="e.g. 18000"
+                    className="input-modern font-bold text-emerald-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Expected Salary (₹ Monthly)</label>
+                  <input
+                    type="text"
+                    value={expectedSalary}
+                    onChange={(e) => setExpectedSalary(e.target.value)}
+                    placeholder="e.g. 22000"
+                    className="input-modern font-bold text-emerald-800"
                   />
                 </div>
               </div>

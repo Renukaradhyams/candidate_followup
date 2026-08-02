@@ -171,8 +171,8 @@ class CandidateService {
         data.occupation || null,
         data.qualification || null,
         data.experience || null,
-        data.currentSalary || null,
-        data.expectedSalary || data.salary || 0.0,
+        data.previousSalary || data.currentSalary || null,
+        data.expectedSalary || data.salary || null,
         data.noticePeriod || null,
         data.ownVehicle || 'No',
         data.source || 'Walk-in',
@@ -251,7 +251,7 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url'];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary'];
     
     const map = {
       blood_group: 'bloodGroup',
@@ -267,7 +267,9 @@ class CandidateService {
       languages_known: 'languagesKnown',
       resume_url: 'resumeUrl',
       photo_url: 'photoUrl',
-      aadhaar_url: 'aadhaarUrl'
+      aadhaar_url: 'aadhaarUrl',
+      current_salary: 'previousSalary',
+      expected_salary: 'expectedSalary'
     };
 
     for (const key of allowed) {
