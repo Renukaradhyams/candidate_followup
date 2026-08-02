@@ -150,8 +150,28 @@ const distDir = path.join(APP_ROOT, 'dist');
 if (fs.existsSync(distDir)) {
   console.log(`[Boot] Serving frontend from: ${distDir}`);
   app.use(express.static(distDir));
+
+  // Assets Fallback: Never return index.html (text/html) for CSS / JS asset requests!
+  app.get('/assets/*', (req, res, next) => {
+    const assetPath = path.join(distDir, req.path);
+    if (fs.existsSync(assetPath) && fs.statSync(assetPath).isFile()) {
+      return res.sendFile(assetPath);
+    }
+    const ext = path.extname(req.path).toLowerCase();
+    const assetsFolder = path.join(distDir, 'assets');
+    if (fs.existsSync(assetsFolder)) {
+      const files = fs.readdirSync(assetsFolder);
+      const match = files.find(f => path.extname(f).toLowerCase() === ext);
+      if (match) {
+        return res.sendFile(path.join(assetsFolder, match));
+      }
+    }
+    return res.status(404).send('Asset file not found');
+  });
+
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') ||
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets') ||
+        req.path.endsWith('.css') || req.path.endsWith('.js') ||
         req.path === '/health' || req.path === '/db-status') return next();
     
     const fallback = path.join(distDir, 'index.html');

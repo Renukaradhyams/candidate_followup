@@ -30,6 +30,8 @@ export default function CandidateEntryPage() {
   const [aadhaarNumber, setAadhaarNumber] = useState('');
   const [fatherDetails, setFatherDetails] = useState('');
   const [motherDetails, setMotherDetails] = useState('');
+  const [religion, setReligion] = useState('');
+  const [caste, setCaste] = useState('');
   const [religionCaste, setReligionCaste] = useState('');
   const [languagesKnown, setLanguagesKnown] = useState<string[]>([]);
   const [previousSalary, setPreviousSalary] = useState('');
@@ -83,7 +85,12 @@ export default function CandidateEntryPage() {
           setFatherDetails(c.fatherDetails || '');
           setMotherDetails(c.motherDetails || '');
           setReligionCaste(c.religionCaste || '');
-          setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? JSON.parse(c.languagesKnown) : c.languagesKnown) : []);
+          if (c.religionCaste) {
+            const parts = c.religionCaste.split(' / ');
+            setReligion(parts[0] || c.religionCaste);
+            setCaste(parts[1] || '');
+          }
+          setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? (c.languagesKnown.startsWith('[') ? JSON.parse(c.languagesKnown) : [c.languagesKnown]) : c.languagesKnown) : []);
           setDeclaration(true);
           setExistingResume(c.resumeUrl || '');
           setExistingPhoto(c.photoUrl || '');
@@ -209,7 +216,7 @@ export default function CandidateEntryPage() {
   const POSITIONS = Array.from(new Set([...(designations || []), ...defaultPositions])).filter(Boolean);
   const QUALIFICATIONS = ['SSLC', 'PUC', 'Diploma', 'Graduate', 'Other'];
   const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1–2 Years', '2–5 Years', 'More than 5 Years'];
-  const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi'];
+  const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Others'];
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] pb-12">
@@ -339,7 +346,7 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Blood Group</label>
                   <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="select-modern">
                     <option value="">Select Blood Group</option>
-                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Not Known'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                   </select>
                 </div>
               </div>
@@ -369,12 +376,22 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion &amp; Caste / Category</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion</label>
+                  <select value={religion} onChange={(e) => setReligion(e.target.value)} className="select-modern">
+                    <option value="">Select Religion</option>
+                    {['Hindu', 'Muslim', 'Christian', 'Jain', 'Sikh', 'Buddhist', 'Other'].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Caste / Category</label>
                   <input
                     type="text"
-                    value={religionCaste}
-                    onChange={(e) => setReligionCaste(e.target.value)}
-                    placeholder="e.g. Hindu / General"
+                    value={caste}
+                    onChange={(e) => setCaste(e.target.value)}
+                    placeholder="e.g. General, OBC, SC, ST, Cat-1, 2A, 3B..."
                     className="input-modern"
                   />
                 </div>
