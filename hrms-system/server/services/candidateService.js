@@ -359,12 +359,14 @@ class CandidateService {
         'candidate_activities',
         'interview_schedules',
         'hr_evaluations',
-        'interview_tokens',
-        'onboarding_records'
+        'interview_tokens'
       ];
       for (const t of tables) {
         await conn.query(`DELETE FROM \`${t}\` WHERE app_no = ?`, [appNo]);
       }
+
+      // Handle onboarding_records separately because it uses record_id instead of app_no
+      await conn.query(`DELETE FROM \`onboarding_records\` WHERE record_id = ?`, [appNo]);
 
       await conn.commit();
     } catch (dbError) {
