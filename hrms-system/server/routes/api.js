@@ -23,6 +23,28 @@ router.post('/public/candidate-entry', candidateController.addCandidate);
 router.get('/public/check-duplicate', candidateController.checkDuplicate);
 router.get('/public/designations', settingsController.getDesignations);
 
+router.get('/public/migrate-db', async (req, res) => {
+  try {
+    const db = require('../config/db');
+    let results = [];
+    const newCols = [
+      'religion VARCHAR(100) NULL',
+      'caste VARCHAR(100) NULL'
+    ];
+    for (let col of newCols) {
+      try {
+        await db.query(`ALTER TABLE candidates ADD COLUMN ${col}`);
+        results.push(`Added ${col}`);
+      } catch (e) {
+        results.push(`Column ${col.split(' ')[0]} might already exist: ${e.message}`);
+      }
+    }
+    res.json({ success: true, message: 'Migration completed', results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── Candidate Routes ─────────────────────────────────────────
 router.get('/candidates', candidateController.getCandidates);
 router.post('/candidates', candidateController.addCandidate);
