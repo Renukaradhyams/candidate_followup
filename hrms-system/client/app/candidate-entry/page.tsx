@@ -38,6 +38,10 @@ export default function CandidateEntryPage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
 
+  const [existingResume, setExistingResume] = useState('');
+  const [existingPhoto, setExistingPhoto] = useState('');
+  const [existingAadhaar, setExistingAadhaar] = useState('');
+
   const [declaration, setDeclaration] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -77,6 +81,9 @@ export default function CandidateEntryPage() {
           setReligionCaste(c.religionCaste || '');
           setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? JSON.parse(c.languagesKnown) : c.languagesKnown) : []);
           setDeclaration(true); // Assuming they declared it earlier
+          setExistingResume(c.resumeUrl || '');
+          setExistingPhoto(c.photoUrl || '');
+          setExistingAadhaar(c.aadharUrl || c.aadhaarUrl || '');
         }
         setLoading(false);
       }).catch(err => {
@@ -121,19 +128,34 @@ export default function CandidateEntryPage() {
       showToast('You must agree to the declaration', 'error');
       return;
     }
-    if (!resumeFile || !photoFile || !aadhaarFile) {
+    if (!editAppNo && (!resumeFile || !photoFile || !aadhaarFile)) {
       showToast('Please upload all mandatory documents', 'error');
       return;
     }
-    // All required fields already validated before reaching Step 2
 
     setLoading(true);
     try {
-      // In a real app we would upload files first and get URLs.
-      // For now we mock the URLs.
-      const resumeUrl = resumeFile ? URL.createObjectURL(resumeFile) : '';
-      const photoUrl = photoFile ? URL.createObjectURL(photoFile) : '';
-      const aadhaarUrl = aadhaarFile ? URL.createObjectURL(aadhaarFile) : '';
+      let resumeUrl = existingResume;
+      let photoUrl = existingPhoto;
+      let aadhaarUrl = existingAadhaar;
+
+      if (resumeFile || photoFile || aadhaarFile) {
+        const formData = new FormData();
+        if (resumeFile) formData.append('resume', resumeFile);
+        if (photoFile) formData.append('photo', photoFile);
+        if (aadhaarFile) formData.append('aadhar', aadhaarFile);
+        
+        const uploadRes = await API.uploadDocuments(formData);
+        if (uploadRes.success) {
+          if (uploadRes.resumeUrl) resumeUrl = uploadRes.resumeUrl;
+          if (uploadRes.photoUrl) photoUrl = uploadRes.photoUrl;
+          if (uploadRes.aadhaarUrl) aadhaarUrl = uploadRes.aadhaarUrl;
+        } else {
+          showToast('Failed to upload documents', 'error');
+          setLoading(false);
+          return;
+        }
+      }
 
       const payload = {
         name,

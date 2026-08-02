@@ -250,12 +250,30 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known'];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url'];
     
+    const map = {
+      blood_group: 'bloodGroup',
+      offered_doj: 'offeredDoj',
+      designation: 'desig',
+      retail_experience: 'retailExperience',
+      previous_company: 'previousCompany',
+      previous_designation: 'previousDesignation',
+      aadhaar_number: 'aadhaarNumber',
+      father_details: 'fatherDetails',
+      mother_details: 'motherDetails',
+      religion_caste: 'religionCaste',
+      languages_known: 'languagesKnown',
+      resume_url: 'resumeUrl',
+      photo_url: 'photoUrl',
+      aadhaar_url: 'aadhaarUrl'
+    };
+
     for (const key of allowed) {
-      if (data[key] !== undefined) {
+      const dataKey = map[key] || key;
+      if (data[dataKey] !== undefined) {
         fields.push(`${key} = ?`);
-        values.push(Array.isArray(data[key]) ? JSON.stringify(data[key]) : data[key]);
+        values.push(Array.isArray(data[dataKey]) ? JSON.stringify(data[dataKey]) : data[dataKey]);
       }
     }
 

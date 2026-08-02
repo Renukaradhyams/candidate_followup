@@ -113,6 +113,18 @@ export const API = {
   },
 
   // Candidates
+  async uploadDocuments(formData: FormData) {
+    const session = Auth.get();
+    const headers: Record<string, string> = {};
+    if (session && session.token) {
+      headers['Authorization'] = `Bearer ${session.token}`;
+    }
+    const apiBase = getApiBase();
+    const url = `${apiBase}/candidates/upload-documents`;
+    const res = await fetch(url, { method: 'POST', headers, body: formData });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  },
   async getCandidates(filters: any = {}) {
     const query = new URLSearchParams(filters).toString();
     return apiFetch(`/candidates?${query}`);

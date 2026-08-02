@@ -104,6 +104,26 @@ class CandidateController {
     }
   }
 
+  async uploadDocuments(req, res) {
+    try {
+      const result = {};
+      if (req.files) {
+        if (req.files['resume'] && req.files['resume'][0]) {
+          result.resumeUrl = `/uploads/candidate-resumes/${req.files['resume'][0].filename}`;
+        }
+        if (req.files['photo'] && req.files['photo'][0]) {
+          result.photoUrl = `/uploads/candidate-photos/${req.files['photo'][0].filename}`;
+        }
+        if (req.files['aadhar'] && req.files['aadhar'][0]) {
+          result.aadhaarUrl = `/uploads/employee-documents/${req.files['aadhar'][0].filename}`;
+        }
+      }
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      return errorRes(res, 'File upload failed', [err.message], 500);
+    }
+  }
+
   async getPendingActions(req, res) {
     try {
       const result = await candidateService.getPendingActions();

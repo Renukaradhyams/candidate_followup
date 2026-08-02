@@ -37,6 +37,7 @@ router.get('/candidates/pending-actions', candidateController.getPendingActions)
 router.get('/candidates/source-breakdown', candidateController.getSourceBreakdown);
 router.get('/candidates/activity-full', candidateController.getActivityFull);
 router.post('/candidates/upload-resume', upload.single('resume'), candidateController.uploadResume);
+router.post('/candidates/upload-documents', upload.fields([{ name: 'resume' }, { name: 'photo' }, { name: 'aadhar' }]), candidateController.uploadDocuments);
 
 // ── Interview Routes ─────────────────────────────────────────
 router.get('/interviews', interviewController.getInterviews);
