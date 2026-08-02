@@ -33,7 +33,13 @@ const storage = multer.diskStorage({
     cb(null, path.join(uploadDir, dest));
   },
   filename: (req, file, cb) => {
-    const rawName = (req.body && (req.body.name || req.body.candidateName)) || '';
+    let rawName = (req.body && (req.body.name || req.body.candidateName || req.body.candName)) || '';
+    if (!rawName && req.headers && req.headers['x-candidate-name']) {
+      try { rawName = decodeURIComponent(req.headers['x-candidate-name']); } catch(e) {}
+    }
+    if (!rawName && req.query && req.query.name) {
+      rawName = req.query.name;
+    }
     const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '');
     const prefix = cleanName ? cleanName : 'Candidate';
 

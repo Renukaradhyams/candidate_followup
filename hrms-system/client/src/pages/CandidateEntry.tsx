@@ -152,11 +152,12 @@ export default function CandidateEntryPage() {
 
       if (resumeFile || photoFile || aadhaarFile) {
         const formData = new FormData();
+        if (name) formData.append('name', name);
         if (resumeFile) formData.append('resume', resumeFile);
         if (photoFile) formData.append('photo', photoFile);
         if (aadhaarFile) formData.append('aadhar', aadhaarFile);
         
-        const uploadRes = await API.uploadDocuments(formData);
+        const uploadRes = await API.uploadDocuments(formData, name);
         if (uploadRes.success) {
           if (uploadRes.resumeUrl) resumeUrl = uploadRes.resumeUrl;
           if (uploadRes.photoUrl) photoUrl = uploadRes.photoUrl;
