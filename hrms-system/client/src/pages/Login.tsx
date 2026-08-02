@@ -43,22 +43,6 @@ export default function LoginPage() {
         setErrorMsg(res.message || 'Incorrect username or password. Please try again.');
       }
     } catch (err: any) {
-      // Fallback demo support for offline testing
-      if (username.toLowerCase() === 'hr@bsctextiles.com' && password === 'bsc@2026') {
-        Auth.save({ username: 'HR Admin', role: 'HR', fullName: 'HR Admin', displayName: 'HR Admin' });
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-      if (username.toLowerCase() === 'manager@bsctextiles.com' && password === 'bsc@2026') {
-        Auth.save({ username: 'Store Manager', role: 'Manager', fullName: 'Store Manager', displayName: 'Store Manager' });
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-      if (username.toLowerCase() === 'admin@bsctextiles.com' && password === 'bsc@2026') {
-        Auth.save({ username: 'Admin', role: 'Admin', fullName: 'System Admin', displayName: 'Admin' });
-        navigate('/dashboard', { replace: true });
-        return;
-      }
       setErrorMsg(err.message || 'Incorrect username or password. Please try again.');
     } finally {
       setLoading(false);
