@@ -19,9 +19,11 @@ export default function InterviewPanelPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Scoring Side Panel
-  const [scorePanel, setScorePanel] = useState<{ open: boolean; interview: any | null; questions: any[] }>({ open: false, interview: null, questions: [] });
+  const [scorePanel, setScorePanel] = useState<{ open: boolean; interview: any | null; questions: any[]; round: 'HR' | 'Round 2' }>({ open: false, interview: null, questions: [], round: 'HR' });
   const [scores, setScores] = useState<number[]>([]);
   const [remarks, setRemarks] = useState('');
+  const [offeredSalary, setOfferedSalary] = useState('');
+  const [offeredDoj, setOfferedDoj] = useState('');
 
   // Assign Evaluator Modal
   const [assignModal, setAssignModal] = useState<{ open: boolean; interview: any | null }>({ open: false, interview: null });
@@ -80,15 +82,18 @@ export default function InterviewPanelPage() {
 
   const isPassing = (score: number, max: number) => (score / (max || 1)) * 100 >= 60;
 
-  const handleOpenScorePanel = async (iv: any) => {
+  const handleOpenScorePanel = async (iv: any, round: 'HR' | 'Round 2' = 'HR') => {
     try {
-      const qRes = await API.getInterviewQuestions(iv.desig, 'HR');
+      const qRes = await API.getInterviewQuestions(iv.desig, round);
       const questions = qRes.questions || [];
-      const initScores = questions.map((q: any) => iv.hrScore?.scores?.[questions.indexOf(q)] || 0);
+      const previousScore = round === 'HR' ? iv.hrScore : iv.assignedScore;
+      const initScores = questions.map((q: any) => previousScore?.scores?.[questions.indexOf(q)] || 0);
 
-      setScorePanel({ open: true, interview: iv, questions });
+      setScorePanel({ open: true, interview: iv, questions, round });
       setScores(initScores);
-      setRemarks(iv.hrScore?.remarks || '');
+      setRemarks(previousScore?.remarks || '');
+      setOfferedSalary('');
+      setOfferedDoj('');
     } catch (e) {
       showToast('Error loading interview questions', 'error');
     }
@@ -99,16 +104,16 @@ export default function InterviewPanelPage() {
       showToast('Remarks are mandatory before saving', 'error');
       return;
     }
-    const { interview, questions } = scorePanel;
+    const { interview, questions, round } = scorePanel;
     if (!interview) return;
 
     const total = scores.reduce((a, b) => a + b, 0);
     const maxTotal = questions.reduce((s, q) => s + (q.max || 10), 0);
 
     try {
-      await API.saveScore(interview.appNo, 'HR', { scores, total, maxTotal, remarks });
-      showToast(`HR score saved: ${total}/${maxTotal}`, 'success');
-      setScorePanel({ open: false, interview: null, questions: [] });
+      await API.saveScore(interview.appNo, round, { scores, total, maxTotal, remarks }, offeredSalary, offeredDoj);
+      showToast(`${round} score saved: ${total}/${maxTotal}`, 'success');
+      setScorePanel({ open: false, interview: null, questions: [], round: 'HR' });
       loadInterviews();
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
@@ -292,10 +297,18 @@ export default function InterviewPanelPage() {
                             <div className="flex items-center gap-1.5">
                               {!iv.hrScore && session?.role !== 'Manager' && (
                                 <button
-                                  onClick={() => handleOpenScorePanel(iv)}
+                                  onClick={() => handleOpenScorePanel(iv, 'HR')}
                                   className="px-2.5 py-1 rounded-md bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] text-[11px]"
                                 >
                                   Score HR Round
+                                </button>
+                              )}
+                              {iv.hrScore && !iv.assignedScore && session?.role !== 'Manager' && (
+                                <button
+                                  onClick={() => handleOpenScorePanel(iv, 'Round 2')}
+                                  className="px-2.5 py-1 rounded-md bg-teal-600 text-white font-bold hover:bg-teal-700 text-[11px]"
+                                >
+                                  Score Round 2
                                 </button>
                               )}
                               {iv.hrScore && !iv.assignedName && session?.role !== 'Manager' && (
@@ -339,15 +352,15 @@ export default function InterviewPanelPage() {
       {/* Evaluation Side Panel */}
       {scorePanel.open && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setScorePanel({ open: false, interview: null, questions: [] })} />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })} />
 
           <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 animate-fade-in">
-            <div className="bg-[#1E2D4E] p-5 text-white flex items-center justify-between">
+            <div className={`p-5 text-white flex items-center justify-between ${scorePanel.round === 'HR' ? 'bg-[#1E2D4E]' : 'bg-teal-700'}`}>
               <div>
                 <h3 className="font-extrabold text-base">{scorePanel.interview?.candidate}</h3>
-                <div className="text-[11px] text-white/60">{scorePanel.interview?.desig} · HR Evaluation</div>
+                <div className="text-[11px] text-white/60">{scorePanel.interview?.desig} · {scorePanel.round} Evaluation</div>
               </div>
-              <button onClick={() => setScorePanel({ open: false, interview: null, questions: [] })}>
+              <button onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })}>
                 <X className="w-5 h-5 text-white/70 hover:text-white" />
               </button>
             </div>
@@ -387,15 +400,37 @@ export default function InterviewPanelPage() {
 
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-extrabold uppercase text-[#777777]">
-                  Mandatory HR Remarks <span className="text-red-600">*</span>
+                  Mandatory Remarks <span className="text-red-600">*</span>
                 </label>
                 <textarea
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Enter assessment remarks (mandatory)..."
-                  rows={3}
+                  rows={2}
                   className="w-full p-3 rounded-xl border border-[#e0ddd8] bg-[#F9F7F4] focus:outline-none focus:border-[#1E2D4E]"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Expected Joining Date</label>
+                  <input
+                    type="date"
+                    value={offeredDoj}
+                    onChange={(e) => setOfferedDoj(e.target.value)}
+                    className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] focus:outline-none focus:border-[#1E2D4E]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-extrabold uppercase text-[#777777]">Offered Salary</label>
+                  <input
+                    type="text"
+                    value={offeredSalary}
+                    onChange={(e) => setOfferedSalary(e.target.value)}
+                    placeholder="e.g. ₹25,000/month"
+                    className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] focus:outline-none focus:border-[#1E2D4E]"
+                  />
+                </div>
               </div>
             </div>
 

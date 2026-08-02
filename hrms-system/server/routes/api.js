@@ -38,6 +38,8 @@ router.get('/candidates/source-breakdown', candidateController.getSourceBreakdow
 router.get('/candidates/activity-full', candidateController.getActivityFull);
 router.post('/candidates/upload-resume', upload.single('resume'), candidateController.uploadResume);
 router.post('/candidates/upload-documents', upload.fields([{ name: 'resume' }, { name: 'photo' }, { name: 'aadhar' }]), candidateController.uploadDocuments);
+router.get('/openings', candidateController.getOpenings);
+router.post('/openings/update', candidateController.updateOpening);
 
 // ── Interview Routes ─────────────────────────────────────────
 router.get('/interviews', interviewController.getInterviews);
@@ -110,6 +112,8 @@ router.post('/legacy', async (req, res) => {
     getPendingActions: candidateController.getPendingActions,
     getSourceBreakdown: candidateController.getSourceBreakdown,
     getDesignations: settingsController.getDesignations,
+    getOpenings: candidateController.getOpenings,
+    updateOpening: candidateController.updateOpening,
     saveCallStep: interviewController.saveCallStep,
     getCallStatus: interviewController.getCallStatus,
     getInterviews: interviewController.getInterviews,

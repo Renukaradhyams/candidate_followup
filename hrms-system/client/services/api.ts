@@ -183,10 +183,10 @@ export const API = {
   async getCallStatus(appNo: string) {
     return apiFetch(`/interviews/call-status?appNo=${encodeURIComponent(appNo)}`);
   },
-  async saveScore(appNo: string, round: string, scores: any) {
+  async saveScore(appNo: string, round: string, scores: any, offeredSalary?: string, offeredDoj?: string) {
     return apiFetch('/interviews/save-score', {
       method: 'POST',
-      body: JSON.stringify({ appNo, round, scores })
+      body: JSON.stringify({ appNo, round, scores, offeredSalary, offeredDoj })
     });
   },
   async generateInterviewToken(p: any) {

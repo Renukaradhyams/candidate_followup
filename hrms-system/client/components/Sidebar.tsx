@@ -15,7 +15,8 @@ import {
   Settings, 
   DoorOpen,
   UserCheck,
-  ShieldCheck
+  ShieldCheck,
+  Briefcase
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -57,6 +58,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'candidates', href: '/candidates', label: 'Candidates', icon: Users, section: 'Main' },
     { key: 'interview', href: '/interview-panel', label: 'Interview Panel', icon: Target, section: 'Main' },
     { key: 'offer', href: '/offer-process', label: 'Offer Process', icon: FileText, section: 'Main' },
+    { key: 'openings', href: '/openings', label: 'Openings', icon: Briefcase, section: 'Main' },
     { key: 'onboarding', href: '/onboarding', label: 'Onboarding', icon: PartyPopper, section: 'HR Ops' },
     { key: 'employees', href: '/offer-process', label: 'Employees', icon: UserCheck, section: 'HR Ops' },
     { key: 'exit', href: '/employee-exit', label: 'Exit / FnF', icon: DoorOpen, section: 'HR Ops' },

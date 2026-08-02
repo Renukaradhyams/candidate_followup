@@ -22,7 +22,7 @@ const saveCallStep = async (req, res) => {
     }
     const cand = cRows[0];
 
-    const statusMap = { 1: '1st Call Done', 2: '2nd Call Done', 3: 'Interview Scheduled' };
+    const statusMap = { 1: '1st Call', 2: 'Interview Scheduled' };
     const newStatus = statusMap[step] || 'Scheduled';
 
     const [schRows] = await db.query(`SELECT id FROM interview_schedules WHERE app_no = ?`, [appNo]);
@@ -36,9 +36,6 @@ const saveCallStep = async (req, res) => {
         updFields.push('call1_date = ?', 'call1_remarks = ?');
         params.push(callDate, remarks);
       } else if (step === 2) {
-        updFields.push('call2_date = ?', 'call2_remarks = ?');
-        params.push(callDate, remarks);
-      } else if (step === 3) {
         updFields.push('interview_date = ?', 'interview_remarks = ?');
         params.push(callDate, remarks);
       }
@@ -53,9 +50,6 @@ const saveCallStep = async (req, res) => {
         colNames.push('call1_date', 'call1_remarks');
         colVals.push(callDate, remarks);
       } else if (step === 2) {
-        colNames.push('call2_date', 'call2_remarks');
-        colVals.push(callDate, remarks);
-      } else if (step === 3) {
         colNames.push('interview_date', 'interview_remarks');
         colVals.push(callDate, remarks);
       }
@@ -67,12 +61,12 @@ const saveCallStep = async (req, res) => {
     await db.query(`UPDATE candidates SET status = ?, updated_at = ? WHERE app_no = ?`, [newStatus, new Date(), appNo]);
 
     // Activity log
-    const actLabelMap = { 1: '1st Follow-up Call', 2: '2nd Follow-up Call', 3: 'Interview Scheduled' };
-    const actIconMap = { 1: '📞', 2: '📞', 3: '📅' };
+    const actLabelMap = { 1: '1st Follow-up Call', 2: 'Interview Scheduled' };
+    const actIconMap = { 1: '📞', 2: '📅' };
     await db.query(
       `INSERT INTO candidate_activities (candidate_id, app_no, action_type, icon, label, remarks, by_user, color)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cand.id, appNo, `step_${step}`, actIconMap[step], actLabelMap[step], remarks, user, step === 3 ? 'navy' : 'gold']
+      [cand.id, appNo, `step_${step}`, actIconMap[step], actLabelMap[step], remarks, user, step === 2 ? 'navy' : 'gold']
     );
 
     await logAction(user, 'SAVE_CALL_STEP', 'INTERVIEW', { appNo, step, newStatus });
@@ -222,7 +216,7 @@ const getInterviewQuestions = async (req, res) => {
 
 const saveScore = async (req, res) => {
   try {
-    const { appNo, round, scores } = req.body;
+    const { appNo, round, scores, offeredSalary, offeredDoj } = req.body;
     const user = req.user ? req.user.username : 'HR';
 
     if (!scores || !scores.remarks) {
@@ -233,17 +227,34 @@ const saveScore = async (req, res) => {
     if (cRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
     const candId = cRows[0].id;
 
+    // Update Salary and DOJ if provided
+    const updFields = [];
+    const updVals = [];
+    if (offeredSalary !== undefined && offeredSalary !== '') {
+      updFields.push('salary = ?');
+      updVals.push(offeredSalary);
+    }
+    if (offeredDoj !== undefined && offeredDoj !== '') {
+      updFields.push('offered_doj = ?');
+      updVals.push(offeredDoj);
+    }
+    
+    if (updFields.length > 0) {
+      updVals.push(appNo);
+      await db.query(`UPDATE candidates SET ${updFields.join(', ')} WHERE app_no = ?`, updVals);
+    }
+
     const scoreStr = JSON.stringify(scores);
     const now = new Date();
 
     const [evalRows] = await db.query(`SELECT id FROM hr_evaluations WHERE app_no = ?`, [appNo]);
 
     if (evalRows.length > 0) {
-      const colName = round === 'ASSIGNED' ? 'assigned_score_json' : 'hr_score_json';
+      const colName = round === 'ASSIGNED' || round === 'Round 2' ? 'assigned_score_json' : 'hr_score_json';
       await db.query(`UPDATE hr_evaluations SET ${colName} = ?, updated_at = ? WHERE app_no = ?`, [scoreStr, now, appNo]);
     } else {
-      const colHR = round === 'ASSIGNED' ? null : scoreStr;
-      const colAssigned = round === 'ASSIGNED' ? scoreStr : null;
+      const colHR = round === 'ASSIGNED' || round === 'Round 2' ? null : scoreStr;
+      const colAssigned = round === 'ASSIGNED' || round === 'Round 2' ? scoreStr : null;
       await db.query(
         `INSERT INTO hr_evaluations (candidate_id, app_no, hr_score_json, assigned_score_json) VALUES (?, ?, ?, ?)`,
         [candId, appNo, colHR, colAssigned]
@@ -251,13 +262,17 @@ const saveScore = async (req, res) => {
     }
 
     // Activity log
+    const rndLabel = round === 'ASSIGNED' || round === 'Round 2' ? 'Round 2 Assessment' : 'HR Round 1 Assessment';
+    const rndIcon = round === 'ASSIGNED' || round === 'Round 2' ? '🤝' : '🎯';
+    const rndColor = round === 'ASSIGNED' || round === 'Round 2' ? 'teal' : 'navy';
+    
     await db.query(
       `INSERT INTO candidate_activities (candidate_id, app_no, action_type, icon, label, score, max_score, remarks, by_user, color)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [candId, appNo, 'hr_score', '🎯', 'HR Round 1 Assessment', scores.total || 0, scores.maxTotal || 60, scores.remarks, user, 'navy']
+      [candId, appNo, round === 'ASSIGNED' || round === 'Round 2' ? 'r2_score' : 'hr_score', rndIcon, rndLabel, scores.total || 0, scores.maxTotal || 60, scores.remarks, user, rndColor]
     );
 
-    await logAction(user, 'SAVE_HR_SCORE', 'INTERVIEW', { appNo, total: scores.total });
+    await logAction(user, 'SAVE_SCORE', 'INTERVIEW', { appNo, total: scores.total, round });
 
     return res.json({ success: true });
   } catch (err) {

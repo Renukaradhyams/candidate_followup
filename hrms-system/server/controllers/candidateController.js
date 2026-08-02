@@ -141,6 +141,51 @@ class CandidateController {
       return res.json({ breakdown: [] });
     }
   }
+
+  async getOpenings(req, res) {
+    try {
+      const db = require('../config/db');
+      
+      const [reqRows] = await db.query(`SELECT designation, required_count FROM manpower_requisitions`);
+      const reqMap = {};
+      reqRows.forEach(r => reqMap[r.designation] = r.required_count);
+
+      const [hiredRows] = await db.query(`SELECT designation, COUNT(*) as cnt FROM candidates WHERE status IN ('Selected', 'Offer Sent', 'Offer Accepted', 'Joined') GROUP BY designation`);
+      const hiredMap = {};
+      hiredRows.forEach(r => hiredMap[r.designation] = r.cnt);
+
+      const [desigRows] = await db.query(`SELECT name FROM designations WHERE active = TRUE`);
+      
+      const openings = desigRows.map(d => ({
+        designation: d.name,
+        required: reqMap[d.name] || 0,
+        hired: hiredMap[d.name] || 0,
+        remaining: Math.max(0, (reqMap[d.name] || 0) - (hiredMap[d.name] || 0))
+      }));
+
+      return res.json({ success: true, openings });
+    } catch (err) {
+      return errorRes(res, 'Failed to fetch openings', [err.message], 500);
+    }
+  }
+
+  async updateOpening(req, res) {
+    try {
+      const db = require('../config/db');
+      const { designation, required_count } = req.body;
+      
+      const [rows] = await db.query(`SELECT id FROM manpower_requisitions WHERE designation = ?`, [designation]);
+      if (rows.length > 0) {
+        await db.query(`UPDATE manpower_requisitions SET required_count = ? WHERE designation = ?`, [required_count, designation]);
+      } else {
+        await db.query(`INSERT INTO manpower_requisitions (designation, required_count) VALUES (?, ?)`, [designation, required_count]);
+      }
+      
+      return res.json({ success: true });
+    } catch (err) {
+      return errorRes(res, 'Failed to update opening', [err.message], 500);
+    }
+  }
 }
 
 module.exports = new CandidateController();

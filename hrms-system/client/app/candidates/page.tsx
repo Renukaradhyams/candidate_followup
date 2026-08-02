@@ -185,7 +185,7 @@ export default function CandidatesPage() {
         remarks: callRemarks
       });
 
-      showToast(step === 3 ? 'Interview Scheduled!' : `${step === 1 ? '1st' : '2nd'} call logged ✓`, 'success');
+      showToast(step === 2 ? 'Interview Scheduled!' : '1st call logged ✓', 'success');
       setCallModal({ open: false, candidate: null, step: 1, callStatus: null });
       setDrawerCandidate(null);
       loadCandidates();
@@ -236,8 +236,7 @@ export default function CandidatesPage() {
               { key: 'all', label: 'All' },
               { key: 'New', label: 'New' },
               { key: 'Shortlisted', label: 'Shortlisted' },
-              { key: '1st Call Done', label: '1st Call' },
-              { key: '2nd Call Done', label: '2nd Call' },
+              { key: '1st Call', label: '1st Call' },
               { key: 'Interview Scheduled', label: 'Interview Scheduled' },
               { key: 'Interviewed', label: 'Interviewed' },
               { key: 'Selected', label: 'Selected' },
@@ -370,15 +369,15 @@ export default function CandidatesPage() {
                                   Shortlist
                                 </button>
                               )}
-                              {(c.status === 'Shortlisted' || c.status === '1st Call Done') && (
+                              {(c.status === 'Shortlisted') && (
                                 <button
                                   onClick={() => handleOpenCallModal(c)}
                                   className="px-2.5 py-1 rounded-md bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px]"
                                 >
-                                  📞 Call Step
+                                  📞 1st Call
                                 </button>
                               )}
-                              {c.status === '2nd Call Done' && (
+                              {(c.status === '1st Call') && (
                                 <button
                                   onClick={() => handleOpenCallModal(c)}
                                   className="px-2.5 py-1 rounded-md bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px]"
@@ -648,23 +647,21 @@ export default function CandidatesPage() {
 
             {/* Call Step button for shortlisted / called candidates */}
             {(drawerCandidate.status === 'Shortlisted' ||
-              drawerCandidate.status === '1st Call Done' ||
-              drawerCandidate.status === '2nd Call Done') && !isViewOnly && (
+              drawerCandidate.status === '1st Call') && !isViewOnly && (
               <div className="p-4 border-t border-amber-200 bg-amber-50">
                 <div className="text-[10px] font-black uppercase text-amber-700 tracking-wider mb-2">
-                  {drawerCandidate.status === '2nd Call Done' ? '📅 Schedule Interview' : '📞 Call Step'}
+                  {drawerCandidate.status === '1st Call' ? '📅 Schedule Interview' : '📞 Call Step'}
                 </div>
                 <button
                   onClick={() => handleOpenCallModal(drawerCandidate)}
                   className={`w-full py-3 rounded-xl font-bold text-xs shadow-lg text-white ${
-                    drawerCandidate.status === '2nd Call Done'
+                    drawerCandidate.status === '1st Call'
                       ? 'bg-[#1E2D4E] hover:bg-[#162340]'
                       : 'bg-amber-500 hover:bg-amber-600'
                   }`}
                 >
                   {drawerCandidate.status === 'Shortlisted' && '☎ Log 1st Call'}
-                  {drawerCandidate.status === '1st Call Done' && '☎ Log 2nd Call'}
-                  {drawerCandidate.status === '2nd Call Done' && '📅 Schedule Interview'}
+                  {drawerCandidate.status === '1st Call' && '📅 Schedule Interview'}
                 </button>
               </div>
             )}
@@ -722,8 +719,7 @@ export default function CandidatesPage() {
             <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e0ddd8] text-xs space-y-2">
                <div className="font-bold text-[#1E2D4E] mb-2">
                   {callModal.step === 1 && 'Step 1: Log 1st Call'}
-                  {callModal.step === 2 && 'Step 2: Log 2nd Call'}
-                  {callModal.step === 3 && 'Step 3: Schedule Interview'}
+                  {callModal.step === 2 && 'Step 2: Schedule Interview'}
                </div>
                
                <div className="space-y-1.5">

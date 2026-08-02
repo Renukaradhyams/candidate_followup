@@ -296,6 +296,42 @@ async function autoInitializeDatabase(pool) {
       }
     }
 
+    // --- MIGRATIONS ---
+    const migrations = [
+      "ALTER TABLE candidates ADD COLUMN photo_url TEXT NULL",
+      "ALTER TABLE candidates ADD COLUMN aadhaar_url TEXT NULL",
+      "ALTER TABLE candidates ADD COLUMN salary VARCHAR(100) NULL",
+      "ALTER TABLE candidates ADD COLUMN offered_doj DATE NULL",
+      `CREATE TABLE IF NOT EXISTS manpower_requisitions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        designation VARCHAR(150) NOT NULL UNIQUE,
+        required_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+      `CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(150),
+        action VARCHAR(100),
+        module VARCHAR(100),
+        details TEXT,
+        ip_address VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+    ];
+
+    for (const sql of migrations) {
+      try {
+        await connection.query(sql);
+      } catch (err) {
+        // Ignore duplicate column errors
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          logDebug(`[Migration Warning]:`, err.message);
+        }
+      }
+    }
+    // ------------------
+
     // Seed default admin users if `users` table is empty
     const [uRows] = await connection.query(`SELECT COUNT(*) as cnt FROM users`);
     if (uRows[0].cnt === 0) {
