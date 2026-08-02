@@ -3,7 +3,8 @@
  */
 
 const getApiBase = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  // @ts-ignore - suppress vite env errors in standard TS compiler
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   return '/api';
 };
 
