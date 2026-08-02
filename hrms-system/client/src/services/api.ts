@@ -68,6 +68,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   if (session && session.token) {
     headers['Authorization'] = `Bearer ${session.token}`;
+    headers['x-auth-token'] = session.token; // Fallback for Hostinger Apache stripping Authorization header
   }
 
   const apiBase = getApiBase();
@@ -118,6 +119,7 @@ export const API = {
     const headers: Record<string, string> = {};
     if (session && session.token) {
       headers['Authorization'] = `Bearer ${session.token}`;
+      headers['x-auth-token'] = session.token;
     }
     if (candName) {
       headers['x-candidate-name'] = encodeURIComponent(candName);
