@@ -37,7 +37,10 @@ export const Auth = {
 
   check(): boolean {
     const session = this.get();
-    if (!session) return false;
+    if (!session || !session.token) {
+      this.clear();
+      return false;
+    }
     // 24h expiration
     if (Date.now() - session.loginAt > 24 * 60 * 60 * 1000) {
       this.clear();
