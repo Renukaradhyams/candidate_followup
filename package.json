@@ -3,13 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build && node -e \"const fs = require('fs'); const src = fs.existsSync('out') ? 'out' : '.next'; if (!fs.existsSync('dist')) fs.cpSync(src, 'dist', {recursive: true});\"",
     "start": "node server.js",
     "seed": "node hrms-system/server/scripts/seed.js"
   },
   "dependencies": {
-    "next": "^14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "bcrypt": "^5.1.1",
