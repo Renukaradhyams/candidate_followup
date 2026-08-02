@@ -298,6 +298,9 @@ async function autoInitializeDatabase(pool) {
 
     // --- MIGRATIONS ---
     const migrations = [
+      "ALTER TABLE candidates ADD COLUMN is_duplicate_phone VARCHAR(10) DEFAULT 'No'",
+      "ALTER TABLE candidates ADD COLUMN resume_url TEXT NULL",
+      "ALTER TABLE candidates ADD COLUMN blood_group VARCHAR(20) NULL",
       "ALTER TABLE candidates ADD COLUMN photo_url TEXT NULL",
       "ALTER TABLE candidates ADD COLUMN aadhaar_url TEXT NULL",
       "ALTER TABLE candidates ADD COLUMN salary VARCHAR(100) NULL",
