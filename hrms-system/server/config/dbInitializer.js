@@ -334,7 +334,19 @@ async function autoInitializeDatabase(pool) {
         details TEXT,
         ip_address VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+      // selection_offers missing columns needed by offerController
+      "ALTER TABLE selection_offers ADD COLUMN call1_date DATETIME NULL",
+      "ALTER TABLE selection_offers ADD COLUMN call1_remarks TEXT NULL",
+      "ALTER TABLE selection_offers ADD COLUMN call2_date DATETIME NULL",
+      "ALTER TABLE selection_offers ADD COLUMN call2_remarks TEXT NULL",
+      "ALTER TABLE selection_offers ADD COLUMN confirm_date DATETIME NULL",
+      "ALTER TABLE selection_offers ADD COLUMN confirm_remarks TEXT NULL",
+      "ALTER TABLE selection_offers ADD COLUMN notice_period VARCHAR(100) NULL",
+      "ALTER TABLE selection_offers ADD COLUMN est_doj DATE NULL",
+      "ALTER TABLE selection_offers ADD COLUMN actual_doj DATE NULL",
+      "ALTER TABLE selection_offers ADD COLUMN updated_at DATETIME NULL"
     ];
 
     for (const sql of migrations) {

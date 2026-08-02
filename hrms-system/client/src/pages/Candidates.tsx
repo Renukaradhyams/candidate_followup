@@ -99,6 +99,10 @@ export default function CandidatesPage() {
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
     if (url.startsWith('http') || url.startsWith('/')) return url;
+    // Determine correct upload subdirectory from filename prefix
+    if (url.startsWith('photo')) return `/uploads/candidate-photos/${url}`;
+    if (url.startsWith('resume')) return `/uploads/candidate-resumes/${url}`;
+    if (url.startsWith('aadhar') || url.startsWith('pan') || url.startsWith('document')) return `/uploads/employee-documents/${url}`;
     return `/uploads/${url}`;
   };
 
