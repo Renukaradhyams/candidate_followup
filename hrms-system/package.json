@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "cd client && npm run dev",
     "build": "node build.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",
