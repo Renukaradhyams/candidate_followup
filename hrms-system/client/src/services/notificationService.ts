@@ -69,7 +69,8 @@ class NotificationEngine {
   private initSocket() {
     if (this.initialized) return;
     
-    this.socket = io({
+    const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : undefined;
+    this.socket = io(apiBase, {
       autoConnect: true,
       transports: ['websocket', 'polling']
     });
@@ -95,7 +96,22 @@ class NotificationEngine {
     try {
       const res = await API.getBroadcasts();
       if (res && res.broadcasts) {
-        this.notifications = res.broadcasts.map(this.mapDbBroadcastToNotification);
+        const session = Auth.get();
+        const mapped = res.broadcasts.map(this.mapDbBroadcastToNotification);
+        
+        if (session) {
+          this.notifications = mapped.filter((notif: SystemNotification) => {
+            return notif.targetRole === 'Everyone' || 
+                   notif.targetRole === session.role || 
+                   (notif.targetRole === 'HR Team' && (session.role === 'HR' || session.role === 'Admin')) ||
+                   (notif.targetRole === 'Store Managers' && session.role === 'Manager') ||
+                   (notif.targetRole === 'Admins' && session.role === 'Admin') ||
+                   notif.senderName === session.fullName;
+          });
+        } else {
+          this.notifications = mapped;
+        }
+
         this.restoreReadStates();
         this.notifyListeners();
       }
@@ -283,15 +299,23 @@ class NotificationEngine {
     this.listeners.forEach(l => l(list));
   }
 
-  public subscribeDirect(listener: (messages: DirectMessage[]) => void) {
-    this.dmListeners.push(listener);
-    listener([...this.directMessages]);
+  public subscribeDMs(callback: (dms: DirectMessage[]) => void) {
+    this.dmListeners.push(callback);
+    callback([...this.directMessages]);
     return () => {
-      this.dmListeners = this.dmListeners.filter(l => l !== listener);
+      this.dmListeners = this.dmListeners.filter((cb) => cb !== callback);
     };
   }
-  public sendDirectMessage(data: Omit<DirectMessage, 'id' | 'timestamp' | 'read' | 'delivered'>) {}
-  public markDirectAsRead(id: string) {}
+
+  async sendDM(toUserId: string, content: string) {
+    // Legacy stub or future implementation
+    console.log('Sending DM to', toUserId, content);
+  }
+
+  async markDmAsRead(dmId: string | number) {
+    // Legacy stub or future implementation
+    console.log('Marking DM as read', dmId);
+  }
 
   public playNotificationSound(priority: 'low' | 'normal' | 'high' | 'critical' = 'normal') {
     if (!this.settings.soundEnabled) return;

@@ -116,7 +116,6 @@ const updateOfferDetails = async (req, res) => {
 const acceptOffer = async (req, res) => {
   try {
     const { appNo, remarks } = req.body;
-    if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const now = new Date();
     await db.query(`UPDATE selection_offers SET status = 'Accepted', updated_at = ? WHERE app_no = ?`, [now, appNo]);
@@ -133,7 +132,6 @@ const acceptOffer = async (req, res) => {
 const rejectOffer = async (req, res) => {
   try {
     const { appNo, remarks } = req.body;
-    if (!remarks) return errorRes(res, 'Remarks are mandatory', [], 400);
 
     const now = new Date();
     await db.query(`UPDATE selection_offers SET status = 'Offer Rejected', updated_at = ? WHERE app_no = ?`, [now, appNo]);

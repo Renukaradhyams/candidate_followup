@@ -10,6 +10,7 @@ const offerController = require('../controllers/offerController');
 const onboardingController = require('../controllers/onboardingController');
 const exitController = require('../controllers/exitController');
 const settingsController = require('../controllers/settingsController');
+const broadcastController = require('../controllers/broadcastController');
 
 // ── Auth Routes ──────────────────────────────────────────────
 router.post('/auth/login', authController.login);
@@ -111,6 +112,11 @@ router.post('/settings/designations/delete', settingsController.deleteDesignatio
 router.get('/settings/questions', settingsController.getAllInterviewQuestions);
 router.post('/settings/questions/add', settingsController.addInterviewQuestion);
 router.post('/settings/questions/delete', settingsController.deleteInterviewQuestion);
+
+// ── Broadcast Routes ─────────────────────────────────────────
+router.get('/broadcasts', broadcastController.getBroadcasts);
+router.post('/broadcasts', broadcastController.createBroadcast);
+router.delete('/broadcasts/:id', authenticate, authorize('Admin', 'Super Admin'), broadcastController.deleteBroadcast);
 
 // ── Legacy Google Apps Script Action Dispatcher Endpoint ─────
 // Dispatches legacy `{ action: 'verifyUser', ... }` requests to appropriate controller actions

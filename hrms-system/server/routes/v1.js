@@ -10,7 +10,6 @@ const offerController = require('../controllers/offerController');
 const onboardingController = require('../controllers/onboardingController');
 const exitController = require('../controllers/exitController');
 const settingsController = require('../controllers/settingsController');
-const broadcastController = require('../controllers/broadcastController');
 
 const { validateLogin } = require('../validators/authValidator');
 const { validateAddCandidate, validateUpdateCandidate } = require('../validators/candidateValidator');
@@ -86,10 +85,5 @@ router.delete('/settings/questions', authenticate, authorize('Admin', 'Super Adm
 router.get('/public/interview', interviewController.getInterviewByToken);
 router.post('/public/interview-score', interviewController.submitInterviewScore);
 router.post('/public/candidate-entry', validateAddCandidate, candidateController.addCandidate);
-
-// -- Broadcasts
-router.get('/broadcasts', broadcastController.getBroadcasts);
-router.post('/broadcasts', broadcastController.createBroadcast);
-router.delete('/broadcasts/:id', authenticate, authorize('Admin', 'Super Admin'), broadcastController.deleteBroadcast);
 
 module.exports = router;
