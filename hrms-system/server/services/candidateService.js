@@ -1,4 +1,6 @@
 const pool = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 
 class CandidateService {
   async generateCandidateCode() {
@@ -331,23 +333,78 @@ class CandidateService {
   }
 
   async deleteCandidate(appNo) {
-    // Delete from candidates and all related tables
-    const tables = [
-      'candidates',
-      'selection_offers',
-      'selected_candidates',
-      'rejected_candidates',
-      'candidate_activities',
-      'interview_schedules',
-      'hr_evaluations',
-      'interview_tokens',
-      'onboarding_records'
-    ];
-    for (const t of tables) {
-      try {
-        await pool.query(`DELETE FROM \`${t}\` WHERE app_no = ?`, [appNo]);
-      } catch (e) {}
+    if (!appNo) return { success: false, error: 'App Number is required' };
+
+    // 1. Fetch file URLs before DB deletion
+    let fileUrls = [];
+    try {
+      const [rows] = await pool.query(`SELECT resume_url, photo_url, aadhaar_url FROM candidates WHERE app_no = ?`, [appNo]);
+      if (rows && rows.length > 0) {
+        fileUrls = [rows[0].resume_url, rows[0].photo_url, rows[0].aadhaar_url].filter(Boolean);
+      }
+    } catch (e) {
+      console.warn(`[DeleteCandidate] Could not fetch file URLs for ${appNo}:`, e.message);
     }
+
+    // 2. Perform DB deletion in a transaction
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const tables = [
+        'candidates',
+        'selection_offers',
+        'selected_candidates',
+        'rejected_candidates',
+        'candidate_activities',
+        'interview_schedules',
+        'hr_evaluations',
+        'interview_tokens',
+        'onboarding_records'
+      ];
+      for (const t of tables) {
+        await conn.query(`DELETE FROM \`${t}\` WHERE app_no = ?`, [appNo]);
+      }
+
+      await conn.commit();
+    } catch (dbError) {
+      await conn.rollback();
+      throw dbError;
+    } finally {
+      conn.release();
+    }
+
+    // 3. Physical file & folder cleanup AFTER successful DB commit
+    try {
+      let uploadDir = process.env.UPLOAD_DIR;
+      if (!uploadDir) {
+        uploadDir = path.join(__dirname, '../../../uploads');
+        if (!fs.existsSync(uploadDir)) {
+          uploadDir = path.join(__dirname, '../../uploads');
+        }
+      }
+
+      // 3a. Delete dedicated applicant directory: uploads/applicants/BSC-2026-0001
+      const applicantFolder = path.join(uploadDir, 'applicants', appNo);
+      if (fs.existsSync(applicantFolder)) {
+        fs.rmSync(applicantFolder, { recursive: true, force: true });
+        console.log(`[DeleteCandidate] Successfully removed applicant directory: ${applicantFolder}`);
+      }
+
+      // 3b. Delete any legacy flat files linked in DB columns
+      for (const rawUrl of fileUrls) {
+        if (!rawUrl || typeof rawUrl !== 'string') continue;
+        const cleanPath = rawUrl.replace(/^\/uploads\//, '').replace(/^uploads\//, '');
+        const targetPath = path.join(uploadDir, cleanPath);
+        if (fs.existsSync(targetPath)) {
+          fs.unlinkSync(targetPath);
+          console.log(`[DeleteCandidate] Deleted file: ${targetPath}`);
+        }
+      }
+    } catch (fsError) {
+      console.warn(`[DeleteCandidate] File cleanup notice for ${appNo}:`, fsError.message);
+    }
+
     return { success: true };
   }
 

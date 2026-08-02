@@ -278,23 +278,31 @@ export default function CandidateEntryPage() {
       <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Step Stepper Indicator */}
         {step !== 3 && (
-          <div className="card-glass p-4 flex items-center justify-between text-xs font-extrabold">
-            <div className={`flex items-center gap-2 ${step === 1 ? 'text-[#1E2D4E]' : 'text-[#888888]'}`}>
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-[#1E2D4E] text-white shadow-xs' : 'bg-[#F9F7F4] border'}`}>
-                1
-              </span>
-              <span className="hidden sm:inline">Step 1: Personal &amp; Career Info</span>
-              <span className="sm:hidden">Step 1</span>
+          <div className="card-glass p-4 text-xs font-extrabold space-y-2">
+            <div className="flex items-center justify-between">
+              <div className={`flex items-center gap-2 ${step === 1 ? 'text-[#1E2D4E]' : 'text-emerald-700'}`}>
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step === 1 ? 'bg-[#1E2D4E] text-white shadow-md ring-2 ring-[#C9952A]' : 'bg-emerald-600 text-white'}`}>
+                  {step > 1 ? '✓' : '1'}
+                </span>
+                <span className="hidden sm:inline">Step 1: Personal &amp; Career Info</span>
+                <span className="sm:hidden">Step 1</span>
+              </div>
+
+              <div className={`flex items-center gap-2 ${step === 2 ? 'text-[#1E2D4E]' : 'text-[#888888]'}`}>
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${step === 2 ? 'bg-[#1E2D4E] text-white shadow-md ring-2 ring-[#C9952A]' : 'bg-[#F9F7F4] border border-[#e2dfd7]'}`}>
+                  2
+                </span>
+                <span className="hidden sm:inline">Step 2: Documents &amp; Declaration</span>
+                <span className="sm:hidden">Step 2</span>
+              </div>
             </div>
 
-            <div className="h-0.5 flex-1 mx-4 bg-[#e2dfd7]" />
-
-            <div className={`flex items-center gap-2 ${step === 2 ? 'text-[#1E2D4E]' : 'text-[#888888]'}`}>
-              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-[#1E2D4E] text-white shadow-xs' : 'bg-[#F9F7F4] border'}`}>
-                2
-              </span>
-              <span className="hidden sm:inline">Step 2: Documents &amp; Declaration</span>
-              <span className="sm:hidden">Step 2</span>
+            {/* Animated Progress Bar Line */}
+            <div className="h-1.5 w-full bg-[#e2dfd7] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#1E2D4E] to-[#C9952A] transition-all duration-500 ease-out"
+                style={{ width: step === 1 ? '50%' : '100%' }}
+              />
             </div>
           </div>
         )}

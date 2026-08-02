@@ -327,86 +327,144 @@ export default function InterviewPanelPage() {
         </main>
       </div>
 
-      {/* Score Side Panel */}
+      {/* Centered Score Evaluation Modal */}
       {scorePanel.open && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })} />
-          <div className="relative w-full max-w-lg bg-white h-full shadow-2xl p-6 flex flex-col z-10 space-y-4 animate-fade-in overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <div>
-                <h3 className="font-extrabold text-[#1E2D4E] text-base">{scorePanel.round} Scorecard — {scorePanel.interview?.candidate}</h3>
-                <p className="text-xs text-[#777777] font-semibold">{scorePanel.interview?.desig} · App No: {scorePanel.interview?.appNo}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-[#1E2D4E]/60 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-[#e2dfd7] overflow-hidden flex flex-col max-h-[90vh] my-auto animate-scale-in">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 border-b border-[#e2dfd7] bg-[#1E2D4E] text-white flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#C9952A]/20 border border-[#C9952A]/40 flex items-center justify-center text-[#C9952A]">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#C9952A] text-white">
+                      {scorePanel.round} Evaluation
+                    </span>
+                    <span className="text-xs font-mono font-bold text-white/70">
+                      App No: {scorePanel.interview?.appNo}
+                    </span>
+                  </div>
+                  <h3 className="font-black text-lg text-white tracking-tight leading-tight mt-0.5">
+                    {scorePanel.interview?.candidate}
+                  </h3>
+                  <p className="text-xs text-white/80 font-medium">{scorePanel.interview?.desig}</p>
+                </div>
               </div>
-              <button onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })} className="text-[#888888]">
+              <button
+                onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })}
+                className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4 flex-1 text-xs">
-              {scorePanel.questions.map((q, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-2">
-                  <div className="flex justify-between font-bold text-[#1E2D4E]">
-                    <span>{idx + 1}. {q.question}</span>
-                    <span className="text-[#C9952A] font-mono">Max: {q.max || 10}</span>
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+              <div className="space-y-3">
+                <h4 className="font-extrabold text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2">
+                  <Star className="w-4 h-4 text-[#C9952A]" />
+                  <span>Evaluation Questions &amp; Scoring Rubric</span>
+                </h4>
+                
+                {scorePanel.questions.map((q, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-3">
+                    <div className="flex items-start justify-between gap-3 font-bold text-[#1E2D4E]">
+                      <span className="text-xs sm:text-sm font-extrabold leading-snug">{idx + 1}. {q.question}</span>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#1E2D4E]/10 text-[#1E2D4E] font-mono text-[11px] font-black flex-shrink-0">
+                        Max: {q.max || 10}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 bg-white p-2.5 rounded-xl border border-[#e2dfd7]">
+                      <input
+                        type="range"
+                        min="0"
+                        max={q.max || 10}
+                        value={scores[idx] || 0}
+                        onChange={(e) => {
+                          const next = [...scores];
+                          next[idx] = parseInt(e.target.value) || 0;
+                          setScores(next);
+                        }}
+                        className="w-full accent-[#1E2D4E] cursor-pointer"
+                      />
+                      <span className="font-black text-base text-[#1E2D4E] w-8 text-center bg-[#F9F7F4] py-1 rounded-lg border border-[#e2dfd7]">
+                        {scores[idx] || 0}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                ))}
+              </div>
+
+              {/* Total Score Summary Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#1E2D4E] to-[#162340] text-white flex items-center justify-between shadow-lg border border-[#C9952A]/30">
+                <div>
+                  <span className="font-black text-xs uppercase tracking-wider block text-white">Aggregated Evaluation Score</span>
+                  <span className="text-[11px] text-white/80 font-medium">Based on evaluator criteria points</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-[#C9952A]">
+                    {scores.reduce((a, b) => a + b, 0)} <span className="text-sm text-white/80">/ {scorePanel.questions.reduce((s, q) => s + (q.max || 10), 0)}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Remarks & Recommendation Inputs */}
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="block font-extrabold text-[#1E2D4E] mb-1 text-xs">Evaluator Remarks &amp; Observations *</label>
+                  <textarea
+                    rows={3}
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Provide detailed feedback regarding candidate attitude, communication, technical fit, salary expectations..."
+                    className="input-modern text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-extrabold text-[#1E2D4E] mb-1 text-xs">
+                      {scorePanel.round === 'HR' ? 'Expected Monthly Salary (₹)' : 'Recommended Salary (₹)'}
+                    </label>
                     <input
-                      type="range"
-                      min="0"
-                      max={q.max || 10}
-                      value={scores[idx] || 0}
-                      onChange={(e) => {
-                        const next = [...scores];
-                        next[idx] = parseInt(e.target.value) || 0;
-                        setScores(next);
-                      }}
-                      className="w-full accent-[#1E2D4E]"
+                      type="text"
+                      value={offeredSalary}
+                      onChange={(e) => setOfferedSalary(e.target.value)}
+                      placeholder="e.g. 25,000"
+                      className="input-modern text-xs font-bold"
                     />
-                    <span className="font-black text-sm text-[#1E2D4E] w-6 text-right">{scores[idx] || 0}</span>
                   </div>
-                </div>
-              ))}
-
-              <div className="p-4 rounded-xl bg-[#1E2D4E] text-white flex justify-between items-center shadow-md">
-                <span className="font-bold text-xs uppercase tracking-wider">Total Evaluated Score</span>
-                <span className="text-xl font-black text-[#C9952A]">
-                  {scores.reduce((a, b) => a + b, 0)} / {scorePanel.questions.reduce((s, q) => s + (q.max || 10), 0)}
-                </span>
-              </div>
-
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Evaluator Remarks &amp; Feedback</label>
-                <textarea
-                  rows={3}
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Detailed remarks on communication, skills, culture fit..."
-                  className="input-modern"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">
-                    {scorePanel.round === 'HR' ? 'Expected Salary (₹)' : 'Recommended Salary (₹)'}
-                  </label>
-                  <input type="text" value={offeredSalary} onChange={(e) => setOfferedSalary(e.target.value)} placeholder="e.g. 25,000" className="input-modern" />
-                </div>
-                <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">
-                    {scorePanel.round === 'HR' ? 'Expected DOJ' : 'Recommended DOJ'}
-                  </label>
-                  <input type="date" value={offeredDoj} onChange={(e) => setOfferedDoj(e.target.value)} className="input-modern" />
+                  <div>
+                    <label className="block font-extrabold text-[#1E2D4E] mb-1 text-xs">
+                      {scorePanel.round === 'HR' ? 'Expected Date of Joining' : 'Recommended Date of Joining'}
+                    </label>
+                    <input
+                      type="date"
+                      value={offeredDoj}
+                      onChange={(e) => setOfferedDoj(e.target.value)}
+                      className="input-modern text-xs font-bold"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
-              <button onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-end gap-3 sticky bottom-0 z-10">
+              <button
+                onClick={() => setScorePanel({ open: false, interview: null, questions: [], round: 'HR' })}
+                className="px-5 py-2.5 rounded-xl border-2 border-[#e2dfd7] bg-white text-[#555555] font-extrabold hover:bg-black/5 transition-colors text-xs"
+              >
                 Cancel
               </button>
-              <button onClick={handleSaveScore} className="btn-primary text-xs shadow-md">
-                Save Evaluation Scorecard
+              <button
+                onClick={handleSaveScore}
+                className="px-6 py-2.5 rounded-xl bg-[#1E2D4E] text-white font-black hover:bg-[#162340] shadow-md transition-all text-xs flex items-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4 text-[#C9952A]" />
+                <span>Save Evaluation Scorecard</span>
               </button>
             </div>
           </div>
