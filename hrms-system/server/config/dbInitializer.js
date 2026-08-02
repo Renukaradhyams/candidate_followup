@@ -359,7 +359,7 @@ async function autoInitializeDatabase(pool) {
         await connection.query(mig);
       } catch (e) {
         if (e.code !== 'ER_DUP_FIELDNAME') {
-          logDebug(\`Migration warning for query "\${mig}": \${e.message}\`);
+          logDebug(`Migration warning for query "${mig}": ${e.message}`);
         }
       }
     }
