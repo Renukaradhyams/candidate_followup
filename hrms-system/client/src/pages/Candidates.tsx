@@ -491,99 +491,322 @@ export default function CandidatesPage() {
         </main>
       </div>
 
-      {/* Candidate Details Drawer */}
+      {/* Centered Enterprise Candidate Profile Modal */}
       {drawerCandidate && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setDrawerCandidate(null)} />
-          <div className="relative w-full max-w-lg bg-white h-full shadow-2xl p-6 flex flex-col z-10 space-y-5 animate-fade-in overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1E2D4E] text-white font-black text-sm flex items-center justify-center shadow-md">
-                  {drawerCandidate.initials}
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1E2D4E]/60 backdrop-blur-md transition-all animate-fade-in">
+          <div className="relative w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden border border-[#C9952A]/40">
+            {/* Sticky Header */}
+            <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
+              <div className="flex items-center gap-3.5">
+                {fileUrl(drawerCandidate.photoUrl) ? (
+                  <img
+                    src={fileUrl(drawerCandidate.photoUrl)!}
+                    alt={drawerCandidate.name}
+                    className="w-14 h-14 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-xl flex items-center justify-center border-2 border-[#C9952A] shadow-md">
+                    {drawerCandidate.initials}
+                  </div>
+                )}
                 <div>
-                  <h3 className="font-extrabold text-[#1E2D4E] text-base leading-tight">{drawerCandidate.name}</h3>
-                  <div className="text-xs text-[#777777] font-mono mt-0.5">{drawerCandidate.appNo} · {drawerCandidate.desig}</div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{drawerCandidate.name}</h2>
+                    <StatusBadge status={drawerCandidate.status} size="sm" />
+                  </div>
+                  <div className="text-xs text-[#C9952A] font-extrabold font-mono mt-1.5 flex flex-wrap items-center gap-2">
+                    <span>{drawerCandidate.appNo}</span>
+                    <span>•</span>
+                    <span className="text-white font-bold">{drawerCandidate.desig}</span>
+                    <span>•</span>
+                    <span className="text-white/80 font-normal">Applied: {drawerCandidate.date}</span>
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setDrawerCandidate(null)} className="text-[#888888] hover:text-[#1E2D4E] p-1.5 rounded-lg border border-[#e2dfd7]">
-                <X className="w-5 h-5" />
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDrawerCandidate(null)}
+                  className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 border-b border-[#e2dfd7] pb-2 text-xs font-bold">
-              {['overview', 'details', 'activity'].map(tab => (
+            {/* Tabs Navigation Bar */}
+            <div className="flex items-center gap-1.5 p-2 sm:px-5 bg-[#F9F7F4] border-b border-[#e2dfd7] overflow-x-auto text-xs font-bold scrollbar-none sticky top-[80px] z-10">
+              {[
+                { id: 'overview', label: '👤 Overview' },
+                { id: 'personal', label: '📋 Personal Info' },
+                { id: 'address', label: '🏠 Address' },
+                { id: 'family', label: '👨‍👩‍👧 Family' },
+                { id: 'education', label: '🎓 Education' },
+                { id: 'employment', label: '💼 Employment' },
+                { id: 'languages', label: '🗣️ Languages' },
+                { id: 'documents', label: '📄 Documents' },
+                { id: 'activity', label: '⏱️ Activity Log' }
+              ].map(tab => (
                 <button
-                  key={tab}
-                  onClick={() => setDrawerTab(tab as any)}
-                  className={`px-3 py-1.5 rounded-lg capitalize transition-all ${drawerTab === tab ? 'bg-[#1E2D4E] text-white' : 'text-[#666666] hover:bg-[#F9F7F4]'}`}
+                  key={tab.id}
+                  onClick={() => setDrawerTab(tab.id as any)}
+                  className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 text-xs font-extrabold ${
+                    drawerTab === tab.id
+                      ? 'bg-[#1E2D4E] text-white shadow-sm'
+                      : 'text-[#555555] hover:bg-white hover:text-[#1E2D4E]'
+                  }`}
                 >
-                  {tab}
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </div>
 
-            {drawerTab === 'overview' && (
-              <div className="space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7]">
-                  <div>
-                    <span className="text-[10px] uppercase font-black text-[#777777] block">Status</span>
-                    <StatusBadge status={drawerCandidate.status} size="sm" />
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs bg-[#EDE8DE]">
+              {/* Tab 1: Profile Overview */}
+              {(drawerTab === 'overview' || (drawerTab as string) === 'profile') && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Application No</span>
+                      <div className="text-base font-mono font-black text-[#1E2D4E]">{drawerCandidate.appNo}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Position Applied</span>
+                      <div className="text-base font-extrabold text-[#1E2D4E]">{drawerCandidate.desig || '—'}</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
+                      <span className="text-[10px] uppercase font-black text-[#777777]">Recruitment Source</span>
+                      <div className="text-base font-extrabold text-[#C9952A]">{drawerCandidate.source || 'Walk-in'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-black text-[#777777] block">Phone</span>
-                    <span className="font-bold text-[#1E2D4E] font-mono">{drawerCandidate.phone}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-black text-[#777777] block">Email</span>
-                    <span className="font-bold text-[#1E2D4E]">{drawerCandidate.email || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-black text-[#777777] block">Qualification</span>
-                    <span className="font-bold text-[#1E2D4E]">{drawerCandidate.qualification || '—'}</span>
+
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-[#C9952A]" />
+                      <span>Primary Contact &amp; Application Meta</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><span className="text-[#777777]">Mobile Phone:</span> <span className="font-extrabold text-[#1E2D4E] font-mono ml-1">{drawerCandidate.phone}</span></div>
+                      <div><span className="text-[#777777]">Email Address:</span> <span className="font-extrabold text-[#1E2D4E] ml-1">{drawerCandidate.email || '—'}</span></div>
+                      <div><span className="text-[#777777]">Application Date:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerCandidate.date}</span></div>
+                      <div><span className="text-[#777777]">Days in Pipeline:</span> <span className="font-bold text-emerald-800 ml-1">{drawerCandidate.daysIn} Days</span></div>
+                      <div><span className="text-[#777777]">Referrer Info:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerCandidate.referrer ? `${drawerCandidate.referrer} (${drawerCandidate.referrerEmpNo || ''})` : '—'}</span></div>
+                      <div><span className="text-[#777777]">Current Status:</span> <span className="font-bold text-sky-800 ml-1">{drawerCandidate.status}</span></div>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-[#1E2D4E] block">Uploaded Documents</span>
-                  <div className="grid grid-cols-3 gap-2">
+              {/* Tab 2: Personal Information */}
+              {(drawerTab as string) === 'personal' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-[#C9952A]" />
+                    <span>Personal Profile Information</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div><span className="text-[#777777] block text-[10.5px]">Full Applicant Name:</span><span className="font-extrabold text-[#1E2D4E] text-sm">{drawerCandidate.name}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone Number:</span><span className="font-extrabold text-[#1E2D4E] font-mono text-sm">{drawerCandidate.phone}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Email Address:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.email || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Gender:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.gender || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Date of Birth:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.dob || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Blood Group:</span><span className="font-bold text-rose-700">{drawerCandidate.bloodGroup || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number (12 Digits):</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerCandidate.aadhaarNumber || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Religion &amp; Caste / Category:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.religionCaste || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Address Information */}
+              {(drawerTab as string) === 'address' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#C9952A]" />
+                    <span>Residential Address &amp; Location Details</span>
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-[#777777] block text-[10.5px] mb-1">Complete Residential Address:</span>
+                      <div className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] font-semibold text-[#1E2D4E] leading-relaxed">
+                        {drawerCandidate.address || drawerCandidate.cityState || '—'}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><span className="text-[#777777] block text-[10.5px]">City / Location:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.cityState || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">State / Region:</span><span className="font-bold text-[#1E2D4E]">Karnataka</span></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: Family Information */}
+              {(drawerTab as string) === 'family' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#C9952A]" />
+                    <span>Family &amp; Parental Background</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-1">
+                      <span className="text-[#777777] text-[10.5px] font-bold block">Father's Name &amp; Occupation</span>
+                      <span className="font-extrabold text-[#1E2D4E] block">{drawerCandidate.fatherDetails || '—'}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-1">
+                      <span className="text-[#777777] text-[10.5px] font-bold block">Mother's Name &amp; Occupation</span>
+                      <span className="font-extrabold text-[#1E2D4E] block">{drawerCandidate.motherDetails || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 5: Educational Details */}
+              {(drawerTab as string) === 'education' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-[#C9952A]" />
+                    <span>Educational Qualifications</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification:</span><span className="font-extrabold text-[#1E2D4E] text-sm">{drawerCandidate.qualification || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience:</span><span className="font-extrabold text-[#1E2D4E] text-sm">{drawerCandidate.experience || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 6: Employment Details */}
+              {(drawerTab as string) === 'employment' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                    <span>Work Experience &amp; Salary Details</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div><span className="text-[#777777] block text-[10.5px]">Total Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.experience || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Prior Work / Retail Experience:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.retailExperience || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Employer / Store:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.previousCompany || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Designation:</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.previousDesignation || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Previous Monthly Salary:</span><span className="font-extrabold text-emerald-800">₹ {drawerCandidate.currentSalary || drawerCandidate.previousSalary || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Expected Monthly Salary:</span><span className="font-extrabold text-emerald-800">₹ {drawerCandidate.expectedSalary || '—'}</span></div>
+                    <div><span className="text-[#777777] block text-[10.5px]">Earliest Date of Joining:</span><span className="font-bold text-amber-800">{drawerCandidate.offeredDoj || drawerCandidate.noticePeriod || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 7: Languages */}
+              {(drawerTab as string) === 'languages' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#C9952A]" />
+                    <span>Languages Known</span>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(drawerCandidate.languagesKnown) ? drawerCandidate.languagesKnown : (drawerCandidate.languagesKnown ? JSON.parse(drawerCandidate.languagesKnown) : [])).map((lang: string) => (
+                      <span key={lang} className="px-3.5 py-1.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] font-extrabold text-xs text-[#1E2D4E] shadow-2xs">
+                        🗣️ {lang}
+                      </span>
+                    )) || 'No languages specified'}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 8: Documents */}
+              {(drawerTab as string) === 'documents' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <Image className="w-4 h-4 text-[#C9952A]" />
+                    <span>Verified Applicant Documents</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {fileUrl(drawerCandidate.photoUrl) ? (
-                      <a href={fileUrl(drawerCandidate.photoUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
-                        📷 Photo
+                      <a href={fileUrl(drawerCandidate.photoUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-all flex flex-col items-center gap-2 shadow-2xs group">
+                        <span className="text-2xl">📷</span>
+                        <span className="text-xs">Passport Photo</span>
+                        <span className="text-[10px] text-[#777777] group-hover:text-white/80 underline">View Document ↗</span>
                       </a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Photo</span>}
+                    ) : <div className="p-4 text-center text-[#aaa] border rounded-2xl bg-[#F9F7F4] font-bold">No Photo Uploaded</div>}
 
-                    {fileUrl(drawerCandidate.aadhaarUrl) ? (
-                      <a href={fileUrl(drawerCandidate.aadhaarUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
-                        📄 Aadhaar
+                    {fileUrl(drawerCandidate.aadhaarUrl || drawerCandidate.aadharUrl) ? (
+                      <a href={fileUrl(drawerCandidate.aadhaarUrl || drawerCandidate.aadharUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-all flex flex-col items-center gap-2 shadow-2xs group">
+                        <span className="text-2xl">📄</span>
+                        <span className="text-xs">Aadhaar Card</span>
+                        <span className="text-[10px] text-[#777777] group-hover:text-white/80 underline">View Document ↗</span>
                       </a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Aadhaar</span>}
+                    ) : <div className="p-4 text-center text-[#aaa] border rounded-2xl bg-[#F9F7F4] font-bold">No Aadhaar Uploaded</div>}
 
                     {fileUrl(drawerCandidate.resumeUrl) ? (
-                      <a href={fileUrl(drawerCandidate.resumeUrl)!} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-bold text-[#1E2D4E] hover:bg-white transition-colors">
-                        📑 Resume
+                      <a href={fileUrl(drawerCandidate.resumeUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-all flex flex-col items-center gap-2 shadow-2xs group">
+                        <span className="text-2xl">📑</span>
+                        <span className="text-xs">Resume / CV</span>
+                        <span className="text-[10px] text-[#777777] group-hover:text-white/80 underline">View Document ↗</span>
                       </a>
-                    ) : <span className="p-2 text-center text-[#aaa] border rounded-xl">No Resume</span>}
+                    ) : <div className="p-4 text-center text-[#aaa] border rounded-2xl bg-[#F9F7F4] font-bold">No Resume Uploaded</div>}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {drawerTab === 'activity' && (
-              <div className="space-y-3 text-xs overflow-y-auto max-h-80 pr-1">
-                {activityLog.length > 0 ? (
-                  activityLog.map((a, idx) => (
-                    <div key={idx} className="p-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-1">
-                      <div className="flex items-center justify-between font-bold text-[#1E2D4E]">
-                        <span>{a.label || a.action_type}</span>
-                        <span className="text-[10px] text-[#777777] font-mono">{a.created_at ? new Date(a.created_at).toLocaleDateString() : ''}</span>
-                      </div>
-                      {a.remarks && <p className="text-[#666666] italic">{a.remarks}</p>}
-                    </div>
-                  ))
-                ) : <p className="text-center py-6 text-[#888888]">No activity logged yet.</p>}
+              {/* Tab 9: Activity Timeline */}
+              {drawerTab === 'activity' && (
+                <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
+                  <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#C9952A]" />
+                    <span>Activity &amp; Interaction Audit Log</span>
+                  </h4>
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    {activityLog.length > 0 ? (
+                      activityLog.map((a, idx) => (
+                        <div key={idx} className="p-3.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-1">
+                          <div className="flex items-center justify-between font-extrabold text-[#1E2D4E]">
+                            <span>{a.label || a.action_type}</span>
+                            <span className="text-[10px] text-[#777777] font-mono">{a.created_at ? new Date(a.created_at).toLocaleDateString() : ''}</span>
+                          </div>
+                          {a.remarks && <p className="text-[#666666] italic text-[11px]">{a.remarks}</p>}
+                        </div>
+                      ))
+                    ) : <p className="text-center py-8 text-[#888888] font-semibold">No activity logs recorded yet for this applicant.</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="p-4 bg-white border-t border-[#e2dfd7] flex flex-wrap items-center justify-between gap-2 sticky bottom-0 z-20">
+              <button
+                onClick={() => handleDeleteCandidate(drawerCandidate.appNo)}
+                className="px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-extrabold text-xs hover:bg-rose-600 hover:text-white transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Applicant</span>
+              </button>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => handleOpenCallModal(drawerCandidate)}
+                  className="px-3.5 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs hover:bg-[#162340] transition-colors shadow-xs flex items-center gap-1.5"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Log Call / Schedule</span>
+                </button>
+                <button
+                  onClick={() => handleOpenRemarkModal('shortlist', drawerCandidate)}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-700 text-white font-extrabold text-xs hover:bg-emerald-800 transition-colors shadow-xs"
+                >
+                  Shortlist
+                </button>
+                <button
+                  onClick={() => handleOpenRemarkModal('hold', drawerCandidate)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 text-white font-extrabold text-xs hover:bg-amber-700 transition-colors shadow-xs"
+                >
+                  Hold
+                </button>
+                <button
+                  onClick={() => handleOpenRemarkModal('reject', drawerCandidate)}
+                  className="px-3.5 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 transition-colors shadow-xs"
+                >
+                  Reject
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

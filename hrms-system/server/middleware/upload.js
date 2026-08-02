@@ -33,9 +33,38 @@ const storage = multer.diskStorage({
     cb(null, path.join(uploadDir, dest));
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const rawName = (req.body && (req.body.name || req.body.candidateName)) || '';
+    const cleanName = rawName.replace(/[^a-zA-Z0-9]/g, '');
+    const prefix = cleanName ? cleanName : 'Candidate';
+
+    let docType = 'Document';
+    if (file.fieldname === 'photo') docType = 'Photo';
+    else if (file.fieldname === 'aadhar' || file.fieldname === 'aadhaar' || file.fieldname === 'document') docType = 'Aadhaar';
+    else if (file.fieldname === 'resume') docType = 'Resume';
+    else if (file.fieldname === 'offerLetter') docType = 'OfferLetter';
+    else if (file.fieldname === 'relievingLetter') docType = 'RelievingLetter';
+    else if (file.fieldname === 'experienceCert') docType = 'ExperienceCert';
+
     const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    let destSubdir = 'misc';
+    if (file.fieldname === 'resume') destSubdir = 'candidate-resumes';
+    else if (file.fieldname === 'photo') destSubdir = 'candidate-photos';
+    else if (file.fieldname === 'document' || file.fieldname === 'aadhar' || file.fieldname === 'pan') destSubdir = 'employee-documents';
+
+    const baseFileName = `${prefix}_${docType}`;
+    let finalFileName = `${baseFileName}${ext}`;
+    const targetDir = path.join(uploadDir, destSubdir);
+
+    try {
+      if (fs.existsSync(path.join(targetDir, finalFileName))) {
+        const suffix = Date.now().toString().slice(-6);
+        finalFileName = `${baseFileName}_${suffix}${ext}`;
+      }
+    } catch (e) {
+      finalFileName = `${baseFileName}_${Date.now()}${ext}`;
+    }
+
+    cb(null, finalFileName);
   }
 });
 

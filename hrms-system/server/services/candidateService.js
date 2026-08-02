@@ -5,6 +5,12 @@ class CandidateService {
     const year = new Date().getFullYear();
     const [rows] = await pool.query(`SELECT id, app_no FROM candidates`);
 
+    if (!rows || rows.length === 0) {
+      return {
+        appNo: `BSC-${year}-0001`
+      };
+    }
+
     let maxNum = 0;
     const existing = new Set();
 
@@ -21,7 +27,7 @@ class CandidateService {
       }
     }
 
-    let nextNum = maxNum > 0 ? maxNum + 1 : (rows.length + 1);
+    let nextNum = maxNum > 0 ? maxNum + 1 : 1;
     let candidateCode = `BSC-${year}-${String(nextNum).padStart(4, '0')}`;
 
     while (existing.has(candidateCode)) {
