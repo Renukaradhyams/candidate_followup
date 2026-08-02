@@ -518,6 +518,44 @@ export default function InterviewPanelPage() {
           </div>
         </div>
       )}
+
+      {/* Approve / Reject Modal */}
+      {approveModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl p-5 space-y-4 shadow-2xl animate-fade-in">
+            <h3 className="font-black text-[#1E2D4E] text-base">
+              {approveModal.probation ? 'Move to Probation' : 'Select Candidate'}
+            </h3>
+            
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Remarks / Justification *</label>
+                <textarea
+                  value={approveRemarks}
+                  onChange={(e) => setApproveRemarks(e.target.value)}
+                  placeholder="Why is this candidate selected?"
+                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] h-24"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setApproveModal({ open: false, interview: null, probation: false })}
+                className="px-4 py-2 rounded-lg border border-[#e0ddd8] text-xs font-bold text-[#666666]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmApprove}
+                className={`px-4 py-2 rounded-lg text-white text-xs font-bold ${approveModal.probation ? 'bg-amber-600' : 'bg-emerald-600'}`}
+              >
+                Confirm {approveModal.probation ? 'Probation' : 'Selection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
