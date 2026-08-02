@@ -9,3 +9,5 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.pem
+uploads/
+hrms-system/uploads/

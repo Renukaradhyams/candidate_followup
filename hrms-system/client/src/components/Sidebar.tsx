@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Auth, UserSession } from '../services/api';
+import { API, Auth, UserSession } from '../services/api';
 import { 
   BarChart3, 
   Users, 
