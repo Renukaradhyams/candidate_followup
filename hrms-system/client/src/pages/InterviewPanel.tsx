@@ -25,6 +25,9 @@ export default function InterviewPanelPage() {
   const [offeredSalary, setOfferedSalary] = useState('');
   const [offeredDoj, setOfferedDoj] = useState('');
 
+  // View Scorecard Modal
+  const [viewScorecardModal, setViewScorecardModal] = useState<{ open: boolean; interview: any | null; hrQuestions: any[]; r2Questions: any[] }>({ open: false, interview: null, hrQuestions: [], r2Questions: [] });
+
   // Assign Evaluator Modal
   const [assignModal, setAssignModal] = useState<{ open: boolean; interview: any | null }>({ open: false, interview: null });
   const [evalName, setEvalName] = useState('');
@@ -103,6 +106,27 @@ export default function InterviewPanelPage() {
       setOfferedDoj('');
     } catch (e) {
       showToast('Error loading interview questions', 'error');
+    }
+  };
+
+  const handleViewScorecard = async (iv: any) => {
+    try {
+      let hrQuestions: any[] = [];
+      let r2Questions: any[] = [];
+      
+      if (iv.hrScore) {
+        const qRes = await API.getInterviewQuestions(iv.desig, 'HR');
+        hrQuestions = qRes.questions || [];
+      }
+      
+      if (iv.assignedScore) {
+        const qRes = await API.getInterviewQuestions(iv.desig, 'Round 2');
+        r2Questions = qRes.questions || [];
+      }
+
+      setViewScorecardModal({ open: true, interview: iv, hrQuestions, r2Questions });
+    } catch (e) {
+      showToast('Error loading scorecard details', 'error');
     }
   };
 
@@ -302,14 +326,26 @@ export default function InterviewPanelPage() {
                               {iv.hrScore ? 'Edit HR Score' : 'Score HR Round'}
                             </button>
                           )}
+                          <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => handleViewScorecard(iv)}
+                            className="px-2.5 py-1 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold text-[11px] hover:bg-[#1E2D4E] hover:text-white shadow-xs transition-colors"
+                          >
+                            View Scorecard
+                          </button>
                           <button
                             onClick={() => {
+                              if (iv.assignedName && !iv.assignedScore) {
+                                showToast('External evaluator has not submitted the score yet.', 'info');
+                                return;
+                              }
                               handleOpenScorePanel(iv, 'Round 2');
                             }}
                             className="px-2.5 py-1 rounded-lg bg-[#C9952A] text-white font-bold text-[11px] hover:bg-amber-600 shadow-xs"
                           >
                             {iv.assignedScore ? 'Edit Management Score' : 'Score Management Round'}
                           </button>
+                          </div>
                           <button
                             onClick={() => setApproveModal({ open: true, interview: iv, probation: false })}
                             className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-bold text-[11px] hover:bg-emerald-800 shadow-xs"
@@ -600,6 +636,83 @@ export default function InterviewPanelPage() {
               <button onClick={handleConfirmApprove} className="btn-gold text-xs shadow-md">
                 Confirm Selection Approval
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Scorecard Modal */}
+      {viewScorecardModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1E2D4E]/60 backdrop-blur-md">
+          <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-in">
+            <div className="p-4 sm:p-5 border-b border-[#e2dfd7] bg-[#1E2D4E] text-white flex items-center justify-between sticky top-0 z-10">
+              <div>
+                <h3 className="font-black text-lg">Full Interview Scorecard</h3>
+                <p className="text-xs text-white/70 font-medium">Candidate: {viewScorecardModal.interview?.candidate} ({viewScorecardModal.interview?.desig})</p>
+              </div>
+              <button onClick={() => setViewScorecardModal({ open: false, interview: null, hrQuestions: [], r2Questions: [] })} className="text-white/70 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+              {viewScorecardModal.interview?.hrScore ? (
+                <div className="bg-[#F9F7F4] border border-[#e2dfd7] rounded-2xl p-4 sm:p-5">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-extrabold text-[#1E2D4E] text-sm uppercase tracking-wider">HR Round 1 Details</h4>
+                    <span className="font-black text-lg text-[#C9952A]">{viewScorecardModal.interview.hrScore.total} / {viewScorecardModal.interview.hrScore.maxTotal}</span>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {viewScorecardModal.hrQuestions.map((hq: any, idx: number) => (
+                      <div key={hq.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#e2dfd7]">
+                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{hq.text}</span>
+                        <span className="font-black text-xs text-[#C9952A]">
+                          {viewScorecardModal.interview.hrScore.scores?.[idx] || 0} / {hq.max || 10}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-[#e2dfd7]">
+                    <span className="block text-[10px] font-black uppercase text-[#777777] mb-1">Evaluator Remarks</span>
+                    <p className="text-xs font-medium text-[#1E2D4E]">
+                      {viewScorecardModal.interview.hrScore.remarks || 'No remarks provided.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[#888888] font-medium text-center py-4 bg-[#F9F7F4] rounded-2xl border border-[#e2dfd7] border-dashed">
+                  HR Round 1 evaluation has not been completed yet.
+                </div>
+              )}
+
+              {viewScorecardModal.interview?.assignedScore ? (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 sm:p-5">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-extrabold text-blue-900 text-sm uppercase tracking-wider">Round 2 Management Details</h4>
+                    <span className="font-black text-lg text-blue-700">{viewScorecardModal.interview.assignedScore.total} / {viewScorecardModal.interview.assignedScore.maxTotal}</span>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {viewScorecardModal.r2Questions.map((rq: any, idx: number) => (
+                      <div key={rq.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-blue-100">
+                        <span className="font-bold text-blue-900 text-[11px] max-w-[80%]">{rq.text}</span>
+                        <span className="font-black text-xs text-blue-700">
+                          {viewScorecardModal.interview.assignedScore.scores?.[idx] || 0} / {rq.max || 10}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-blue-100">
+                    <span className="block text-[10px] font-black uppercase text-blue-600 mb-1">Evaluator Remarks</span>
+                    <p className="text-xs font-medium text-[#1E2D4E]">
+                      {viewScorecardModal.interview.assignedScore.remarks || 'No remarks provided.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[#888888] font-medium text-center py-4 bg-blue-50/30 rounded-2xl border border-blue-100 border-dashed">
+                  Round 2 Management evaluation has not been completed yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
