@@ -205,6 +205,8 @@ class CandidateController {
           hired,
           remaining: Math.max(0, required - hired)
         };
+      });
+
       openings.sort((a, b) => (a.designation || '').localeCompare(b.designation || ''));
 
       return res.json({ success: true, openings });
