@@ -35,10 +35,33 @@ export default function EmployeesPage() {
     desig: '',
     department: '',
     salary: '',
+    incentive: '',
     offeredDoj: '',
-    status: ''
+    status: '',
+    branch: '',
+    reportingManager: '',
+    remarks: ''
   });
   const [saving, setSaving] = useState(false);
+
+  const parseSalaryAndIncentive = (val: any) => {
+    if (!val) return { base: 0, incentive: 0, total: 0, rawBase: '', rawIncentive: '' };
+    const str = String(val).trim();
+    if (str.includes('|')) {
+      const parts = str.split('|');
+      const base = parseFloat(parts[0]) || 0;
+      const inc = parseFloat(parts[1]) || 0;
+      return { base, incentive: inc, total: base + inc, rawBase: parts[0] || '', rawIncentive: parts[1] || '' };
+    }
+    if (str.includes('+')) {
+      const parts = str.split('+');
+      const base = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
+      const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+      return { base, incentive: inc, total: base + inc, rawBase: String(base), rawIncentive: String(inc) };
+    }
+    const base = parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
+    return { base, incentive: 0, total: base, rawBase: str, rawIncentive: '' };
+  };
 
   const loadEmployees = useCallback(async () => {
     try {
@@ -105,15 +128,20 @@ export default function EmployeesPage() {
 
   const handleOpenEdit = (emp: any) => {
     setEditModal({ open: true, emp });
+    const parsedSal = parseSalaryAndIncentive(emp.salary);
     setEditForm({
       name: emp.name || '',
       phone: emp.phone || '',
       email: emp.email || '',
-      desig: emp.desig || '',
+      desig: emp.desig || emp.designation || '',
       department: emp.department || '',
-      salary: emp.salary && emp.salary !== '—' ? emp.salary : (emp.expectedSalary || ''),
+      salary: parsedSal.rawBase || (parsedSal.base ? String(parsedSal.base) : ''),
+      incentive: parsedSal.rawIncentive || (parsedSal.incentive ? String(parsedSal.incentive) : ''),
       offeredDoj: emp.offeredDoj || emp.estDoj || emp.actualDoj || '',
-      status: emp.status || 'Joined'
+      status: emp.status || 'Joined',
+      branch: emp.branch || 'Main Branch (The Textile Mall)',
+      reportingManager: emp.reportingManager || '',
+      remarks: emp.remarks || ''
     });
   };
 
@@ -126,6 +154,10 @@ export default function EmployeesPage() {
 
     setSaving(true);
     try {
+      const combinedSalary = editForm.incentive && editForm.incentive.trim()
+        ? `${editForm.salary.trim()}|${editForm.incentive.trim()}`
+        : editForm.salary.trim();
+
       await API.updateCandidate(editModal.emp.appNo, {
         isFullEdit: true,
         name: editForm.name,
@@ -133,9 +165,12 @@ export default function EmployeesPage() {
         email: editForm.email,
         desig: editForm.desig,
         department: editForm.department,
-        salary: editForm.salary,
+        salary: combinedSalary,
         offeredDoj: editForm.offeredDoj,
-        status: editForm.status
+        status: editForm.status,
+        branch: editForm.branch,
+        reportingManager: editForm.reportingManager,
+        remarks: editForm.remarks
       });
 
       showToast('Employee details updated successfully!', 'success');
@@ -352,8 +387,28 @@ export default function EmployeesPage() {
                       <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{emp.desig}</td>
                       <td className="py-3.5 px-4 text-[#555555] font-semibold">{emp.department || '—'}</td>
                       <td className="py-3.5 px-4 font-mono text-[#555555]">{emp.phone}</td>
-                      <td className="py-3.5 px-4 font-extrabold text-emerald-700">
-                        {emp.salary && emp.salary !== '—' ? `₹ ${emp.salary}` : '—'}
+                      <td className="py-3.5 px-4">
+                        {(() => {
+                          const sal = parseSalaryAndIncentive(emp.salary);
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] uppercase text-[#777777] font-extrabold">Base:</span>
+                                <span className="font-extrabold text-[#1E2D4E] font-mono">₹{sal.base.toLocaleString('en-IN')}</span>
+                              </div>
+                              {sal.incentive > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] uppercase text-emerald-600 font-extrabold">Inc:</span>
+                                  <span className="font-bold text-emerald-700 font-mono">+₹{sal.incentive.toLocaleString('en-IN')}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1.5 border-t border-[#e2dfd7]/60 pt-0.5 mt-0.5">
+                                <span className="text-[10px] uppercase text-amber-800 font-extrabold">Pkg:</span>
+                                <span className="font-black text-[#1E2D4E] font-mono text-xs">₹{sal.total.toLocaleString('en-IN')}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-[#666666]">
                         {emp.offeredDoj || emp.estDoj || emp.actualDoj || '—'}
@@ -410,13 +465,13 @@ export default function EmployeesPage() {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-xs max-h-[75vh] overflow-y-auto pr-1">
               <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Full Name *</label>
-                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="input-modern" />
+                <label className="block font-bold text-[#1E2D4E] mb-1">Full Employee Name *</label>
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="input-modern font-bold text-[#1E2D4E]" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Phone Number *</label>
                   <input type="text" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} className="input-modern font-mono" />
@@ -427,13 +482,13 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Designation Role</label>
-                  <input type="text" value={editForm.desig} onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })} className="input-modern" />
+                  <input type="text" value={editForm.desig} onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })} className="input-modern font-bold" />
                 </div>
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Department</label>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department</label>
                   <select value={editForm.department || ''} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="select-modern font-bold">
                     <option value="">Select Department</option>
                     <option value="Ground Floor Saree">Ground Floor Saree</option>
@@ -448,29 +503,59 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Salary (₹)</label>
-                  <input type="text" value={editForm.salary} onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern" />
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Base Salary (₹)</label>
+                  <input type="text" value={editForm.salary} onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern font-mono font-bold text-emerald-800" />
                 </div>
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Date of Joining</label>
-                  <input type="date" value={editForm.offeredDoj} onChange={(e) => setEditForm({ ...editForm, offeredDoj: e.target.value })} className="input-modern" />
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Incentive (₹)</label>
+                  <input type="text" value={editForm.incentive} onChange={(e) => setEditForm({ ...editForm, incentive: e.target.value })} placeholder="e.g. 2000" className="input-modern font-mono font-bold text-emerald-700" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Date of Joining (DOJ)</label>
+                  <input type="date" value={editForm.offeredDoj} onChange={(e) => setEditForm({ ...editForm, offeredDoj: e.target.value })} className="input-modern font-bold text-amber-800" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Employee Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="select-modern font-bold"
+                  >
+                    <option value="Joined">Joined</option>
+                    <option value="Offer Accepted">Offer Accepted</option>
+                    <option value="Selected">Selected</option>
+                    <option value="Offer Sent">Offer Sent</option>
+                    <option value="Probation">Probation</option>
+                    <option value="Resigned">Resigned</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Branch Location</label>
+                  <input type="text" value={editForm.branch} onChange={(e) => setEditForm({ ...editForm, branch: e.target.value })} placeholder="Main Branch" className="input-modern" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Reporting Manager</label>
+                  <input type="text" value={editForm.reportingManager} onChange={(e) => setEditForm({ ...editForm, reportingManager: e.target.value })} placeholder="Store Manager" className="input-modern" />
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Employee Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="select-modern font-bold"
-                >
-                  <option value="Joined">Joined</option>
-                  <option value="Offer Accepted">Offer Accepted</option>
-                  <option value="Selected">Selected</option>
-                  <option value="Offer Sent">Offer Sent</option>
-                </select>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Shortlisting & Recruiter Remarks</label>
+                <textarea
+                  rows={2}
+                  value={editForm.remarks}
+                  onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
+                  placeholder="Enter employee notes, HR remarks, or special package terms..."
+                  className="input-modern"
+                />
               </div>
             </div>
 
@@ -580,10 +665,28 @@ export default function EmployeesPage() {
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
                     <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-[#C9952A]" />
-                      <span>Salary &amp; Offer Details</span>
+                      <span>Compensation & Package Breakdown</span>
                     </h4>
+                    {(() => {
+                      const sal = parseSalaryAndIncentive(drawerEmp.salary);
+                      return (
+                        <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                          <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]">
+                            <div className="text-[9px] uppercase font-black text-[#777777] mb-1">Base Salary</div>
+                            <div className="text-sm font-bold text-[#1E2D4E] font-mono">₹{sal.base.toLocaleString('en-IN')}</div>
+                          </div>
+                          <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200">
+                            <div className="text-[9px] uppercase font-black text-emerald-800 mb-1">Monthly Incentive</div>
+                            <div className="text-sm font-bold text-emerald-700 font-mono">{sal.incentive > 0 ? `+₹${sal.incentive.toLocaleString('en-IN')}` : 'Not Set'}</div>
+                          </div>
+                          <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-2xs">
+                            <div className="text-[9px] uppercase font-black text-amber-900 mb-1">Total Package</div>
+                            <div className="text-sm font-black text-slate-900 font-mono">₹{sal.total.toLocaleString('en-IN')}</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div><span className="text-[#777777] block text-[10.5px]">Offered Monthly Salary</span><span className="font-extrabold text-emerald-800 text-sm font-mono">{drawerEmp.salary && drawerEmp.salary !== '—' ? `₹ ${drawerEmp.salary}` : '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Expected Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.expectedSalary ? `₹ ${drawerEmp.expectedSalary}` : '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Previous Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{(drawerEmp.previousSalary || drawerEmp.currentSalary) ? `₹ ${drawerEmp.previousSalary || drawerEmp.currentSalary}` : '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Notice Period</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span></div>

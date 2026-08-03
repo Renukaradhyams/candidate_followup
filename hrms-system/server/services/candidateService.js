@@ -295,12 +295,13 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','department','branch','reporting_manager','remarks','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
     
     const map = {
       blood_group: 'bloodGroup',
       offered_doj: 'offeredDoj',
       designation: 'desig',
+      reporting_manager: 'reportingManager',
       retail_experience: 'retailExperience',
       previous_company: 'previousCompany',
       previous_designation: 'previousDesignation',
@@ -327,6 +328,14 @@ class CandidateService {
     if (fields.length > 0) {
       values.push(appNo);
       await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+    }
+
+    // Also sync selection_offers table if existing
+    if (data.department || data.desig || data.status || data.remarks) {
+      await pool.query(
+        `UPDATE selection_offers SET department = COALESCE(?, department), designation = COALESCE(?, designation), status = COALESCE(?, status), remarks = COALESCE(?, remarks), updated_at = NOW() WHERE app_no = ?`,
+        [data.department || null, data.desig || null, data.status || null, data.remarks || null, appNo]
+      );
     }
 
     return { success: true };
