@@ -65,6 +65,7 @@ router.get('/candidates/activity', candidateController.getSystemActivity);
 router.get('/openings', candidateController.getOpenings);
 router.post('/openings/update', authenticate, authorize('Admin', 'Super Admin'), candidateController.updateOpening);
 router.get('/employees', candidateController.getEmployees);
+router.post('/employees/bulk', authenticate, candidateController.bulkAddEmployees);
 
 // ── Interview Routes ─────────────────────────────────────────
 router.get('/interviews', interviewController.getInterviews);

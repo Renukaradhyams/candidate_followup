@@ -128,7 +128,7 @@ export default function CandidateEntryPage() {
   };
 
   const handleGoStep2 = () => {
-    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber) {
+    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber || !bloodGroup || !religion || !caste.trim()) {
       showToast('Please fill out all mandatory fields marked with (*)', 'error');
       return;
     }
@@ -177,7 +177,7 @@ export default function CandidateEntryPage() {
             formData.append('aadhar', optimizedAadhaar);
           }
         } catch (optimizationError: any) {
-          // If any file fails the 500KB validation, we stop the whole process and alert the user
+          // If any file fails the 800KB validation, we stop the whole process and alert the user
           showToast(optimizationError.message, 'error');
           setLoading(false);
           return;
@@ -382,7 +382,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Blood Group</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Blood Group *</label>
                   <select value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)} className="select-modern">
                     <option value="">Select Blood Group</option>
                     {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Not Known'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
@@ -415,7 +415,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion *</label>
                   <select value={religion} onChange={(e) => setReligion(e.target.value)} className="select-modern">
                     <option value="">Select Religion</option>
                     {['Hindu', 'Muslim', 'Christian', 'Jain', 'Sikh', 'Buddhist', 'Other'].map(r => (
@@ -425,7 +425,7 @@ export default function CandidateEntryPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Caste / Category</label>
+                  <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Caste / Category *</label>
                   <input
                     type="text"
                     value={caste}

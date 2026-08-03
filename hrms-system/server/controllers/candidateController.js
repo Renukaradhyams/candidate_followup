@@ -322,6 +322,21 @@ class CandidateController {
       return errorRes(res, 'Failed to fetch employees', [err.message], 500);
     }
   }
+
+  async bulkAddEmployees(req, res) {
+    try {
+      const { employees } = req.body;
+      if (!employees || !Array.isArray(employees)) {
+        return res.status(400).json({ success: false, error: 'Invalid payload' });
+      }
+      
+      const user = req.user ? req.user.username : 'HR';
+      const result = await candidateService.bulkAddEmployees(employees, user);
+      return res.json(result);
+    } catch (err) {
+      return errorRes(res, 'Failed to bulk import employees', [err.message], 500);
+    }
+  }
 }
 
 module.exports = new CandidateController();

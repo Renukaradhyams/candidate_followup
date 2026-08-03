@@ -8,8 +8,9 @@ import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import {
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase,
-  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image as ImageIcon, FileCheck
+  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image as ImageIcon, FileCheck, Upload, Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function EmployeesPage() {
   const navigate = useNavigate();
@@ -155,6 +156,70 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSaving(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+          showToast('No data found in excel sheet', 'error');
+          setSaving(false);
+          return;
+        }
+
+        const res = await fetch('/api/employees/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.token}`
+          },
+          body: JSON.stringify({ employees: data })
+        });
+        
+        const json = await res.json();
+        if (json.success) {
+          showToast(`Successfully imported ${json.addedCount} employees`, 'success');
+          loadEmployees();
+        } else {
+          showToast(`Failed: ${json.error}`, 'error');
+        }
+      } catch (err: any) {
+        showToast('Error reading Excel: ' + err.message, 'error');
+      } finally {
+        setSaving(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleDownloadSample = () => {
+    const ws = XLSX.utils.json_to_sheet([{
+      Name: 'John Doe',
+      Phone: '9876543210',
+      Email: 'john@example.com',
+      Gender: 'MALE',
+      DOB: '1990-01-01',
+      BloodGroup: 'O+',
+      Religion: 'Hindu',
+      Caste: 'General',
+      Designation: 'Cashier',
+      Salary: '20000',
+      DOJ: '2023-01-15'
+    }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employees");
+    XLSX.writeFile(wb, "Sample_Employee_Import.xlsx");
+  };
+
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
 
@@ -183,6 +248,19 @@ export default function EmployeesPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDownloadSample}
+                  className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] flex items-center gap-1.5 shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5" /> Sample
+                </button>
+                <label className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold cursor-pointer hover:bg-[#162340] flex items-center gap-1.5 shadow-xs">
+                  <Upload className="w-3.5 h-3.5" /> Import
+                  <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportExcel} disabled={saving} />
+                </label>
+              </div>
+
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
                 <input

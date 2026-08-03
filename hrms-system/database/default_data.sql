@@ -1,6 +1,13 @@
 -- Default Data Seed Script for BSC Enterprise HRMS
 USE `hrms_db`;
 
+-- Seed Users (Default Password: bsc@2026)
+INSERT INTO `users` (`username`, `password`, `role`, `full_name`, `active`) VALUES
+('hr@bsctextiles.com', '$2b$10$aJTX5LNvHOQjpp3ljG6mo.RMJFeIs0NwH9XKTfjV2CKmTCJ/jcHte', 'HR', 'HR Admin', TRUE),
+('manager@bsctextiles.com', '$2b$10$aJTX5LNvHOQjpp3ljG6mo.RMJFeIs0NwH9XKTfjV2CKmTCJ/jcHte', 'Manager', 'Store Manager', TRUE),
+('admin@bsctextiles.com', '$2b$10$aJTX5LNvHOQjpp3ljG6mo.RMJFeIs0NwH9XKTfjV2CKmTCJ/jcHte', 'Admin', 'Admin', TRUE)
+ON DUPLICATE KEY UPDATE `full_name` = VALUES(`full_name`), `password` = VALUES(`password`), `active` = VALUES(`active`);
+
 -- Seed Designations
 INSERT INTO `designations` (`role_scope`, `name`, `active`) VALUES
 ('All', 'Sales Executive', TRUE),

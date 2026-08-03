@@ -578,6 +578,49 @@ class CandidateService {
       return { breakdown: [] };
     }
   }
+
+  async bulkAddEmployees(employees, user) {
+    let addedCount = 0;
+    const errors = [];
+
+    for (let i = 0; i < employees.length; i++) {
+      const emp = employees[i];
+      try {
+        const codes = await this.generateCandidateCode();
+        const appNo = codes.appNo;
+        
+        await pool.query(
+          `INSERT INTO candidates (
+            app_no, name, phone, email, dob, gender, designation, 
+            salary, blood_group, religion, caste, religion_caste, 
+            status, offered_doj, source
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Joined', ?, 'Bulk Import')`,
+          [
+            appNo,
+            emp.Name || 'Unknown Employee',
+            emp.Phone || null,
+            emp.Email || null,
+            emp.DOB ? new Date(emp.DOB).toISOString().split('T')[0] : null,
+            emp.Gender || null,
+            emp.Designation || null,
+            emp.Salary || null,
+            emp.BloodGroup || null,
+            emp.Religion || null,
+            emp.Caste || null,
+            (emp.Religion && emp.Caste) ? `${emp.Religion} / ${emp.Caste}` : (emp.Religion || emp.Caste || null),
+            emp.DOJ ? new Date(emp.DOJ).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          ]
+        );
+        
+        await this.logActivity(appNo, 'Joined', `Employee bulk imported by ${user}`, user);
+        addedCount++;
+      } catch (err) {
+        errors.push(`Row ${i + 1}: ${err.message}`);
+      }
+    }
+    
+    return { success: true, addedCount, errors };
+  }
 }
 
 module.exports = new CandidateService();
