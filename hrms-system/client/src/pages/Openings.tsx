@@ -224,6 +224,35 @@ export default function OpeningsPage() {
                     </tr>
                   );
                 })}
+                {openings.length > 0 && (() => {
+                  const totalRequired = openings.reduce((acc, op) => acc + ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required), 0);
+                  const totalHired = openings.reduce((acc, op) => acc + op.hired, 0);
+                  const totalStillNeeded = openings.reduce((acc, op) => acc + Math.max(0, ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required) - op.hired), 0);
+                  return (
+                    <tr className="bg-[#1E2D4E]/10 border-t-2 border-[#1E2D4E] font-black text-sm text-[#1E2D4E]">
+                      <td className="py-4 px-4 font-black uppercase text-xs tracking-wider">
+                        Total Manpower Summary
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-xl font-black text-[#1E2D4E]">{totalRequired}</span>
+                        <div className="text-[10px] text-[#1E2D4E]/70 font-bold uppercase mt-0.5">Total Openings</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-xl font-black text-emerald-700">{totalHired}</span>
+                        <div className="text-[10px] text-emerald-800/70 font-bold uppercase mt-0.5">Total Hired</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`text-xl font-black ${totalStillNeeded > 0 ? 'text-amber-700' : 'text-[#888888]'}`}>
+                          {totalStillNeeded}
+                        </span>
+                        <div className="text-[10px] text-amber-800/70 font-bold uppercase mt-0.5">Total Still Needed</div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="px-2.5 py-1 rounded-full bg-[#1E2D4E] text-white font-bold text-[10px] uppercase">Overall Total</span>
+                      </td>
+                    </tr>
+                  );
+                })()}
                 {openings.length === 0 && (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-[#888888]">

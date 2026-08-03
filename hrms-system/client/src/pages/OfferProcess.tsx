@@ -198,19 +198,16 @@ export default function OfferProcessPage() {
 
   const handleAcceptOffer = async (appNo: string) => {
     if (saving) return;
-    const remarks = prompt('Remarks for offer acceptance (optional):');
-    if (remarks === null) return;
-
-    const inputDate = prompt('Enter Actual Date of Joining (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-    if (inputDate === null) return;
-
     setSaving(true);
     try {
-      await API.acceptOffer({ appNo, remarks, joiningDate: inputDate });
-      showToast('Offer accepted & marked Joined! 🎉 Moving to Employee directory...', 'success');
+      const matched = (offers || []).find(o => o.appNo === appNo);
+      const joiningDate = matched?.estDoj || new Date().toISOString().slice(0, 10);
+      await API.acceptOffer({ appNo, remarks: 'Accepted via Offer Desk', joiningDate });
+      showToast('Offer accepted & candidate Joined! 🎉 Redirecting to Employees...', 'success');
+      loadOffers();
       setTimeout(() => {
         navigate('/employees');
-      }, 1500);
+      }, 1200);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
     } finally {
