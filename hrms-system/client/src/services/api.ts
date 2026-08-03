@@ -306,5 +306,20 @@ export const API = {
   // Broadcasts
   async getBroadcasts() { return apiFetch('/broadcasts'); },
   async createBroadcast(payload: any) { return apiFetch('/broadcasts', { method: 'POST', body: JSON.stringify(payload) }); },
-  async deleteBroadcast(id: string | number) { return apiFetch(`/broadcasts/${id}`, { method: 'DELETE' }); }
+  async deleteBroadcast(id: string | number) { return apiFetch(`/broadcasts/${id}`, { method: 'DELETE' }); },
+
+  // File URL Helper
+  fileUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    let clean = url.trim();
+    if (!clean) return null;
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    if (clean.startsWith('uploads/')) clean = `/${clean}`;
+    const filename = clean.split('/').pop() || clean;
+    if (filename.startsWith('photo') && !clean.includes('applicants')) return `/uploads/candidate-photos/${filename}`;
+    if (filename.startsWith('resume') && !clean.includes('applicants')) return `/uploads/candidate-resumes/${filename}`;
+    if ((filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) && !clean.includes('applicants')) return `/uploads/employee-documents/${filename}`;
+    if (clean.startsWith('/uploads/')) return clean;
+    return `/uploads/misc/${filename}`;
+  }
 };

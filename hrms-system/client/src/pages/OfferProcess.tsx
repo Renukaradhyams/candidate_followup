@@ -60,6 +60,20 @@ export default function OfferProcessPage() {
 
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
+  const fileUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    let clean = url.trim();
+    if (!clean) return null;
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    if (clean.startsWith('uploads/')) clean = `/${clean}`;
+    const filename = clean.split('/').pop() || clean;
+    if (filename.startsWith('photo') && !clean.includes('applicants')) return `/uploads/candidate-photos/${filename}`;
+    if (filename.startsWith('resume') && !clean.includes('applicants')) return `/uploads/candidate-resumes/${filename}`;
+    if ((filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) && !clean.includes('applicants')) return `/uploads/employee-documents/${filename}`;
+    if (clean.startsWith('/uploads/')) return clean;
+    return `/uploads/misc/${filename}`;
+  };
+
   const fmtINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
   const renderOfferStatus = (status: string) => {
@@ -777,9 +791,9 @@ export default function OfferProcessPage() {
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pr-10">
                 {/* Photo / Avatar */}
-                {candidateData?.photoUrl ? (
+                {fileUrl(candidateData?.photoUrl) ? (
                   <img
-                    src={API.fileUrl(candidateData.photoUrl) || ''}
+                    src={fileUrl(candidateData?.photoUrl)!}
                     alt={profileOffer.name}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
