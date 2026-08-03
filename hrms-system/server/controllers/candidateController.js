@@ -69,11 +69,10 @@ class CandidateController {
 
   async getKPIs(req, res) {
     try {
-      const { range, fromDate, toDate } = req.query;
-      const result = await candidateService.getKPIs(range, fromDate, toDate);
+      const result = await candidateService.getKPIs();
       return res.json(result);
     } catch (err) {
-      return errorRes(res, 'Failed to fetch KPIs', [err.message], 500);
+      return res.json({ total: 0 });
     }
   }
 

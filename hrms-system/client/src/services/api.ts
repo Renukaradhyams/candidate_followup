@@ -168,13 +168,8 @@ export const API = {
   async getNextAppNo() {
     return apiFetch('/candidates/next-app-no');
   },
-  async getKPIs(dateRange?: string, fromDate?: string, toDate?: string) {
-    const params = new URLSearchParams();
-    if (dateRange) params.append('range', dateRange);
-    if (fromDate) params.append('fromDate', fromDate);
-    if (toDate) params.append('toDate', toDate);
-    const q = params.toString();
-    return apiFetch(`/candidates/kpis${q ? `?${q}` : ''}`);
+  async getKPIs(dateRange?: string) {
+    return apiFetch(`/candidates/kpis${dateRange ? `?range=${dateRange}` : ''}`);
   },
   async getPendingActions() {
     return apiFetch('/candidates/pending-actions');

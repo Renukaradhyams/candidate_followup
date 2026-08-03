@@ -464,93 +464,104 @@ class CandidateService {
     return [];
   }
 
-  async getKPIs(range = 'all', fromDate = null, toDate = null) {
-    let dateWhereClause = '';
-    const params = [];
+  async getKPIs() {
+    try {
+      const [candRows] = await pool.query(`SELECT status, created_at FROM candidates`);
+      const total = candRows.length;
 
-    const now = new Date();
-    if (range === 'today') {
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      dateWhereClause = ' WHERE created_at >= ?';
-      params.push(todayStart);
-    } else if (range === 'week') {
-      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-      dateWhereClause = ' WHERE created_at >= ?';
-      params.push(weekStart);
-    } else if (range === 'month') {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      dateWhereClause = ' WHERE created_at >= ?';
-      params.push(monthStart);
-    } else if (range === 'last_month') {
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      dateWhereClause = ' WHERE created_at >= ? AND created_at <= ?';
-      params.push(lastMonthStart, lastMonthEnd);
-    } else if (range === 'custom' && fromDate) {
-      const start = new Date(fromDate);
-      const end = toDate ? new Date(new Date(toDate).setHours(23, 59, 59)) : new Date(new Date(fromDate).setHours(23, 59, 59));
-      dateWhereClause = ' WHERE created_at >= ? AND created_at <= ?';
-      params.push(start, end);
+      const todayStr = new Date().toDateString();
+      const todayCandidates = candRows.filter(r => r.created_at && new Date(r.created_at).toDateString() === todayStr).length;
+      const pendingReview = candRows.filter(r => r.status === 'New').length;
+      const shortlisted = candRows.filter((r) =>
+        ['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)
+      ).length;
+      const selected = candRows.filter((r) => r.status === 'Selected').length;
+      const joined = candRows.filter((r) => r.status === 'Joined').length;
+      const offerAccepted = candRows.filter((r) => r.status === 'Offer Accepted').length;
+      const rejected = candRows.filter((r) => r.status === 'Rejected').length;
+      const hold = candRows.filter((r) => r.status === 'Hold').length;
+
+      let offerRows = [];
+      try {
+        const [oRows] = await pool.query(`SELECT status FROM selection_offers`);
+        offerRows = oRows || [];
+      } catch (e) {}
+
+      const offerPending = offerRows.filter(r => r.status === 'Pending').length;
+      const acceptedOffers = offerRows.filter((r) => r.status === 'Accepted').length;
+      const offerDeclined = offerRows.filter(r => r.status === 'Rejected').length;
+      const acceptanceRate = offerRows.length > 0 ? Math.round((acceptedOffers / offerRows.length) * 100) : 0;
+
+      let interviewsToday = 0;
+      try {
+        const [schedRows] = await pool.query(`SELECT interview_date FROM interview_schedules WHERE interview_date IS NOT NULL`);
+        interviewsToday = (schedRows || []).filter((r) => r.interview_date && new Date(r.interview_date).toDateString() === todayStr).length;
+      } catch (e) {}
+
+      let activeEmployees = 0;
+      try {
+        const [empRows] = await pool.query(`SELECT id FROM users WHERE active = TRUE`);
+        activeEmployees = (empRows || []).length;
+      } catch (e) {}
+
+      return {
+        totalCandidates: total,
+        todayCandidates,
+        pendingReview,
+        interviewScheduled: interviewsToday,
+        interviewCompleted: shortlisted,
+        round1Cleared: shortlisted,
+        round2Cleared: selected,
+        selected,
+        rejected,
+        offerPending,
+        offerAccepted,
+        offerDeclined,
+        joiningPending: offerAccepted,
+        employeesJoined: joined,
+        exitPending: 0,
+        completedExit: 0,
+        activeEmployees,
+        acceptanceRate,
+        avgDays: 5,
+        total,
+        shortlisted,
+        joined,
+        onboarding: offerAccepted,
+        interviewsToday,
+        newCandidates: pendingReview,
+        hold
+      };
+    } catch (err) {
+      return {
+        totalCandidates: 0,
+        todayCandidates: 0,
+        pendingReview: 0,
+        interviewScheduled: 0,
+        interviewCompleted: 0,
+        round1Cleared: 0,
+        round2Cleared: 0,
+        selected: 0,
+        rejected: 0,
+        offerPending: 0,
+        offerAccepted: 0,
+        offerDeclined: 0,
+        joiningPending: 0,
+        employeesJoined: 0,
+        exitPending: 0,
+        completedExit: 0,
+        activeEmployees: 0,
+        acceptanceRate: 0,
+        avgDays: 0,
+        total: 0,
+        shortlisted: 0,
+        joined: 0,
+        onboarding: 0,
+        interviewsToday: 0,
+        newCandidates: 0,
+        hold: 0
+      };
     }
-
-    const [candRows] = await pool.query(`SELECT status, created_at FROM candidates${dateWhereClause}`, params);
-    const total = candRows.length;
-
-    const todayStr = new Date().toDateString();
-    const todayCandidates = candRows.filter(r => new Date(r.created_at).toDateString() === todayStr).length;
-    const pendingReview = candRows.filter(r => r.status === 'New').length;
-    const shortlisted = candRows.filter((r) =>
-      ['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)
-    ).length;
-    const selected = candRows.filter((r) => r.status === 'Selected').length;
-    const joined = candRows.filter((r) => r.status === 'Joined').length;
-    const offerAccepted = candRows.filter((r) => r.status === 'Offer Accepted').length;
-    const rejected = candRows.filter((r) => r.status === 'Rejected').length;
-    const hold = candRows.filter((r) => r.status === 'Hold').length;
-
-    const [offerRows] = await pool.query(`SELECT status FROM selection_offers`);
-    const offerPending = offerRows.filter(r => r.status === 'Pending').length;
-    const acceptedOffers = offerRows.filter((r) => r.status === 'Accepted').length;
-    const offerDeclined = offerRows.filter(r => r.status === 'Rejected').length;
-    const acceptanceRate = offerRows.length > 0 ? Math.round((acceptedOffers / offerRows.length) * 100) : 0;
-
-    const [schedRows] = await pool.query(`SELECT interview_date FROM interview_schedules WHERE interview_date IS NOT NULL`);
-    const interviewsToday = schedRows.filter((r) => new Date(r.interview_date).toDateString() === todayStr).length;
-
-    const exitPending = 0;
-    const completedExit = 0;
-
-    const [empRows] = await pool.query(`SELECT id FROM users WHERE active = TRUE`);
-    const activeEmployees = empRows.length;
-
-    return {
-      totalCandidates: total,
-      todayCandidates,
-      pendingReview,
-      interviewScheduled: interviewsToday,
-      interviewCompleted: shortlisted,
-      round1Cleared: shortlisted,
-      round2Cleared: selected,
-      selected,
-      rejected,
-      offerPending,
-      offerAccepted,
-      offerDeclined,
-      joiningPending: offerAccepted,
-      employeesJoined: joined,
-      exitPending,
-      completedExit,
-      activeEmployees,
-      acceptanceRate,
-      avgDays: 5,
-      total,
-      shortlisted,
-      joined,
-      onboarding: offerAccepted,
-      interviewsToday,
-      newCandidates: pendingReview,
-      hold
-    };
   }
 
   async getActivityFull(appNo) {

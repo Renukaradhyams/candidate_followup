@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     try {
       const [kData, pData, sData, cData] = await Promise.all([
-        API.getKPIs(activeRange, fromDate, toDate),
+        API.getKPIs(activeRange),
         API.getPendingActions(),
         API.getSourceBreakdown(),
         API.getCandidates({ limit: 500 })
@@ -76,7 +76,7 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.warn('Dashboard data load warning:', err.message);
     }
-  }, [activeRange, fromDate, toDate]);
+  }, [activeRange]);
 
   useEffect(() => {
     if (!Auth.check()) {
