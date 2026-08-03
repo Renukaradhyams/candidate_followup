@@ -295,7 +295,7 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary'];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
     
     const map = {
       blood_group: 'bloodGroup',

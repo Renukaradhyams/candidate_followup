@@ -122,6 +122,7 @@ export default function EmployeesPage() {
     setSaving(true);
     try {
       await API.updateCandidate(editModal.emp.appNo, {
+        isFullEdit: true,
         name: editForm.name,
         phone: editForm.phone,
         email: editForm.email,
