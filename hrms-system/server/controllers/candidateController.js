@@ -185,8 +185,7 @@ class CandidateController {
       });
 
       const [desigRows] = await db.query(`SELECT name FROM designations WHERE active = TRUE`);
-      const defaultRoles = ['Sales Executive', 'Cashier', 'Billing Executive', 'HR', 'Store Assistant', 'Stock Executive', 'Visual Merchandiser', 'Floor Manager', 'Security', 'Housekeeping', 'Helper', 'Store Manager', 'Assistant Store Manager', 'Accountant'];
-      const desigSet = new Set([...defaultRoles, ...desigRows.map(d => d.name)]);
+      const desigSet = new Set([...desigRows.map(d => d.name)]);
       
       // Also include any designations that exist in manpower_requisitions or candidates
       reqRows.forEach(r => { if (r.designation) desigSet.add(r.designation); });

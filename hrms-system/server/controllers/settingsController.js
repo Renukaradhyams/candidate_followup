@@ -178,6 +178,7 @@ const deleteDesignation = async (req, res) => {
   try {
     const { name } = req.body;
     await db.query(`UPDATE designations SET active = FALSE WHERE name = ?`, [name]);
+    await db.query(`DELETE FROM manpower_requisitions WHERE designation = ?`, [name]);
 
     await logAction(req.user ? req.user.username : 'Admin', 'DELETE_DESIGNATION', 'SETTINGS', { name });
 
