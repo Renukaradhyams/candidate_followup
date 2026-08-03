@@ -35,7 +35,7 @@ export default function CandidatesPage() {
   const [remarksText, setRemarksText] = useState('');
   
   const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
-  const [offerForm, setOfferForm] = useState({ salary: "", doj: "", desig: "", department: "", remarks: "" });
+  const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
   
   const [callModal, setCallModal] = useState<{ open: boolean; candidate: any | null; step: number; callStatus: any }>({ open: false, candidate: null, step: 1, callStatus: null });
@@ -150,7 +150,7 @@ export default function CandidatesPage() {
     
     if (action === 'shortlist') {
       setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
+      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
       return;
     }
     
@@ -201,13 +201,17 @@ export default function CandidatesPage() {
     }
     setActionLoading(true);
     try {
+      const combinedSalary = offerForm.incentive && offerForm.incentive.trim()
+        ? `${offerForm.salary.trim()}|${offerForm.incentive.trim()}`
+        : offerForm.salary.trim();
+
       await API.createDirectOffer({
         appNo: directOfferModal.candidate.appNo,
-        salaryOffered: offerForm.salary,
+        salaryOffered: combinedSalary,
         estDoj: offerForm.doj,
         designation: offerForm.desig,
         department: offerForm.department,
-          remarks: offerForm.remarks
+        remarks: offerForm.remarks
       });
       showToast('Candidate moved to Offer Desk successfully', 'success');
       setDirectOfferModal({ open: false, candidate: null });
@@ -855,6 +859,11 @@ export default function CandidatesPage() {
               <div>
                 <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Salary (₹) *</label>
                 <input type="text" value={offerForm.salary} onChange={(e) => setOfferForm({ ...offerForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern font-bold text-emerald-800" />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Offered Incentive (₹) (Optional)</label>
+                <input type="text" value={offerForm.incentive || ''} onChange={(e) => setOfferForm({ ...offerForm, incentive: e.target.value })} placeholder="e.g. 2000 (Monthly / Performance)" className="input-modern font-bold text-emerald-700" />
               </div>
 
               <div>
