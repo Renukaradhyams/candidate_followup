@@ -14,6 +14,7 @@ export default function OfferProcessPage() {
   const [offers, setOffers] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [drawerOffer, setDrawerOffer] = useState<any | null>(null);
   const [drawerTab, setDrawerTab] = useState<'overview' | 'personal' | 'professional' | 'documents'>('overview');
@@ -59,8 +60,17 @@ export default function OfferProcessPage() {
     if (activeFilter === 'Accepted') list = list.filter(o => o.status === 'Accepted');
     if (activeFilter === 'Declined') list = list.filter(o => o.status === 'Declined' || o.status === 'Offer Rejected');
     if (activeFilter === 'Joined') list = list.filter(o => o.status === 'Joined');
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(o => 
+        (o.name && o.name.toLowerCase().includes(q)) || 
+        (o.appNo && o.appNo.toLowerCase().includes(q)) || 
+        (o.desig && o.desig.toLowerCase().includes(q))
+      );
+    }
     setFiltered(list);
-  }, [offers, activeFilter]);
+  }, [offers, activeFilter, searchQuery]);
 
   const handleSaveDetails = async () => {
     if (!detailOffer || saving) return;
