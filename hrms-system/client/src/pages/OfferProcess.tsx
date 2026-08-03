@@ -295,7 +295,7 @@ export default function OfferProcessPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filtered.map(o => (
+                    {(filtered || []).map(o => (
                       <tr key={o.appNo} onClick={() => setProfileOffer(o)} className="hover:bg-slate-50 transition-colors cursor-pointer group">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
@@ -359,7 +359,7 @@ export default function OfferProcessPage() {
                         </td>
                       </tr>
                     ))}
-                    {filtered.length === 0 && (
+                    {(filtered || []).length === 0 && (
                       <tr><td colSpan={6} className="py-12 text-center text-slate-500 font-semibold">No offers found.</td></tr>
                     )}
                   </tbody>
@@ -368,7 +368,7 @@ export default function OfferProcessPage() {
 
               {/* Mobile Cards */}
               <div className="md:hidden grid gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-                {filtered.map(o => (
+                {(filtered || []).map(o => (
                   <div key={o.appNo} onClick={() => setProfileOffer(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative cursor-pointer active:scale-[0.98] transition-transform">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
@@ -419,7 +419,7 @@ export default function OfferProcessPage() {
                     </div>
                   </div>
                 ))}
-                {filtered.length === 0 && (
+                {(filtered || []).length === 0 && (
                   <div className="py-12 text-center text-slate-500 font-semibold bg-white rounded-2xl border border-slate-200">No offers found.</div>
                 )}
               </div>
@@ -479,7 +479,7 @@ export default function OfferProcessPage() {
                       <label className="block text-[10px] font-extrabold text-slate-500 mb-1.5 uppercase tracking-wider">Final Designation</label>
                       <select value={finalDesignation} onChange={(e) => setFinalDesignation(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-bold outline-none focus:border-blue-500 focus:ring-2 ring-blue-500/20 transition-all cursor-pointer hover:bg-white">
                         <option value="">Select Designation</option>
-                        {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                        {(designations || []).map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
                     <div>
