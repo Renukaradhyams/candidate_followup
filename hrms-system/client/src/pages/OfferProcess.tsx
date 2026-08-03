@@ -646,14 +646,14 @@ export default function OfferProcessPage() {
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-bold text-xs outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
                       >
                         <option value="">Select Department</option>
-                        <option value="SAARE">SAARE</option>
-                        <option value="LADIES">LADIES</option>
-                        <option value="KIDS">KIDS</option>
-                        <option value="MENS">MENS</option>
-                        <option value="HOME FURNISHING">HOME FURNISHING</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Sales">Sales</option>
-                        <option value="OTHERS">OTHERS</option>
+                        <option value="Ground Floor Saree">Ground Floor Saree</option>
+                        <option value="First Floor Saree">First Floor Saree</option>
+                        <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
+                        <option value="Ladies">Ladies</option>
+                        <option value="Kids">Kids</option>
+                        <option value="Mens">Mens</option>
+                        <option value="Home Furnishing">Home Furnishing</option>
+                        <option value="Others">Others</option>
                       </select>
                     </div>
 

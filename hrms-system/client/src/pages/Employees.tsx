@@ -431,7 +431,17 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Department</label>
-                  <input type="text" value={editForm.department || ''} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="input-modern" />
+                  <select value={editForm.department || ''} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="select-modern font-bold">
+                    <option value="">Select Department</option>
+                    <option value="Ground Floor Saree">Ground Floor Saree</option>
+                    <option value="First Floor Saree">First Floor Saree</option>
+                    <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
+                    <option value="Ladies">Ladies</option>
+                    <option value="Kids">Kids</option>
+                    <option value="Mens">Mens</option>
+                    <option value="Home Furnishing">Home Furnishing</option>
+                    <option value="Others">Others</option>
+                  </select>
                 </div>
               </div>
 

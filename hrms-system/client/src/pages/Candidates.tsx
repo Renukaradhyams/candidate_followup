@@ -1002,12 +1002,14 @@ export default function CandidatesPage() {
                 <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department</label>
                 <select value={offerForm.department} onChange={(e) => setOfferForm({ ...offerForm, department: e.target.value })} className="select-modern font-bold">
                   <option value="">Select Department</option>
-                  <option value="SAARE">SAARE</option>
-                  <option value="LADIES">LADIES</option>
-                  <option value="KIDS">KIDS</option>
-                  <option value="MENS">MENS</option>
-                  <option value="HOME FURNISHING">HOME FURNISHING</option>
-                  <option value="OTHERS">OTHERS</option>
+                  <option value="Ground Floor Saree">Ground Floor Saree</option>
+                  <option value="First Floor Saree">First Floor Saree</option>
+                  <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
+                  <option value="Ladies">Ladies</option>
+                  <option value="Kids">Kids</option>
+                  <option value="Mens">Mens</option>
+                  <option value="Home Furnishing">Home Furnishing</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
             </div>

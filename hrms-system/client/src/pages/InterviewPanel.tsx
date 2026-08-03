@@ -665,7 +665,17 @@ export default function InterviewPanelPage() {
                 </div>
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department *</label>
-                  <input type="text" value={approveDept} onChange={(e) => setApproveDept(e.target.value)} placeholder="e.g. Sales" className="input-modern" />
+                  <select value={approveDept} onChange={(e) => setApproveDept(e.target.value)} className="select-modern font-bold">
+                    <option value="">Select Department</option>
+                    <option value="Ground Floor Saree">Ground Floor Saree</option>
+                    <option value="First Floor Saree">First Floor Saree</option>
+                    <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
+                    <option value="Ladies">Ladies</option>
+                    <option value="Kids">Kids</option>
+                    <option value="Mens">Mens</option>
+                    <option value="Home Furnishing">Home Furnishing</option>
+                    <option value="Others">Others</option>
+                  </select>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block font-bold text-[#1E2D4E] mb-1">Notice Period (Optional)</label>
