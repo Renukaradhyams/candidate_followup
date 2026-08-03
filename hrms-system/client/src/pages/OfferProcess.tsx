@@ -22,9 +22,8 @@ export default function OfferProcessPage() {
   const [finalDesignation, setFinalDesignation] = useState('');
   const [department, setDepartment] = useState('');
   const [otherSection, setOtherSection] = useState('');
-  const [branch, setBranch] = useState('');
-  const [reportingManager, setReportingManager] = useState('');
   const [designations, setDesignations] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
@@ -61,34 +60,43 @@ export default function OfferProcessPage() {
   }, [offers, activeFilter]);
 
   const handleSaveDetails = async () => {
-    if (!detailOffer) return;
-    if (!salaryOffered || !estDoj || !department || !finalDesignation || !branch) {
-      showToast('Salary Offered, DOJ, Finalized Role, Branch, and Allocated Department are mandatory fields.', 'error');
+    if (!detailOffer || saving) return;
+    if (!salaryOffered || !estDoj || !department || !finalDesignation) {
+      showToast('Salary Offered, DOJ, Finalized Role, and Allocated Department are mandatory fields.', 'error');
       return;
     }
+    setSaving(true);
     try {
-      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation, branch, reportingManager });
+      await API.updateOfferDetails({ appNo: detailOffer.appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation });
       showToast('Offer joining details saved', 'success');
       loadOffers();
       setDetailOffer(null);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleAcceptOffer = async (appNo: string) => {
+    if (saving) return;
     const remarks = prompt('Remarks for offer acceptance (optional):');
-    if (remarks === null) return; // User cancelled
+    if (remarks === null) return;
+    setSaving(true);
     try {
       await API.acceptOffer({ appNo, remarks });
       showToast('Offer accepted!', 'success');
       loadOffers();
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleMarkJoined = async (appNo: string) => {
+    if (saving) return;
+    setSaving(true);
     try {
       await API.markJoined({ appNo, joiningDate });
       showToast('Employee marked as Joined! 🎉 Moving to Employee directory...', 'success');
@@ -97,6 +105,8 @@ export default function OfferProcessPage() {
       }, 1200);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -192,8 +202,6 @@ export default function OfferProcessPage() {
                                 setSalaryOffered(o.salary || '');
                                 setFinalDesignation(o.desig || '');
                                 setDepartment(o.department || '');
-                                setBranch(o.branch || '');
-                                setReportingManager(o.reporting_manager || '');
                                 setOtherSection('');
                               }}
                               className="px-2.5 py-1 rounded bg-[#1E2D4E] text-white font-bold text-[11px]"
@@ -348,31 +356,6 @@ export default function OfferProcessPage() {
                   />
                 </div>
               )}
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Branch / Store Location</label>
-                <select
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4] font-bold"
-                >
-                  <option value="">Select Branch</option>
-                  <option value="Head Office">Head Office</option>
-                  <option value="Store 1 (Main)">Store 1 (Main)</option>
-                  <option value="Store 2 (Mall)">Store 2 (Mall)</option>
-                  <option value="Warehouse">Warehouse</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Reporting Manager (Optional)</label>
-                <input
-                  type="text"
-                  value={reportingManager}
-                  onChange={(e) => setReportingManager(e.target.value)}
-                  placeholder="e.g. Ramesh K"
-                  className="w-full p-2.5 rounded-lg border border-[#e0ddd8] bg-[#F9F7F4]"
-                />
-              </div>
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -384,9 +367,10 @@ export default function OfferProcessPage() {
               </button>
               <button
                 onClick={handleSaveDetails}
-                className="flex-1 py-2.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs"
+                disabled={saving}
+                className="flex-1 py-2.5 rounded-lg bg-[#1E2D4E] text-white font-bold text-xs disabled:opacity-50"
               >
-                Save
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

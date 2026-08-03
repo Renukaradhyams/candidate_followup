@@ -20,7 +20,7 @@ export default function NotificationPreferencesModal({ isOpen, onClose }: Notifi
   };
 
   const handleTestSound = () => {
-    NotificationService.playSound('high', 'Emergency');
+    NotificationService.playSound('high');
   };
 
   return (

@@ -10,7 +10,7 @@ const getApiBase = () => {
 
 export interface UserSession {
   username: string;
-  role: 'HR' | 'Manager' | 'Admin';
+  role: 'HR' | 'Manager' | 'Admin' | 'Super Admin' | string;
   fullName: string;
   displayName: string;
   token?: string;

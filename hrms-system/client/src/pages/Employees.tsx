@@ -33,6 +33,7 @@ export default function EmployeesPage() {
     phone: '',
     email: '',
     desig: '',
+    department: '',
     salary: '',
     offeredDoj: '',
     status: ''
@@ -106,6 +107,7 @@ export default function EmployeesPage() {
       phone: emp.phone || '',
       email: emp.email || '',
       desig: emp.desig || '',
+      department: emp.department || '',
       salary: emp.salary && emp.salary !== '—' ? emp.salary : (emp.expectedSalary || ''),
       offeredDoj: emp.offeredDoj || emp.estDoj || emp.actualDoj || '',
       status: emp.status || 'Joined'
@@ -127,6 +129,7 @@ export default function EmployeesPage() {
         phone: editForm.phone,
         email: editForm.email,
         desig: editForm.desig,
+        department: editForm.department,
         salary: editForm.salary,
         offeredDoj: editForm.offeredDoj,
         status: editForm.status
@@ -320,6 +323,7 @@ export default function EmployeesPage() {
                     <th className="py-3 px-4">App No</th>
                     <th className="py-3 px-4">Employee Name</th>
                     <th className="py-3 px-4">Designation</th>
+                    <th className="py-3 px-4">Department</th>
                     <th className="py-3 px-4">Phone / Contact</th>
                     <th className="py-3 px-4">Offered Salary</th>
                     <th className="py-3 px-4">DOJ Offered</th>
@@ -343,6 +347,7 @@ export default function EmployeesPage() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{emp.desig}</td>
+                      <td className="py-3.5 px-4 text-[#555555] font-semibold">{emp.department || '—'}</td>
                       <td className="py-3.5 px-4 font-mono text-[#555555]">{emp.phone}</td>
                       <td className="py-3.5 px-4 font-extrabold text-emerald-700">
                         {emp.salary && emp.salary !== '—' ? `₹ ${emp.salary}` : '—'}
@@ -419,9 +424,15 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Designation Role</label>
-                <input type="text" value={editForm.desig} onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })} className="input-modern" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Designation Role</label>
+                  <input type="text" value={editForm.desig} onChange={(e) => setEditForm({ ...editForm, desig: e.target.value })} className="input-modern" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Department</label>
+                  <input type="text" value={editForm.department || ''} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="input-modern" />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -538,7 +549,9 @@ export default function EmployeesPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-black text-[#777777]">Offered Salary</span>
-                      <div className="text-base font-mono font-black text-emerald-800">₹ {drawerEmp.salary || '—'}</div>
+                      <div className="text-base font-mono font-black text-emerald-800">
+                        {drawerEmp.salary && drawerEmp.salary !== '—' ? `₹ ${drawerEmp.salary}` : '—'}
+                      </div>
                     </div>
                     <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-black text-[#777777]">Date of Joining (DOJ)</span>
@@ -550,16 +563,35 @@ export default function EmployeesPage() {
                     </div>
                   </div>
 
+                  {/* Salary & Offer Details */}
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
                     <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-[#C9952A]" />
-                      <span>Detailed Employment Info</span>
+                      <span>Salary &amp; Offer Details</span>
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div><span className="text-[#777777]">Previous Salary:</span> <span className="font-extrabold text-[#1E2D4E] ml-1">₹ {drawerEmp.previousSalary || drawerEmp.currentSalary || '—'}</span></div>
-                      <div><span className="text-[#777777]">Expected Salary:</span> <span className="font-extrabold text-[#1E2D4E] ml-1">₹ {drawerEmp.expectedSalary || '—'}</span></div>
-                      <div><span className="text-[#777777]">Notice Period:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerEmp.noticePeriod || '—'}</span></div>
-                      <div><span className="text-[#777777]">Referrer Info:</span> <span className="font-bold text-[#1E2D4E] ml-1">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Offered Monthly Salary</span><span className="font-extrabold text-emerald-800 text-sm font-mono">{drawerEmp.salary && drawerEmp.salary !== '—' ? `₹ ${drawerEmp.salary}` : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Expected Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.expectedSalary ? `₹ ${drawerEmp.expectedSalary}` : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{(drawerEmp.previousSalary || drawerEmp.currentSalary) ? `₹ ${drawerEmp.previousSalary || drawerEmp.currentSalary}` : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Notice Period</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Allocated Department</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Designation Role</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.desig || drawerEmp.designation || '—'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Work Experience Details */}
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                      <span>Work Experience Details</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Prior / Retail Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Company / Employer</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
                     </div>
                     {drawerEmp.remarks && (
                       <div className="pt-2 border-t border-[#e2dfd7]/60">

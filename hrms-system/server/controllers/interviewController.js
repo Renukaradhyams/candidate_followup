@@ -107,8 +107,8 @@ const getCallStatus = async (req, res) => {
 
 const getInterviews = async (req, res) => {
   try {
-    const [schedRows] = await db.query(
-      `SELECT * FROM interview_schedules WHERE step >= 3 OR status = 'Interview Scheduled' ORDER BY interview_date ASC`
+    const [candRows] = await db.query(
+      `SELECT app_no, name as candidate_name, designation, status, created_at FROM candidates WHERE status IN ('Interview Scheduled', 'Interviewed') ORDER BY updated_at DESC`
     );
 
     const [evalRows] = await db.query(`SELECT * FROM hr_evaluations`);
@@ -134,11 +134,7 @@ const getInterviews = async (req, res) => {
       };
     });
 
-    const [candRows] = await db.query(`SELECT app_no, status FROM candidates`);
-    const candStatusMap = {};
-    candRows.forEach((r) => { candStatusMap[r.app_no] = r.status; });
-
-    const interviews = schedRows.map((r) => {
+    const interviews = candRows.map((r) => {
       const sc = scoreMap[r.app_no] || {};
       const tk = tokenMap[r.app_no] || {};
       const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
@@ -153,13 +149,13 @@ const getInterviews = async (req, res) => {
         initials,
         color: colors[colorIndex],
         desig: r.designation,
-        call1Date: fmt(r.call1_date),
-        call1Remarks: r.call1_remarks || '',
-        call2Date: fmt(r.call2_date),
-        call2Remarks: r.call2_remarks || '',
-        interviewDate: fmt(r.interview_date),
-        interviewRemarks: r.interview_remarks || '',
-        status: candStatusMap[r.app_no] || r.status,
+        call1Date: '—',
+        call1Remarks: '',
+        call2Date: '—',
+        call2Remarks: '',
+        interviewDate: fmt(r.created_at),
+        interviewRemarks: '',
+        status: r.status,
         hrScore: sc.hrScore || null,
         assignedScore: sc.assignedScore || null,
         isNewRole: sc.isNewRole || false,
@@ -395,15 +391,27 @@ const submitInterviewScore = async (req, res) => {
 
 const approveSelection = async (req, res) => {
   try {
-    const { appNo, candidate, desig, remarks, probation, doneBy } = req.body;
+    const { appNo, candidate, desig, remarks, probation, doneBy, salaryOffered, estDoj, finalDesignation, department, noticePd } = req.body;
     const user = doneBy || (req.user ? req.user.username : 'Store Manager');
 
     const [cRows] = await db.query(`SELECT * FROM candidates WHERE app_no = ?`, [appNo]);
     if (cRows.length === 0) return errorRes(res, 'Candidate record missing or corrupted. Please delete this interview and recreate.', [], 400);
     const cand = cRows[0];
+    
+    const useDesig = finalDesignation || desig || cand.designation;
 
     const now = new Date();
-    await db.query(`UPDATE candidates SET status = 'Selected', updated_at = ? WHERE app_no = ?`, [now, appNo]);
+    
+    const candUpd = ['status = ?', 'updated_at = ?'];
+    const candParams = ['Selected', now];
+    if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
+    if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
+    if (useDesig) { candUpd.push('designation = ?'); candParams.push(useDesig); }
+    if (department) { candUpd.push('department = ?'); candParams.push(department); }
+    if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
+    candParams.push(appNo);
+
+    await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 
     const [hrRows] = await db.query(`SELECT * FROM hr_evaluations WHERE app_no = ?`, [appNo]);
     let hrScore = 0;
@@ -419,15 +427,26 @@ const approveSelection = async (req, res) => {
     await db.query(
       `INSERT INTO selected_candidates (candidate_id, app_no, name, phone, designation, source, hr_score, assigned_score, total_score, decision_date, decision_by, is_probation, remarks)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cand.id, appNo, candidate || cand.name, cand.phone, desig || cand.designation, cand.source, hrScore, assignedScore, hrScore + assignedScore, now, user, probation ? 1 : 0, remarks]
+      [cand.id, appNo, candidate || cand.name, cand.phone, useDesig, cand.source, hrScore, assignedScore, hrScore + assignedScore, now, user, probation ? 1 : 0, remarks]
     );
 
     const [offRows] = await db.query(`SELECT id FROM selection_offers WHERE app_no = ?`, [appNo]);
     if (offRows.length === 0) {
       await db.query(
-        `INSERT INTO selection_offers (candidate_id, app_no, name, designation, status) VALUES (?, ?, ?, ?, ?)`,
-        [cand.id, appNo, candidate || cand.name, desig || cand.designation, 'Pending Accept']
+        `INSERT INTO selection_offers (candidate_id, app_no, name, designation, department, notice_period, est_doj, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cand.id, appNo, candidate || cand.name, useDesig, department || null, noticePd || null, estDoj ? new Date(estDoj) : null, 'Pending Accept']
       );
+    } else {
+      const offUpd = [];
+      const offParams = [];
+      if (useDesig) { offUpd.push('designation = ?'); offParams.push(useDesig); }
+      if (department) { offUpd.push('department = ?'); offParams.push(department); }
+      if (noticePd) { offUpd.push('notice_period = ?'); offParams.push(noticePd); }
+      if (estDoj) { offUpd.push('est_doj = ?'); offParams.push(new Date(estDoj)); }
+      if (offUpd.length > 0) {
+        offParams.push(appNo);
+        await db.query(`UPDATE selection_offers SET ${offUpd.join(', ')} WHERE app_no = ?`, offParams);
+      }
     }
 
     // Activity log

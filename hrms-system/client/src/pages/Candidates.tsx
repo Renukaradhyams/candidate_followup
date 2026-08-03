@@ -41,6 +41,7 @@ export default function CandidatesPage() {
   // Selected / Rejected Panel View
   const [selRejPanel, setSelRejPanel] = useState<'selected' | 'rejected' | null>(null);
   const [selRejData, setSelRejData] = useState<any[]>([]);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadCandidates = useCallback(async () => {
     try {
@@ -125,11 +126,6 @@ export default function CandidatesPage() {
     } catch (e) {}
   };
 
-  const handleOpenRemarkModal = (action: string, candidate: any) => {
-    setRemarkModal({ open: true, action, candidate });
-    setRemarksText('');
-  };
-
   const handleDeleteCandidate = async (appNo: string) => {
     if (!window.confirm('Are you sure you want to permanently delete this candidate?')) return;
     try {
@@ -142,69 +138,34 @@ export default function CandidatesPage() {
     }
   };
 
-  const handleConfirmRemark = async () => {
-    const { action, candidate } = remarkModal;
-    if (!candidate) return;
-
+  const handleStatusChange = async (action: string, candidate: any) => {
+    if (!candidate || actionLoading) return;
+    setActionLoading(true);
     try {
       if (action === 'reject') {
-        await API.rejectCandidate({ appNo: candidate.appNo, remarks: remarksText, candName: candidate.name });
+        if (!window.confirm(`Are you sure you want to reject ${candidate.name}?`)) {
+          setActionLoading(false);
+          return;
+        }
+        await API.rejectCandidate({ appNo: candidate.appNo, remarks: 'Rejected from Shortlisting phase', candName: candidate.name });
         showToast(`${candidate.name} rejected`, 'warn');
       } else {
         const statusMap: Record<string, string> = {
           shortlist: 'Shortlisted',
           hold: 'Hold',
           reactivate: 'New',
-          reengage: 'New'
+          schedule: 'Interview Scheduled'
         };
-        await API.updateCandidate(candidate.appNo, { status: statusMap[action], remarks: remarksText });
+        await API.updateCandidate(candidate.appNo, { status: statusMap[action], remarks: '' });
         showToast(`${candidate.name} updated to ${statusMap[action]}`, 'success');
       }
 
-      setRemarkModal({ open: false, action: '', candidate: null });
       setDrawerCandidate(null);
       loadCandidates();
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
-    }
-  };
-
-  const handleOpenCallModal = async (c: any) => {
-    try {
-      const status = await API.getCallStatus(c.appNo);
-      const step = (status.step || 0) + 1;
-      setCallModal({ open: true, candidate: c, step, callStatus: status });
-      setCallDate(new Date().toISOString().slice(0, 10));
-      setCallRemarks('');
-    } catch (e) {
-      setCallModal({ open: true, candidate: c, step: 1, callStatus: null });
-    }
-  };
-
-  const handleConfirmCallStep = async () => {
-    if (!callDate) {
-      showToast('Date is required', 'error');
-      return;
-    }
-    const { candidate, step } = callModal;
-    if (!candidate) return;
-
-    try {
-      await API.saveCallStep({
-        appNo: candidate.appNo,
-        candidate: candidate.name,
-        desig: candidate.desig,
-        step,
-        date: callDate,
-        remarks: callRemarks
-      });
-
-      showToast(step === 2 ? 'Interview Scheduled!' : '1st call logged ✓', 'success');
-      setCallModal({ open: false, candidate: null, step: 1, callStatus: null });
-      setDrawerCandidate(null);
-      loadCandidates();
-    } catch (err: any) {
-      showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -372,23 +333,15 @@ export default function CandidatesPage() {
                           <div className="flex items-center justify-end gap-1.5">
                             {c.status === 'New' && (
                               <button
-                                onClick={() => handleOpenRemarkModal('shortlist', c)}
+                                onClick={() => handleStatusChange('shortlist', c)}
                                 className="px-2.5 py-1 rounded-lg border border-[#1E2D4E] text-[#1E2D4E] font-bold hover:bg-[#1E2D4E] hover:text-white transition-all text-[11px]"
                               >
                                 Shortlist
                               </button>
                             )}
-                            {(c.status === 'Shortlisted') && (
+                            {(c.status === 'Shortlisted' || c.status === '1st Call' || c.status === '2nd Call') && (
                               <button
-                                onClick={() => handleOpenCallModal(c)}
-                                className="px-2.5 py-1 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all text-[11px] shadow-xs"
-                              >
-                                📞 1st Call
-                              </button>
-                            )}
-                            {(c.status === '1st Call') && (
-                              <button
-                                onClick={() => handleOpenCallModal(c)}
+                                onClick={() => handleStatusChange('schedule', c)}
                                 className="px-2.5 py-1 rounded-lg bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px] shadow-xs"
                               >
                                 📅 Schedule Interview
@@ -779,115 +732,31 @@ export default function CandidatesPage() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => handleOpenCallModal(drawerCandidate)}
+                  onClick={() => handleStatusChange('schedule', drawerCandidate)}
                   className="px-3.5 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs hover:bg-[#162340] transition-colors shadow-xs flex items-center gap-1.5"
                 >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>Log Call / Schedule</span>
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Schedule Interview</span>
                 </button>
                 <button
-                  onClick={() => handleOpenRemarkModal('shortlist', drawerCandidate)}
+                  onClick={() => handleStatusChange('shortlist', drawerCandidate)}
                   className="px-3.5 py-2 rounded-xl bg-emerald-700 text-white font-extrabold text-xs hover:bg-emerald-800 transition-colors shadow-xs"
                 >
                   Shortlist
                 </button>
                 <button
-                  onClick={() => handleOpenRemarkModal('hold', drawerCandidate)}
+                  onClick={() => handleStatusChange('hold', drawerCandidate)}
                   className="px-3.5 py-2 rounded-xl bg-amber-600 text-white font-extrabold text-xs hover:bg-amber-700 transition-colors shadow-xs"
                 >
                   Hold
                 </button>
                 <button
-                  onClick={() => handleOpenRemarkModal('reject', drawerCandidate)}
+                  onClick={() => handleStatusChange('reject', drawerCandidate)}
                   className="px-3.5 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700 transition-colors shadow-xs"
                 >
                   Reject
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Remark Modal */}
-      {remarkModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <h3 className="font-extrabold text-[#1E2D4E] text-base capitalize">
-                {remarkModal.action} — {remarkModal.candidate?.name}
-              </h3>
-              <button onClick={() => setRemarkModal({ open: false, action: '', candidate: null })} className="text-[#888888] hover:text-[#1E2D4E]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Enter HR Remarks / Feedback *</label>
-              <textarea
-                rows={3}
-                value={remarksText}
-                onChange={(e) => setRemarksText(e.target.value)}
-                placeholder="Reasoning for this status update..."
-                className="input-modern"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#e2dfd7]">
-              <button onClick={() => setRemarkModal({ open: false, action: '', candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold">
-                Cancel
-              </button>
-              <button onClick={handleConfirmRemark} className="btn-primary text-xs">
-                Confirm Update
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Call Log Modal */}
-      {callModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <h3 className="font-extrabold text-[#1E2D4E] text-base">
-                Log {callModal.step === 1 ? '1st Call' : 'Interview Schedule'} — {callModal.candidate?.name}
-              </h3>
-              <button onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })} className="text-[#888888]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Date *</label>
-                <input
-                  type="date"
-                  value={callDate}
-                  onChange={(e) => setCallDate(e.target.value)}
-                  className="input-modern"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Call Notes / Schedule Remarks *</label>
-                <textarea
-                  rows={3}
-                  value={callRemarks}
-                  onChange={(e) => setCallRemarks(e.target.value)}
-                  placeholder="Candidate availability, expected timing, interview details..."
-                  className="input-modern"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-[#e2dfd7]">
-              <button onClick={() => setCallModal({ open: false, candidate: null, step: 1, callStatus: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold">
-                Cancel
-              </button>
-              <button onClick={handleConfirmCallStep} className="btn-primary text-xs">
-                Save Call Step
-              </button>
             </div>
           </div>
         </div>

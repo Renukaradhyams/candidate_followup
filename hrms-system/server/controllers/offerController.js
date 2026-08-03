@@ -8,9 +8,12 @@ const getOffers = async (req, res) => {
       SELECT 
         so.*,
         he.hr_score_json,
-        he.assigned_score_json
+        he.assigned_score_json,
+        c.salary,
+        c.department as cand_department
       FROM selection_offers so
       LEFT JOIN hr_evaluations he ON so.app_no = he.app_no
+      LEFT JOIN candidates c ON so.app_no = c.app_no
       ORDER BY so.created_at DESC
     `);
 
@@ -39,6 +42,8 @@ const getOffers = async (req, res) => {
         confirm: fmt(r.confirm_date),
         confirmRemarks: r.confirm_remarks || '',
         status: r.status || '',
+        salary: r.salary || '',
+        department: r.cand_department || r.department || '',
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
         assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null
       };
@@ -86,8 +91,8 @@ const logOfferCall = async (req, res) => {
 
 const updateOfferDetails = async (req, res) => {
   try {
-    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation, branch, reportingManager } = req.body;
-    if (!noticePd && !estDoj && !salaryOffered && !department && !finalDesignation && !branch) return errorRes(res, 'Enter at least one field', [], 400);
+    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation } = req.body;
+    if (!noticePd && !estDoj && !salaryOffered && !department && !finalDesignation) return errorRes(res, 'Enter at least one field', [], 400);
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
@@ -96,8 +101,6 @@ const updateOfferDetails = async (req, res) => {
     if (estDoj) { updFields.push('est_doj = ?'); params.push(new Date(estDoj)); }
     if (finalDesignation) { updFields.push('designation = ?'); params.push(finalDesignation); }
     if (department) { updFields.push('department = ?'); params.push(department + (otherSection ? ` - ${otherSection}` : '')); }
-    if (branch) { updFields.push('branch = ?'); params.push(branch); }
-    if (reportingManager) { updFields.push('reporting_manager = ?'); params.push(reportingManager); }
 
     params.push(appNo);
     await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
@@ -110,8 +113,6 @@ const updateOfferDetails = async (req, res) => {
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
     if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
     if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
-    if (branch) { candUpd.push('branch = ?'); candParams.push(branch); }
-    if (reportingManager) { candUpd.push('reporting_manager = ?'); candParams.push(reportingManager); }
     candParams.push(appNo);
     await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 

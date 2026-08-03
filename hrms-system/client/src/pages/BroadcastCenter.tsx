@@ -165,10 +165,10 @@ export default function BroadcastCenterPage() {
             <div className="space-y-6">
               {/* Analytics Metric Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard title="Total Broadcasts" value={total} trend={`${activeCount} Active`} theme="navy" icon={Megaphone} />
-                <MetricCard title="Active & Sent" value={activeCount} trend="Real-Time Active" theme="emerald" icon={CheckCircle2} />
-                <MetricCard title="Scheduled" value={scheduledCount} trend="Pending Auto-Dispatch" theme="gold" icon={Clock} />
-                <MetricCard title="Read Engagement" value={`${readPercent}%`} trend={`${readCount} Read`} theme="teal" icon={Eye} />
+                <MetricCard title="Total Broadcasts" value={total} trend={`${activeCount} Active`} color="navy" icon={Megaphone} />
+                <MetricCard title="Active & Sent" value={activeCount} trend="Real-Time Active" color="emerald" icon={CheckCircle2} />
+                <MetricCard title="Scheduled" value={scheduledCount} trend="Pending Auto-Dispatch" color="gold" icon={Clock} />
+                <MetricCard title="Read Engagement" value={`${readPercent}%`} trend={`${readCount} Read`} color="teal" icon={Eye} />
               </div>
 
               {/* Recent Activity Table */}

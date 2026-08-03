@@ -4,7 +4,7 @@ import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
 
 function InterviewFormContent() {
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
   const [loading, setLoading] = useState(true);

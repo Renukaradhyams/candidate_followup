@@ -37,6 +37,12 @@ export default function InterviewPanelPage() {
   // Approve / Reject Modal
   const [approveModal, setApproveModal] = useState<{ open: boolean; interview: any | null; probation: boolean }>({ open: false, interview: null, probation: false });
   const [approveRemarks, setApproveRemarks] = useState('');
+  const [approveSalary, setApproveSalary] = useState('');
+  const [approveDoj, setApproveDoj] = useState('');
+  const [approveDesig, setApproveDesig] = useState('');
+  const [approveDept, setApproveDept] = useState('');
+  const [approveNotice, setApproveNotice] = useState('');
+  const [submittingApprove, setSubmittingApprove] = useState(false);
 
   // New Role Modal
   const [newRoleModal, setNewRoleModal] = useState<{ open: boolean; interview: any | null }>({ open: false, interview: null });
@@ -174,15 +180,26 @@ export default function InterviewPanelPage() {
 
   const handleConfirmApprove = async () => {
     const { interview, probation } = approveModal;
-    if (!interview) return;
+    if (!interview || submittingApprove) return;
 
+    if (!approveSalary || !approveDoj || !approveDesig || !approveDept) {
+      showToast('Please fill out all mandatory fields.', 'error');
+      return;
+    }
+
+    setSubmittingApprove(true);
     try {
       await API.approveSelection({
         appNo: interview.appNo,
         candName: interview.candidate,
         desig: interview.desig,
         probation,
-        remarks: approveRemarks
+        remarks: approveRemarks,
+        salaryOffered: approveSalary,
+        estDoj: approveDoj,
+        finalDesignation: approveDesig,
+        department: approveDept,
+        noticePd: approveNotice
       });
 
       showToast(`Candidate ${interview.candidate} approved for Selection & Offer Process!`, 'success');
@@ -190,6 +207,8 @@ export default function InterviewPanelPage() {
       loadInterviews();
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
+    } finally {
+      setSubmittingApprove(false);
     }
   };
 
@@ -347,7 +366,15 @@ export default function InterviewPanelPage() {
                           </button>
                           </div>
                           <button
-                            onClick={() => setApproveModal({ open: true, interview: iv, probation: false })}
+                            onClick={() => {
+                              setApproveModal({ open: true, interview: iv, probation: false });
+                              setApproveSalary('');
+                              setApproveDoj('');
+                              setApproveDesig(iv.desig || '');
+                              setApproveDept('');
+                              setApproveNotice('');
+                              setApproveRemarks('');
+                            }}
                             className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-bold text-[11px] hover:bg-emerald-800 shadow-xs"
                           >
                             Approve Selection
@@ -598,7 +625,7 @@ export default function InterviewPanelPage() {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-xs max-h-[60vh] overflow-y-auto pr-1">
               <p className="text-[#555555] font-medium">Are you sure you want to approve candidate <strong>{approveModal.interview?.candidate}</strong> for final selection and offer issuance?</p>
               
               {approveModal.interview?.hrScore && (
@@ -623,9 +650,32 @@ export default function InterviewPanelPage() {
                 </div>
               )}
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Salary Offered (₹) *</label>
+                  <input type="text" value={approveSalary} onChange={(e) => setApproveSalary(e.target.value)} placeholder="e.g. 35,000" className="input-modern" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Expected DOJ *</label>
+                  <input type="date" value={approveDoj} onChange={(e) => setApproveDoj(e.target.value)} className="input-modern" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Finalized Designation *</label>
+                  <input type="text" value={approveDesig} onChange={(e) => setApproveDesig(e.target.value)} placeholder="e.g. Senior Floor Manager" className="input-modern" />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department *</label>
+                  <input type="text" value={approveDept} onChange={(e) => setApproveDept(e.target.value)} placeholder="e.g. Sales" className="input-modern" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Notice Period (Optional)</label>
+                  <input type="text" value={approveNotice} onChange={(e) => setApproveNotice(e.target.value)} placeholder="e.g. Immediate, 15 Days" className="input-modern" />
+                </div>
+              </div>
+
               <div>
                 <label className="block font-bold text-[#1E2D4E] mb-1">Approval Remarks</label>
-                <textarea rows={3} value={approveRemarks} onChange={(e) => setApproveRemarks(e.target.value)} placeholder="Final approval notes..." className="input-modern" />
+                <textarea rows={2} value={approveRemarks} onChange={(e) => setApproveRemarks(e.target.value)} placeholder="Final approval notes..." className="input-modern" />
               </div>
             </div>
 
@@ -633,8 +683,8 @@ export default function InterviewPanelPage() {
               <button onClick={() => setApproveModal({ open: false, interview: null, probation: false })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
                 Cancel
               </button>
-              <button onClick={handleConfirmApprove} className="btn-gold text-xs shadow-md">
-                Confirm Selection Approval
+              <button onClick={handleConfirmApprove} disabled={submittingApprove} className="btn-gold text-xs shadow-md disabled:opacity-50">
+                {submittingApprove ? 'Approving...' : 'Confirm Selection Approval'}
               </button>
             </div>
           </div>

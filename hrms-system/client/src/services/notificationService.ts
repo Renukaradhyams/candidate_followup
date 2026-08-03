@@ -69,7 +69,8 @@ class NotificationEngine {
   private initSocket() {
     if (this.initialized) return;
     
-    const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : undefined;
+    // @ts-ignore
+    const apiBase = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : undefined;
     this.socket = io(apiBase, {
       autoConnect: true,
       transports: ['websocket', 'polling']
@@ -252,6 +253,30 @@ class NotificationEngine {
 
   public acknowledgeNotification(id: string, username: string) {
     this.markAsRead(id);
+  }
+
+  public acknowledgeRead(id: string, username: string) {
+    this.markAsRead(id);
+  }
+
+  public togglePin(id: string) {
+    const item = this.notifications.find(n => n.id === id);
+    if (item) {
+      item.pinned = !item.pinned;
+      this.notifyListeners();
+    }
+  }
+
+  public toggleArchive(id: string) {
+    this.markAsRead(id);
+  }
+
+  public sendDirectMessage(toUserId: string, recipientName?: string, content?: string, senderId?: string, senderName?: string) {
+    return this.sendDM(toUserId, content || recipientName || '');
+  }
+
+  public playSound(priority: 'low' | 'normal' | 'high' | 'critical' = 'normal') {
+    this.playNotificationSound(priority);
   }
 
   public async addNotification(data: Omit<SystemNotification, 'id' | 'timestamp' | 'read'>) {
