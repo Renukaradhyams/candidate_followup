@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -48,11 +50,11 @@ export default function OfferProcessPage() {
       const inc = parseFloat(parts[1]) || 0;
       return { base, incentive: inc, total: base + inc, rawBase: parts[0] || '', rawIncentive: parts[1] || '' };
     }
-    if (str.includes('+')) {
-      const parts = str.split('+');
-      const base = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
-      const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
-      return { base, incentive: inc, total: base + inc, rawBase: String(base), rawIncentive: String(inc) };
+    const match = str.match(/^(\d+(?:\.\d+)?)\s*(?:\+|\(\+\s*₹?|\s*plus\s*)\s*₹?\s*(\d+(?:\.\d+)?)/i);
+    if (match) {
+      const base = parseFloat(match[1]) || 0;
+      const inc = parseFloat(match[2]) || 0;
+      return { base, incentive: inc, total: base + inc, rawBase: match[1] || '', rawIncentive: match[2] || '' };
     }
     const base = parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
     return { base, incentive: 0, total: base, rawBase: str, rawIncentive: '' };
@@ -122,7 +124,7 @@ export default function OfferProcessPage() {
     setSaving(true);
     try {
       const combinedSalary = incentiveOffered.trim() 
-        ? `${salaryOffered.trim()}|${incentiveOffered.trim()}`
+        ? \`\${salaryOffered.trim()}|\${incentiveOffered.trim()}\`
         : salaryOffered.trim();
 
       await API.updateOfferDetails({ 
@@ -245,9 +247,9 @@ export default function OfferProcessPage() {
               { label: 'Accepted Offers', value: stats.accepted, icon: <CheckCircle2 className="w-5 h-5 text-emerald-600"/>, bg: 'bg-emerald-50/80 border-emerald-100' },
               { label: 'Joined Directory', value: stats.joined, icon: <UserCheck className="w-5 h-5 text-teal-600"/>, bg: 'bg-teal-50/80 border-teal-100' },
               { label: 'Rejected Offers', value: stats.rejected, icon: <XCircle className="w-5 h-5 text-rose-600"/>, bg: 'bg-rose-50/80 border-rose-100' },
-              { label: 'Avg Package', value: `₹ ${Math.round(stats.avgSalary || 0).toLocaleString('en-IN')}`, icon: <DollarSign className="w-5 h-5 text-amber-600"/>, bg: 'bg-amber-50/80 border-amber-100' },
+              { label: 'Avg Package', value: \`₹ \${Math.round(stats.avgSalary || 0).toLocaleString('en-IN')}\`, icon: <DollarSign className="w-5 h-5 text-amber-600"/>, bg: 'bg-amber-50/80 border-amber-100' },
             ].map((stat, i) => (
-              <div key={i} className={`p-4 rounded-2xl border bg-white shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 ${stat.bg}`}>
+              <div key={i} className={\`p-4 rounded-2xl border bg-white shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5 \${stat.bg}\`}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="p-2 rounded-xl bg-white shadow-2xs border border-slate-100">{stat.icon}</div>
                 </div>
@@ -270,11 +272,11 @@ export default function OfferProcessPage() {
                 <button
                   key={t.key}
                   onClick={() => setActiveFilter(t.key)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${
+                  className={\`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all duration-200 \${
                     activeFilter === t.key 
                       ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10' 
                       : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                  }`}
+                  }\`}
                 >
                   {t.label}
                 </button>
@@ -328,7 +330,7 @@ export default function OfferProcessPage() {
                           <tr key={o.appNo} onClick={() => setProfileOffer(o)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-xs shadow-xs bg-${o.color}-600`}>
+                                <div className={\`w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-xs shadow-xs bg-\${o.color}-600\`}>
                                   {o.initials}
                                 </div>
                                 <div>
@@ -405,7 +407,7 @@ export default function OfferProcessPage() {
                     <div key={o.appNo} onClick={() => setProfileOffer(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs relative cursor-pointer active:scale-[0.99] transition-all">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-xs bg-${o.color}-600`}>
+                          <div className={\`w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-xs bg-\${o.color}-600\`}>
                             {o.initials}
                           </div>
                           <div>
@@ -424,7 +426,7 @@ export default function OfferProcessPage() {
                         </div>
                         <div>
                           <div className="text-[9px] uppercase font-black text-slate-400">Incentive</div>
-                          <div className="text-xs font-bold text-emerald-600 font-mono">{sal.incentive > 0 ? `+₹${sal.incentive.toLocaleString('en-IN')}` : '—'}</div>
+                          <div className="text-xs font-bold text-emerald-600 font-mono">{sal.incentive > 0 ? \`+₹\${sal.incentive.toLocaleString('en-IN')}\` : '—'}</div>
                         </div>
                         <div>
                           <div className="text-[9px] uppercase font-black text-amber-700">Total Pkg</div>
@@ -473,7 +475,7 @@ export default function OfferProcessPage() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 bg-white">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-extrabold bg-${detailOffer.color}-600 shadow-md`}>
+                <div className={\`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-extrabold bg-\${detailOffer.color}-600 shadow-md\`}>
                   {detailOffer.initials}
                 </div>
                 <div>
@@ -704,7 +706,7 @@ export default function OfferProcessPage() {
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl sm:text-2xl bg-${profileOffer.color}-600 shadow-md border-4 border-white`}>
+                <div className={\`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl sm:text-2xl bg-\${profileOffer.color}-600 shadow-md border-4 border-white\`}>
                   {profileOffer.initials}
                 </div>
                 <div>
@@ -745,7 +747,7 @@ export default function OfferProcessPage() {
                           </div>
                           <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
                             <div className="text-[9px] uppercase font-black text-emerald-800 mb-1">Incentive</div>
-                            <div className="text-sm font-bold text-emerald-700 font-mono">{sal.incentive > 0 ? `+₹${sal.incentive.toLocaleString('en-IN')}` : '—'}</div>
+                            <div className="text-sm font-bold text-emerald-700 font-mono">{sal.incentive > 0 ? \`+₹\${sal.incentive.toLocaleString('en-IN')}\` : '—'}</div>
                           </div>
                           <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-2xs">
                             <div className="text-[9px] uppercase font-black text-amber-900 mb-1">Total Package</div>
@@ -786,21 +788,21 @@ export default function OfferProcessPage() {
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${profileOffer.salary ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${profileOffer.salary ? 'text-slate-800' : 'text-slate-400'}`}>Package Configured</div>
+                        <div className={\`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 \${profileOffer.salary ? 'bg-emerald-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`font-bold \${profileOffer.salary ? 'text-slate-800' : 'text-slate-400'}\`}>Package Configured</div>
                         <div className="text-[10px] font-medium text-slate-400">Salary & Incentive set</div>
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'bg-emerald-500' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'text-emerald-700' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'text-rose-700' : 'text-slate-400'}`}>
+                        <div className={\`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 \${['Accepted', 'Joined'].includes(profileOffer.status) ? 'bg-emerald-500' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`font-bold \${['Accepted', 'Joined'].includes(profileOffer.status) ? 'text-emerald-700' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'text-rose-700' : 'text-slate-400'}\`}>
                           {profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'Offer Rejected' : 'Offer Acceptance'}
                         </div>
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${profileOffer.status === 'Joined' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${profileOffer.status === 'Joined' ? 'text-slate-800' : 'text-slate-400'}`}>Employee Directory</div>
+                        <div className={\`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 \${profileOffer.status === 'Joined' ? 'bg-emerald-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`font-bold \${profileOffer.status === 'Joined' ? 'text-slate-800' : 'text-slate-400'}\`}>Employee Directory</div>
                       </div>
                     </div>
                   </div>
@@ -827,3 +829,7 @@ export default function OfferProcessPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('client/src/pages/OfferProcess.tsx', code);
+console.log('Successfully updated OfferProcess.tsx with complete redesign and fixes.');
