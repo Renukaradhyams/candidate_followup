@@ -42,11 +42,13 @@ export default function OfferProcessPage() {
   const [profileTab, setProfileTab] = useState<'overview' | 'offer' | 'candidate' | 'timeline' | 'history'>('overview');
   const [candidateData, setCandidateData] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const openProfile = async (o: any) => {
     setProfileOffer(o);
     setProfileTab('overview');
     setCandidateData(null);
+    setImgError(false);
     setLoadingProfile(true);
     try {
       const res = await API.getCandidates({ limit: 500 });
@@ -411,8 +413,8 @@ export default function OfferProcessPage() {
                           <tr key={o.appNo} onClick={() => openProfile(o)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-xs shadow-xs bg-${o.color}-600`}>
-                                  {o.initials}
+                                <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs shadow-xs flex items-center justify-center border border-[#C9952A]/30 flex-shrink-0">
+                                  {o.initials || o.name?.substring(0, 2).toUpperCase()}
                                 </div>
                                 <div>
                                   <div className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">{o.name}</div>
@@ -488,8 +490,8 @@ export default function OfferProcessPage() {
                     <div key={o.appNo} onClick={() => openProfile(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs relative cursor-pointer active:scale-[0.99] transition-all">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-xs bg-${o.color}-600`}>
-                            {o.initials}
+                          <div className="w-10 h-10 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-sm shadow-xs flex items-center justify-center border border-[#C9952A]/30 flex-shrink-0">
+                            {o.initials || o.name?.substring(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <div className="font-extrabold text-slate-900 text-sm">{o.name}</div>
@@ -556,8 +558,8 @@ export default function OfferProcessPage() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200 bg-white">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-extrabold bg-${detailOffer.color}-600 shadow-md`}>
-                  {detailOffer.initials}
+                <div className="w-10 h-10 rounded-2xl bg-[#1E2D4E] text-white font-extrabold flex items-center justify-center shadow-md border border-[#C9952A]/30 flex-shrink-0">
+                  {detailOffer.initials || detailOffer.name?.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="font-extrabold text-slate-900 text-lg sm:text-xl tracking-tight">Configure Offer Details</h3>
@@ -791,16 +793,16 @@ export default function OfferProcessPage() {
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pr-10">
                 {/* Photo / Avatar */}
-                {fileUrl(candidateData?.photoUrl) ? (
+                {!imgError && fileUrl(candidateData?.photoUrl) ? (
                   <img
                     src={fileUrl(candidateData?.photoUrl)!}
                     alt={profileOffer.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5 flex-shrink-0"
+                    onError={() => setImgError(true)}
                   />
                 ) : (
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#A67820] flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-lg border-2 border-[#C9952A]/50 flex-shrink-0">
-                    {profileOffer.initials}
+                    {profileOffer.initials || profileOffer.name?.substring(0, 2).toUpperCase()}
                   </div>
                 )}
 
