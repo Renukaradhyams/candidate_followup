@@ -207,7 +207,12 @@ export default function OfferProcessPage() {
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Topbar 
+          title="Offer Desk"
+          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Offer Desk' }]}
+          session={session}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
           {/* Header */}
