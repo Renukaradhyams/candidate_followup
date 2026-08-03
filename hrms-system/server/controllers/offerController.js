@@ -126,13 +126,26 @@ const updateOfferDetails = async (req, res) => {
 
 const acceptOffer = async (req, res) => {
   try {
-    const { appNo, remarks } = req.body;
+    const { appNo, remarks, joiningDate } = req.body;
 
     const now = new Date();
-    await db.query(`UPDATE selection_offers SET status = 'Accepted', updated_at = ? WHERE app_no = ?`, [now, appNo]);
-    await db.query(`UPDATE candidates SET status = 'Offer Accepted', updated_at = ? WHERE app_no = ?`, [now, appNo]);
+    let status = 'Accepted';
+    let candStatus = 'Offer Accepted';
+    let dojQuery = '';
+    const queryParams = [now];
 
-    await logAction(req.user ? req.user.username : 'HR', 'ACCEPT_OFFER', 'OFFER', { appNo, remarks });
+    if (joiningDate) {
+      status = 'Joined';
+      candStatus = 'Joined';
+      dojQuery = ', actual_doj = ?';
+      queryParams.push(new Date(joiningDate));
+    }
+    queryParams.push(appNo);
+
+    await db.query(`UPDATE selection_offers SET status = ?, updated_at = ?${dojQuery} WHERE app_no = ?`, [status, ...queryParams]);
+    await db.query(`UPDATE candidates SET status = ?, updated_at = ? WHERE app_no = ?`, [candStatus, now, appNo]);
+
+    await logAction(req.user ? req.user.username : 'HR', 'ACCEPT_OFFER', 'OFFER', { appNo, remarks, joiningDate });
 
     return res.json({ success: true });
   } catch (err) {
@@ -185,6 +198,44 @@ const updateOfferStatus = async (req, res) => {
   }
 };
 
+const createDirectOffer = async (req, res) => {
+  try {
+    const { appNo, salaryOffered, estDoj, designation, department } = req.body;
+    if (!salaryOffered) return errorRes(res, 'Offered salary is mandatory', [], 400);
+
+    const now = new Date();
+    const doj = estDoj ? new Date(estDoj) : null;
+
+    const [existing] = await db.query(`SELECT id FROM selection_offers WHERE app_no = ?`, [appNo]);
+    if (existing.length > 0) {
+      return errorRes(res, 'Offer already exists for this candidate', [], 400);
+    }
+
+    const [candRows] = await db.query(`SELECT name, designation, department FROM candidates WHERE app_no = ?`, [appNo]);
+    if (candRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
+    const c = candRows[0];
+
+    const finalDesig = designation || c.designation;
+    const finalDept = department || c.department;
+
+    await db.query(
+      `INSERT INTO selection_offers (app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [appNo, c.name, finalDesig, finalDept, null, doj, 'Pending Accept', now, now]
+    );
+
+    await db.query(
+      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, updated_at = ? WHERE app_no = ?`,
+      [salaryOffered, finalDesig, finalDept, doj, now, appNo]
+    );
+
+    await logAction(req.user ? req.user.username : 'HR', 'DIRECT_OFFER', 'OFFER', { appNo, salaryOffered, estDoj });
+
+    return res.json({ success: true });
+  } catch (err) {
+    return errorRes(res, 'Failed to create direct offer', [err.message], 500);
+  }
+};
+
 module.exports = {
   getOffers,
   logOfferCall,
@@ -192,5 +243,6 @@ module.exports = {
   acceptOffer,
   rejectOffer,
   markJoined,
-  updateOfferStatus
+  updateOfferStatus,
+  createDirectOffer
 };

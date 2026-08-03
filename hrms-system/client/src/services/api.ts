@@ -236,6 +236,12 @@ export const API = {
   async getOffers() {
     return apiFetch('/offers');
   },
+  async createDirectOffer(p: any) {
+    return apiFetch('/offers/direct', {
+      method: 'POST',
+      body: JSON.stringify(p)
+    });
+  },
   async logOfferCall(p: any) {
     return apiFetch('/offers/log-call', {
       method: 'POST',

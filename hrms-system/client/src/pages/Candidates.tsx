@@ -9,7 +9,7 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck
+  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck, DollarSign
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -33,6 +33,10 @@ export default function CandidatesPage() {
   // Modals
   const [remarkModal, setRemarkModal] = useState<{ open: boolean; action: string; candidate: any | null }>({ open: false, action: '', candidate: null });
   const [remarksText, setRemarksText] = useState('');
+  
+  const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
+  const [offerForm, setOfferForm] = useState({ salary: '', doj: '', desig: '', department: '' });
+  const [designations, setDesignations] = useState<string[]>([]);
   
   const [callModal, setCallModal] = useState<{ open: boolean; candidate: any | null; step: number; callStatus: any }>({ open: false, candidate: null, step: 1, callStatus: null });
   const [callDate, setCallDate] = useState(new Date().toISOString().slice(0, 10));
@@ -62,6 +66,9 @@ export default function CandidatesPage() {
     const sess = Auth.get();
     setSession(sess);
     loadCandidates();
+    API.getDesignations().then(res => {
+      if (res && res.designations) setDesignations(res.designations);
+    }).catch(() => {});
   }, [navigate, loadCandidates]);
 
   // Filtering
@@ -140,6 +147,13 @@ export default function CandidatesPage() {
 
   const handleStatusChange = async (action: string, candidate: any) => {
     if (!candidate || actionLoading) return;
+    
+    if (action === 'shortlist') {
+      setDirectOfferModal({ open: true, candidate });
+      setOfferForm({ salary: '', doj: '', desig: candidate.desig || '', department: candidate.department || '' });
+      return;
+    }
+    
     setActionLoading(true);
     try {
       if (action === 'reject') {
@@ -176,6 +190,32 @@ export default function CandidatesPage() {
       setSelRejData(res.candidates || []);
     } catch (e) {
       setSelRejData([]);
+    }
+  };
+
+  const handleDirectOfferSubmit = async () => {
+    if (!directOfferModal.candidate) return;
+    if (!offerForm.salary) {
+      showToast('Offered salary is mandatory', 'error');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await API.createDirectOffer({
+        appNo: directOfferModal.candidate.appNo,
+        salaryOffered: offerForm.salary,
+        estDoj: offerForm.doj,
+        designation: offerForm.desig,
+        department: offerForm.department
+      });
+      showToast('Candidate moved to Offer Desk successfully', 'success');
+      setDirectOfferModal({ open: false, candidate: null });
+      setDrawerCandidate(null);
+      loadCandidates();
+    } catch (err: any) {
+      showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -545,6 +585,43 @@ export default function CandidatesPage() {
                       <div><span className="text-[#777777]">Current Status:</span> <span className="font-bold text-sky-800 ml-1">{drawerCandidate.status}</span></div>
                     </div>
                   </div>
+
+                  {/* Salary & Offer Details */}
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-[#C9952A]" />
+                      <span>Salary &amp; Offer Details</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Expected Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerCandidate.expectedSalary ? `₹ ${drawerCandidate.expectedSalary}` : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{(drawerCandidate.previousSalary || drawerCandidate.currentSalary) ? `₹ ${drawerCandidate.previousSalary || drawerCandidate.currentSalary}` : '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Notice Period</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.noticePeriod || drawerCandidate.offeredDoj || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Allocated Department</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.department || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Designation Role</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.desig || drawerCandidate.designation || '—'}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Work Experience Details */}
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                      <span>Work Experience Details</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Prior / Retail Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.retailExperience || drawerCandidate.retail_experience || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Company / Employer</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.previousCompany || drawerCandidate.previous_company || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.previousDesignation || drawerCandidate.previous_designation || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.qualification || '—'}</span></div>
+                      <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.referrer ? `${drawerCandidate.referrer} (${drawerCandidate.referrerEmpNo || ''})` : '—'}</span></div>
+                    </div>
+                    {drawerCandidate.remarks && (
+                      <div className="pt-2 border-t border-[#e2dfd7]/60">
+                        <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
+                        <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerCandidate.remarks}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -757,6 +834,62 @@ export default function CandidatesPage() {
                   Reject
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Offer Modal */}
+      {directOfferModal.open && directOfferModal.candidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">Direct Offer to Desk — {directOfferModal.candidate.name}</h3>
+              <button onClick={() => setDirectOfferModal({ open: false, candidate: null })} className="text-[#888888]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Salary (₹) *</label>
+                <input type="text" value={offerForm.salary} onChange={(e) => setOfferForm({ ...offerForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern font-bold text-emerald-800" />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Estimated Date of Joining</label>
+                <input type="date" value={offerForm.doj} onChange={(e) => setOfferForm({ ...offerForm, doj: e.target.value })} className="input-modern font-bold text-amber-800" />
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Finalized Designation Role</label>
+                <select value={offerForm.desig} onChange={(e) => setOfferForm({ ...offerForm, desig: e.target.value })} className="select-modern font-bold">
+                  <option value="">Select Designation</option>
+                  {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department</label>
+                <select value={offerForm.department} onChange={(e) => setOfferForm({ ...offerForm, department: e.target.value })} className="select-modern font-bold">
+                  <option value="">Select Department</option>
+                  <option value="SAARE">SAARE</option>
+                  <option value="LADIES">LADIES</option>
+                  <option value="KIDS">KIDS</option>
+                  <option value="MENS">MENS</option>
+                  <option value="HOME FURNISHING">HOME FURNISHING</option>
+                  <option value="OTHERS">OTHERS</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
+              <button onClick={() => setDirectOfferModal({ open: false, candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
+                Cancel
+              </button>
+              <button onClick={handleDirectOfferSubmit} disabled={actionLoading} className="btn-primary text-xs shadow-md disabled:opacity-50">
+                {actionLoading ? 'Processing...' : 'Send to Offer Desk'}
+              </button>
             </div>
           </div>
         </div>

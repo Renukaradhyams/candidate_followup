@@ -81,6 +81,7 @@ router.get('/interviews/rejected', interviewController.getRejectedCandidates);
 
 // ── Offer Routes ─────────────────────────────────────────────
 router.get('/offers', offerController.getOffers);
+router.post('/offers/direct', offerController.createDirectOffer);
 router.post('/offers/log-call', offerController.logOfferCall);
 router.post('/offers/update-details', offerController.updateOfferDetails);
 router.post('/offers/accept', offerController.acceptOffer);
@@ -156,6 +157,7 @@ router.post('/legacy', async (req, res) => {
     getInterviewByToken: interviewController.getInterviewByToken,
     submitInterviewScore: interviewController.submitInterviewScore,
     getOffers: offerController.getOffers,
+    createDirectOffer: offerController.createDirectOffer,
     logOfferCall: offerController.logOfferCall,
     updateOfferDetails: offerController.updateOfferDetails,
     acceptOffer: offerController.acceptOffer,
