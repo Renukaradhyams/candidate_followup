@@ -739,12 +739,12 @@ export default function CandidatesPage() {
                       <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerCandidate.qualification || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerCandidate.referrer ? `${drawerCandidate.referrer} (${drawerCandidate.referrerEmpNo || ''})` : '—'}</span></div>
                     </div>
-                    {drawerCandidate.remarks && (
-                      <div className="pt-2 border-t border-[#e2dfd7]/60">
-                        <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
-                        <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerCandidate.remarks}</span>
+                    <div className="pt-2 border-t border-[#e2dfd7]/60">
+                      <span className="text-[#777777] block text-[10.5px] mb-1 font-bold uppercase">Shortlisting & Recruiter Remarks:</span>
+                      <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] italic">
+                        {drawerCandidate.remarks || 'No remarks recorded.'}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1011,6 +1011,17 @@ export default function CandidatesPage() {
                   <option value="Home Furnishing">Home Furnishing</option>
                   <option value="Others">Others</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Remarks (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={offerForm.remarks || ''}
+                  onChange={(e) => setOfferForm({ ...offerForm, remarks: e.target.value })}
+                  placeholder="Enter shortlisting notes, recruiter remarks or special conditions..."
+                  className="input-modern"
+                />
               </div>
             </div>
 

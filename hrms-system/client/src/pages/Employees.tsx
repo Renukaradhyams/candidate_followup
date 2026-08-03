@@ -61,7 +61,7 @@ export default function EmployeesPage() {
     loadEmployees();
   }, [navigate, loadEmployees]);
 
-  // Filtering
+  // Filtering & Alphabetical Sorting (A-Z)
   useEffect(() => {
     let list = [...employees];
 
@@ -76,6 +76,9 @@ export default function EmployeesPage() {
         e.phone.includes(q)
       );
     }
+
+    // Organize alphabetically by name
+    list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     setFiltered(list);
   }, [employees, desigFilter, searchQuery]);
@@ -603,12 +606,12 @@ export default function EmployeesPage() {
                       <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
                       <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
                     </div>
-                    {drawerEmp.remarks && (
-                      <div className="pt-2 border-t border-[#e2dfd7]/60">
-                        <span className="text-[#777777] block text-[10.5px] mb-0.5">Remarks / HR Notes:</span>
-                        <span className="font-medium text-[#1E2D4E] block leading-relaxed italic">{drawerEmp.remarks}</span>
+                    <div className="pt-2 border-t border-[#e2dfd7]/60">
+                      <span className="text-[#777777] block text-[10.5px] mb-1 font-bold uppercase">Shortlisting & HR Remarks:</span>
+                      <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] italic">
+                        {drawerEmp.remarks || 'No remarks recorded.'}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}

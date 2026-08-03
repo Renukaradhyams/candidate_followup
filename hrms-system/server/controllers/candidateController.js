@@ -240,12 +240,13 @@ class CandidateController {
                 so.notice_period as offer_notice_pd, 
                 so.est_doj as offer_est_doj, 
                 so.actual_doj as offer_actual_doj,
-                so.status as offer_status
+                so.status as offer_status,
+                so.remarks as offer_remarks
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
          WHERE LOWER(TRIM(c.status)) IN ('offer accepted', 'joined', 'hired')
             OR LOWER(TRIM(so.status)) IN ('accepted', 'joined')
-         ORDER BY c.updated_at DESC, c.created_at DESC`
+         ORDER BY LOWER(c.name) ASC`
       );
 
       const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
@@ -315,7 +316,7 @@ class CandidateController {
           q2: r.q2 || '',
           q3: r.q3 || '',
           q4: r.q4 || '',
-          remarks: r.remarks || '',
+          remarks: r.remarks || r.offer_remarks || '',
           date: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
         };
       });

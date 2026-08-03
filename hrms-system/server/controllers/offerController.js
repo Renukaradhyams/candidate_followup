@@ -225,8 +225,8 @@ const createDirectOffer = async (req, res) => {
     );
 
     await db.query(
-      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, updated_at = ? WHERE app_no = ?`,
-      [salaryOffered, finalDesig, finalDept, doj, now, appNo]
+      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE app_no = ?`,
+      [salaryOffered, finalDesig, finalDept, doj, remarks || null, now, appNo]
     );
 
     await logAction(req.user ? req.user.username : 'HR', 'DIRECT_OFFER', 'OFFER', { appNo, salaryOffered, estDoj });
