@@ -22,7 +22,9 @@ export default function OpeningsPage() {
   const loadOpenings = useCallback(async () => {
     try {
       const res = await API.call('getOpenings');
-      setOpenings(res.openings || []);
+      const list = res.openings || [];
+      list.sort((a: any, b: any) => (a.designation || '').localeCompare(b.designation || ''));
+      setOpenings(list);
     } catch (err: any) {
       showToast('Could not load openings', 'error');
     }

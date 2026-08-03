@@ -464,8 +464,36 @@ class CandidateService {
     return [];
   }
 
-  async getKPIs() {
-    const [candRows] = await pool.query(`SELECT status, created_at FROM candidates`);
+  async getKPIs(range = 'all', fromDate = null, toDate = null) {
+    let dateWhereClause = '';
+    const params = [];
+
+    const now = new Date();
+    if (range === 'today') {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      dateWhereClause = ' WHERE created_at >= ?';
+      params.push(todayStart);
+    } else if (range === 'week') {
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      dateWhereClause = ' WHERE created_at >= ?';
+      params.push(weekStart);
+    } else if (range === 'month') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      dateWhereClause = ' WHERE created_at >= ?';
+      params.push(monthStart);
+    } else if (range === 'last_month') {
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      dateWhereClause = ' WHERE created_at >= ? AND created_at <= ?';
+      params.push(lastMonthStart, lastMonthEnd);
+    } else if (range === 'custom' && fromDate) {
+      const start = new Date(fromDate);
+      const end = toDate ? new Date(new Date(toDate).setHours(23, 59, 59)) : new Date(new Date(fromDate).setHours(23, 59, 59));
+      dateWhereClause = ' WHERE created_at >= ? AND created_at <= ?';
+      params.push(start, end);
+    }
+
+    const [candRows] = await pool.query(`SELECT status, created_at FROM candidates${dateWhereClause}`, params);
     const total = candRows.length;
 
     const todayStr = new Date().toDateString();
@@ -489,11 +517,8 @@ class CandidateService {
     const [schedRows] = await pool.query(`SELECT interview_date FROM interview_schedules WHERE interview_date IS NOT NULL`);
     const interviewsToday = schedRows.filter((r) => new Date(r.interview_date).toDateString() === todayStr).length;
 
-    const [obRows] = await pool.query(`SELECT status FROM onboarding_records`);
-    const completedOnboarding = obRows.filter(r => r.status === 'Completed').length;
-
-    const exitPending = 0; // Deprecated
-    const completedExit = 0; // Deprecated
+    const exitPending = 0;
+    const completedExit = 0;
 
     const [empRows] = await pool.query(`SELECT id FROM users WHERE active = TRUE`);
     const activeEmployees = empRows.length;

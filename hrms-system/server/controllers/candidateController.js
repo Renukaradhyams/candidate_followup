@@ -69,7 +69,8 @@ class CandidateController {
 
   async getKPIs(req, res) {
     try {
-      const result = await candidateService.getKPIs();
+      const { range, fromDate, toDate } = req.query;
+      const result = await candidateService.getKPIs(range, fromDate, toDate);
       return res.json(result);
     } catch (err) {
       return errorRes(res, 'Failed to fetch KPIs', [err.message], 500);
@@ -205,7 +206,7 @@ class CandidateController {
           hired,
           remaining: Math.max(0, required - hired)
         };
-      });
+      openings.sort((a, b) => (a.designation || '').localeCompare(b.designation || ''));
 
       return res.json({ success: true, openings });
     } catch (err) {
