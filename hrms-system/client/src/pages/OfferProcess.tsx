@@ -4,10 +4,12 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { 
-  Search, FileText, Phone, Calendar, CheckCircle2, XCircle, 
-  UserCheck, Trash2, X, Briefcase, DollarSign, Image as ImageIcon, 
-  FileCheck, ChevronRight, TrendingUp, Filter, User, Building, MapPin, Loader2, ArrowRight, Clock, Award, Calculator, Layers
+import {
+  Search, FileText, Phone, Calendar, CheckCircle2, XCircle,
+  UserCheck, X, Briefcase, DollarSign,
+  FileCheck, ChevronRight, TrendingUp, User,
+  Loader2, Clock, Award, Edit3,
+  GraduationCap, CheckCheck, AlertTriangle, Activity, Banknote, Star
 } from 'lucide-react';
 
 export default function OfferProcessPage() {
@@ -37,8 +39,42 @@ export default function OfferProcessPage() {
 
   // Profile Modal State
   const [profileOffer, setProfileOffer] = useState<any | null>(null);
+  const [profileTab, setProfileTab] = useState<'overview' | 'offer' | 'candidate' | 'timeline' | 'history'>('overview');
+  const [candidateData, setCandidateData] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-  // Helper to parse salary and incentive
+  const openProfile = async (o: any) => {
+    setProfileOffer(o);
+    setProfileTab('overview');
+    setCandidateData(null);
+    setLoadingProfile(true);
+    try {
+      const res = await API.getCandidates({ limit: 500 });
+      if (res?.candidates) {
+        const match = (res.candidates as any[]).find((c: any) => c.appNo === o.appNo);
+        if (match) setCandidateData(match);
+      }
+    } catch (e) {}
+    setLoadingProfile(false);
+  };
+
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  const fmtINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+  const renderOfferStatus = (status: string) => {
+    const map: Record<string, string> = {
+      'Pending Accept': 'bg-blue-50 text-blue-700 border-blue-200',
+      'Accepted': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      'Joined': 'bg-teal-50 text-teal-700 border-teal-200',
+      'Declined': 'bg-rose-50 text-rose-700 border-rose-200',
+      'Offer Rejected': 'bg-rose-50 text-rose-700 border-rose-200',
+    };
+    const cls = map[status] || 'bg-slate-100 text-slate-600 border-slate-200';
+    const em = status === 'Pending Accept' ? '⏳' : status === 'Accepted' ? '✅' : status === 'Joined' ? '🎉' : (status === 'Declined' || status === 'Offer Rejected') ? '❌' : '';
+    return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${cls}`}>{em} {status || 'Pending'}</span>;
+  };
+
   const parseSalaryAndIncentive = (val: any) => {
     if (!val) return { base: 0, incentive: 0, total: 0, rawBase: '', rawIncentive: '' };
     const str = String(val).trim();
@@ -358,7 +394,7 @@ export default function OfferProcessPage() {
                       {(filtered || []).map(o => {
                         const sal = parseSalaryAndIncentive(o.salary);
                         return (
-                          <tr key={o.appNo} onClick={() => setProfileOffer(o)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
+                          <tr key={o.appNo} onClick={() => openProfile(o)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
                                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-xs shadow-xs bg-${o.color}-600`}>
@@ -435,7 +471,7 @@ export default function OfferProcessPage() {
                 {(filtered || []).map(o => {
                   const sal = parseSalaryAndIncentive(o.salary);
                   return (
-                    <div key={o.appNo} onClick={() => setProfileOffer(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs relative cursor-pointer active:scale-[0.99] transition-all">
+                    <div key={o.appNo} onClick={() => openProfile(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs relative cursor-pointer active:scale-[0.99] transition-all">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-xs bg-${o.color}-600`}>
@@ -725,181 +761,482 @@ export default function OfferProcessPage() {
         </div>
       )}
 
-      {/* Profile Preview Centered Modal */}
+      {/* Profile Preview Centered Modal (Enterprise Upgrade) */}
       {profileOffer && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4 lg:p-6 overflow-y-auto">
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity" onClick={() => setProfileOffer(null)}></div>
-          
-          <div className="bg-slate-50 w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-4xl rounded-none sm:rounded-3xl shadow-2xl relative flex flex-col animate-scale-in overflow-hidden z-10 my-auto">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative shadow-2xs z-10">
-              <button onClick={() => setProfileOffer(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-6 bg-[#1E2D4E]/70 backdrop-blur-xs animate-fade-in">
+          <div className="bg-[#EDE8DE] w-full h-[96vh] sm:h-auto sm:max-h-[94vh] sm:max-w-6xl rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden z-10 border border-[#C9952A]/30 transition-all transform animate-scale-in">
+            
+            {/* Header / Banner */}
+            <div className="bg-gradient-to-br from-[#1E2D4E] via-[#1E2D4E] to-[#253966] text-white p-5 sm:p-7 relative flex-shrink-0">
+              <button 
+                onClick={() => setProfileOffer(null)} 
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors border border-white/10 text-white/80 hover:text-white"
+              >
                 <X className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl sm:text-2xl bg-${profileOffer.color}-600 shadow-md border-4 border-white`}>
-                  {profileOffer.initials}
-                </div>
-                <div>
-                  <h2 className="font-extrabold text-slate-900 text-xl sm:text-2xl tracking-tight">{profileOffer.name}</h2>
-                  <div className="text-xs font-bold text-slate-500 mt-1 flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{profileOffer.appNo}</span>
-                    <span>•</span>
-                    <span className="text-slate-700">{profileOffer.desig}</span>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 pr-10">
+                {/* Photo / Avatar */}
+                {candidateData?.photoUrl ? (
+                  <img
+                    src={API.fileUrl(candidateData.photoUrl) || ''}
+                    alt={profileOffer.name}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#A67820] flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-lg border-2 border-[#C9952A]/50 flex-shrink-0">
+                    {profileOffer.initials}
                   </div>
+                )}
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">{profileOffer.name}</h2>
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                        <span className="font-mono text-[#C9952A] font-bold bg-[#C9952A]/15 px-2.5 py-0.5 rounded border border-[#C9952A]/40">
+                          {profileOffer.appNo}
+                        </span>
+                        <span className="text-white/40">•</span>
+                        <span className="text-white/80 font-bold">{profileOffer.desig || 'Not Assigned'}</span>
+                        <span className="text-white/40">•</span>
+                        <span className="text-white/60 font-semibold">{profileOffer.department || 'Not Assigned'}</span>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 mt-2 sm:mt-0">
+                      {renderOfferStatus(profileOffer.status)}
+                    </div>
+                  </div>
+
+                  {/* Compensation Quick Bar */}
+                  {(() => {
+                    const sal = parseSalaryAndIncentive(profileOffer.salary);
+                    return (
+                      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                        <div className="bg-white/10 rounded-xl p-2.5 border border-white/10 backdrop-blur-xs">
+                          <div className="text-[9px] uppercase font-bold text-white/60">Base Salary</div>
+                          <div className="text-xs sm:text-sm font-black font-mono text-white">{fmtINR(sal.base)}</div>
+                        </div>
+                        <div className="bg-white/10 rounded-xl p-2.5 border border-white/10 backdrop-blur-xs">
+                          <div className="text-[9px] uppercase font-bold text-[#C9952A]">Monthly Incentive</div>
+                          <div className="text-xs sm:text-sm font-black font-mono text-[#C9952A]">
+                            {sal.incentive > 0 ? `+${fmtINR(sal.incentive)}` : 'Not Set'}
+                          </div>
+                        </div>
+                        <div className="bg-white/10 rounded-xl p-2.5 border border-white/10 backdrop-blur-xs">
+                          <div className="text-[9px] uppercase font-bold text-emerald-300">Total Package (CTC)</div>
+                          <div className="text-xs sm:text-sm font-black font-mono text-emerald-300">{fmtINR(sal.total)}</div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
-              </div>
-              <div className="flex flex-col sm:items-end gap-1 mt-2 sm:mt-0">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Current Status</div>
-                <div>{renderStatusBadge(profileOffer.status)}</div>
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-6">
-                  
-                  {/* Compensation Breakdown Card */}
-                  <div className="bg-white p-5 rounded-2xl shadow-2xs border border-slate-200">
-                    <h4 className="text-xs uppercase font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-emerald-600" />
-                      Compensation Breakdown
-                    </h4>
-                    {(() => {
-                      const sal = parseSalaryAndIncentive(profileOffer.salary);
-                      return (
-                        <div className="grid grid-cols-3 gap-3 text-center">
-                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <div className="text-[9px] uppercase font-black text-slate-400 mb-1">Base Salary</div>
-                            <div className="text-sm font-bold text-slate-800 font-mono">₹{sal.base.toLocaleString('en-IN')}</div>
-                          </div>
-                          <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
-                            <div className="text-[9px] uppercase font-black text-emerald-800 mb-1">Incentive</div>
-                            <div className="text-sm font-bold text-emerald-700 font-mono">{sal.incentive > 0 ? `+₹${sal.incentive.toLocaleString('en-IN')}` : '—'}</div>
-                          </div>
-                          <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 shadow-2xs">
-                            <div className="text-[9px] uppercase font-black text-amber-900 mb-1">Total Package</div>
-                            <div className="text-sm font-black text-slate-900 font-mono">₹{sal.total.toLocaleString('en-IN')}</div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Personal & Recruitment Details */}
-                  <div className="bg-white p-5 rounded-2xl shadow-2xs border border-slate-200">
-                    <h4 className="text-xs uppercase font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
-                      <User className="w-4 h-4 text-blue-600" />
-                      Candidate Profile Information
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-                      <div><span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Department</span><span className="font-bold text-slate-800">{profileOffer.department || '—'}</span></div>
-                      <div><span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Est Joining</span><span className="font-bold text-slate-800">{profileOffer.estDoj || profileOffer.actualDoj || '—'}</span></div>
-                      <div><span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Notice Period</span><span className="font-bold text-slate-800">{profileOffer.noticePd || '—'}</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column: Status Timeline */}
-                <div className="space-y-6">
-                  <div className="bg-white p-5 rounded-2xl shadow-2xs border border-slate-200">
-                    <h4 className="text-xs uppercase font-extrabold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-purple-600" />
-                      Offer Journey Timeline
-                    </h4>
-                    
-                    <div className="relative pl-5 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100 text-xs">
-                      <div className="relative">
-                        <div className="absolute -left-[23px] top-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-xs z-10"></div>
-                        <div className="font-bold text-slate-800">Shortlisted</div>
-                        <div className="text-[10px] font-medium text-slate-400">Moved to Offer Desk</div>
-                      </div>
-
-                      <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${profileOffer.salary ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${profileOffer.salary ? 'text-slate-800' : 'text-slate-400'}`}>Package Configured</div>
-                        <div className="text-[10px] font-medium text-slate-400">Salary & Incentive set</div>
-                      </div>
-
-                      <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'bg-emerald-500' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'text-emerald-700' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'text-rose-700' : 'text-slate-400'}`}>
-                          {profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'Offer Rejected' : 'Offer Acceptance'}
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <div className={`absolute -left-[23px] top-0.5 w-3 h-3 rounded-full border-2 border-white shadow-xs z-10 ${profileOffer.status === 'Joined' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`font-bold ${profileOffer.status === 'Joined' ? 'text-slate-800' : 'text-slate-400'}`}>Employee Directory</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
+            {/* Navigation Tabs */}
+            <div className="bg-white border-b border-[#e2dfd7] px-3 sm:px-6 flex items-center gap-1 overflow-x-auto hide-scrollbar flex-shrink-0">
+              {[
+                { id: 'overview', label: '📊 Overview' },
+                { id: 'offer', label: '💼 Offer Configuration' },
+                { id: 'candidate', label: '👤 Candidate Details' },
+                { id: 'timeline', label: '🕐 Offer Timeline' },
+                { id: 'history', label: '📞 Call Logs' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setProfileTab(tab.id as any)}
+                  className={`px-4 py-3.5 text-xs font-extrabold whitespace-nowrap border-b-2 transition-all duration-200 ${
+                    profileTab === tab.id
+                      ? 'border-[#1E2D4E] text-[#1E2D4E] bg-[#1E2D4E]/5'
+                      : 'border-transparent text-[#777777] hover:text-[#1E2D4E] hover:bg-[#F9F7F4]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            
-            {/* Modal Footer */}
-            <div className="border-t border-slate-200 p-4 sm:p-5 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md z-10">
-              <button onClick={() => setProfileOffer(null)} className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                Close
+
+            {/* Scrollable Tab Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              
+              {/* TAB 1: OVERVIEW */}
+              {profileTab === 'overview' && (() => {
+                const sal = parseSalaryAndIncentive(profileOffer.salary);
+                return (
+                  <div className="space-y-4 animate-fade-in">
+                    {/* Hero Cards */}
+                    <div>
+                      <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider mb-2 flex items-center gap-1.5">
+                        <DollarSign className="w-3.5 h-3.5 text-[#C9952A]" /> Financial & Package Overview
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="bg-white rounded-2xl border border-[#e2dfd7] p-5 shadow-xs text-center space-y-1">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2 text-[#1E2D4E]">
+                            <Banknote className="w-5 h-5" />
+                          </div>
+                          <div className="text-[10px] font-black uppercase text-slate-400">Offered Monthly Base</div>
+                          <div className="text-2xl font-black text-[#1E2D4E] font-mono">{fmtINR(sal.base)}</div>
+                          <div className="text-[10px] text-slate-400 font-medium">Standard Monthly Salary</div>
+                        </div>
+
+                        <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-5 shadow-xs text-center space-y-1">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center mx-auto mb-2 text-emerald-600">
+                            <Star className="w-5 h-5" />
+                          </div>
+                          <div className="text-[10px] font-black uppercase text-emerald-600">Performance Incentive</div>
+                          <div className="text-2xl font-black text-emerald-700 font-mono">
+                            {sal.incentive > 0 ? `+${fmtINR(sal.incentive)}` : <span className="text-lg text-slate-400">Not Set</span>}
+                          </div>
+                          <div className="text-[10px] text-emerald-500 font-medium">Target / Monthly Bonus</div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-[#C9952A]/10 to-[#A67820]/5 rounded-2xl border border-[#C9952A]/30 p-5 shadow-xs text-center space-y-1">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-[#C9952A]/20 flex items-center justify-center mx-auto mb-2 text-[#C9952A]">
+                            <Award className="w-5 h-5" />
+                          </div>
+                          <div className="text-[10px] font-black uppercase text-[#C9952A]">Total Package (CTC)</div>
+                          <div className="text-2xl font-black text-[#1E2D4E] font-mono">{fmtINR(sal.total)}</div>
+                          <div className="text-[10px] text-[#C9952A]/80 font-medium">Total Monthly Compensation</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Metadata */}
+                    <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-3">
+                      <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider flex items-center gap-1.5 border-b border-[#e2dfd7] pb-2">
+                        <FileCheck className="w-3.5 h-3.5 text-[#C9952A]" /> Key Placement Parameters
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block">Status</span>
+                          {renderOfferStatus(profileOffer.status)}
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Est. Joining Date</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.estDoj || 'Not Set'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Notice Period</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.noticePd || 'Not Provided'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Actual Joining Date</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.actualDoj || 'Pending'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Role</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.desig || 'Not Assigned'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Department</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.department || 'Not Assigned'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Branch Location</span>
+                          <span className="font-bold text-[#1E2D4E]">Main Branch (The Textile Mall)</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Recruiter Notes</span>
+                          <span className="font-bold text-[#1E2D4E]">{profileOffer.remarks || 'None'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* TAB 2: OFFER DETAILS */}
+              {profileTab === 'offer' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+                      <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-[#C9952A]" /> Complete Offer Specifications
+                      </div>
+                      <button
+                        onClick={() => { setProfileOffer(null); openDetailModal(profileOffer); }}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-[11px] font-extrabold hover:bg-[#162340] transition-colors shadow-xs flex items-center gap-1.5"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit Configuration
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                      {(() => {
+                        const sal = parseSalaryAndIncentive(profileOffer.salary);
+                        return [
+                          { label: 'Application Number', value: profileOffer.appNo, mono: true },
+                          { label: 'Candidate Name', value: profileOffer.name },
+                          { label: 'Offer Status', value: profileOffer.status || 'Pending Accept', isStatus: true },
+                          { label: 'Finalized Designation', value: profileOffer.desig || 'Not Assigned' },
+                          { label: 'Allocated Department', value: profileOffer.department || 'Not Assigned' },
+                          { label: 'Notice Period Required', value: profileOffer.noticePd || 'Not Provided' },
+                          { label: 'Estimated Joining Date', value: profileOffer.estDoj || 'Not Set' },
+                          { label: 'Actual Joining Date', value: profileOffer.actualDoj || 'Pending' },
+                          { label: 'Offered Monthly Base Salary', value: fmtINR(sal.base), mono: true, hl: 'emerald' },
+                          { label: 'Monthly Incentive Amount', value: sal.incentive > 0 ? `+${fmtINR(sal.incentive)}` : 'Not Set', mono: true, hl: 'emerald' },
+                          { label: 'Total Compensation Package', value: fmtINR(sal.total), mono: true, hl: 'gold' },
+                          { label: 'Offer Remarks / Notes', value: profileOffer.remarks || 'None' },
+                        ].map((item, i) => (
+                          <div key={i} className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-1">
+                            <div className="text-[10px] font-black uppercase text-[#777777]">{item.label}</div>
+                            {item.isStatus ? renderOfferStatus(item.value) : (
+                              <div className={`font-bold text-sm ${item.mono ? 'font-mono' : ''} ${
+                                item.hl === 'gold' ? 'text-[#C9952A]' :
+                                item.hl === 'emerald' ? 'text-emerald-700' :
+                                'text-[#1E2D4E]'
+                              }`}>{item.value}</div>
+                            )}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: CANDIDATE DETAILS */}
+              {profileTab === 'candidate' && (
+                <div className="space-y-4 animate-fade-in">
+                  {loadingProfile ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white rounded-2xl border border-[#e2dfd7] animate-pulse" />)}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-3">
+                        <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-[#C9952A]" /> Personal Contact & Bio Data
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                          {[
+                            { label: 'Full Candidate Name', value: profileOffer.name },
+                            { label: 'Application Number', value: profileOffer.appNo, mono: true },
+                            { label: 'Designation Role', value: profileOffer.desig || candidateData?.desig || 'Not Provided' },
+                            { label: 'Phone / Mobile', value: candidateData?.phone || 'Available in Candidate CRM' },
+                            { label: 'Email Address', value: candidateData?.email || 'Not Provided' },
+                            { label: 'Gender', value: candidateData?.gender || 'Not Provided' },
+                            { label: 'Date of Birth', value: candidateData?.dob || 'Not Provided' },
+                            { label: 'Blood Group', value: candidateData?.bloodGroup || 'Not Provided' },
+                            { label: 'Recruitment Source', value: candidateData?.source || 'Walk-in' },
+                          ].map((item, i) => (
+                            <div key={i} className="space-y-1">
+                              <div className="text-[10px] uppercase font-black text-[#777777]">{item.label}</div>
+                              <div className={`font-bold text-[#1E2D4E] ${item.mono ? 'font-mono text-xs' : ''}`}>{item.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-3">
+                          <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-1.5">
+                            <Briefcase className="w-3.5 h-3.5 text-[#C9952A]" /> Work Experience Summary
+                          </div>
+                          <div className="space-y-2 text-xs">
+                            {[
+                              { label: 'Total Work Experience', value: candidateData?.experience },
+                              { label: 'Retail Experience', value: candidateData?.retailExperience },
+                              { label: 'Previous Company', value: candidateData?.previousCompany },
+                              { label: 'Previous Designation', value: candidateData?.previousDesignation },
+                              { label: 'Previous Salary', value: candidateData?.currentSalary ? `₹ ${candidateData.currentSalary}` : null },
+                              { label: 'Expected Salary', value: candidateData?.expectedSalary ? `₹ ${candidateData.expectedSalary}` : null },
+                            ].map((item, i) => (
+                              <div key={i} className="flex justify-between">
+                                <span className="text-[#777777] font-medium">{item.label}:</span>
+                                <span className="font-bold text-[#1E2D4E]">{item.value || 'Not Provided'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-3">
+                          <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-1.5">
+                            <GraduationCap className="w-3.5 h-3.5 text-[#C9952A]" /> Education & Location
+                          </div>
+                          <div className="space-y-2 text-xs">
+                            {[
+                              { label: 'Highest Qualification', value: candidateData?.qualification },
+                              { label: 'City / Location', value: candidateData?.cityState },
+                              { label: 'Referrer Name', value: candidateData?.referrer },
+                              { label: 'Application Date', value: candidateData?.date },
+                              { label: 'Days in Pipeline', value: candidateData?.daysIn ? `${candidateData.daysIn} Days` : null },
+                            ].map((item, i) => (
+                              <div key={i} className="flex justify-between gap-2">
+                                <span className="text-[#777777] font-medium flex-shrink-0">{item.label}:</span>
+                                <span className="font-bold text-[#1E2D4E] text-right">{item.value || 'Not Provided'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 4: TIMELINE */}
+              {profileTab === 'timeline' && (() => {
+                const isAcc = ['Accepted', 'Joined'].includes(profileOffer.status);
+                const isRej = profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected';
+                const isJoined = profileOffer.status === 'Joined';
+                const steps = [
+                  { label: 'Candidate Registered', sub: 'Application submitted to Candidate CRM', done: true },
+                  { label: 'Shortlisted & Interviewed', sub: 'Evaluated by recruitment team', done: true },
+                  { label: 'Offer Extended', sub: 'Moved to Offer Desk with compensation package', done: true },
+                  { label: 'Pending Candidate Acceptance', sub: 'Awaiting candidate response', done: profileOffer.status !== 'Pending Accept', active: profileOffer.status === 'Pending Accept' },
+                  { label: isRej ? 'Offer Declined' : 'Offer Accepted', sub: isRej ? 'Candidate rejected the offer' : 'Candidate accepted the offer', done: isAcc || isRej, rejected: isRej },
+                  { label: 'Joined Employee Directory', sub: 'Onboarded into active employees', done: isJoined },
+                ];
+                return (
+                  <div className="animate-fade-in">
+                    <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 sm:p-7 space-y-4">
+                      <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider flex items-center gap-1.5 border-b border-[#e2dfd7] pb-3">
+                        <Activity className="w-3.5 h-3.5 text-[#C9952A]" /> Offer Workflow Progress
+                      </div>
+                      <div className="relative pl-2">
+                        <div className="absolute left-6 top-2 bottom-2 w-0.5 bg-[#e2dfd7]" />
+                        <div className="space-y-6">
+                          {steps.map((step, i) => (
+                            <div key={i} className={`relative flex items-start gap-4 ${step.done || step.active ? '' : 'opacity-40'}`}>
+                              <div className={`relative z-10 w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs border-2 transition-all ${
+                                step.rejected ? 'bg-rose-100 border-rose-300 text-rose-700 font-bold' :
+                                step.done ? 'bg-[#1E2D4E] border-[#1E2D4E] text-white' :
+                                step.active ? 'bg-[#C9952A] border-[#C9952A] text-white animate-pulse' :
+                                'bg-white border-[#e2dfd7] text-slate-400'
+                              }`}>
+                                {step.done && !step.rejected ? <CheckCheck className="w-4 h-4" /> :
+                                 step.rejected ? <XCircle className="w-4 h-4" /> :
+                                 step.active ? <Clock className="w-4 h-4" /> :
+                                 <span className="text-xs font-mono">{i + 1}</span>}
+                              </div>
+                              <div className="flex-1 pt-1">
+                                <div className={`text-xs font-extrabold ${step.rejected ? 'text-rose-700' : step.done ? 'text-[#1E2D4E]' : step.active ? 'text-[#C9952A]' : 'text-[#888888]'}`}>
+                                  {step.label}
+                                </div>
+                                <div className="text-[11px] text-[#777777] font-medium">{step.sub}</div>
+                              </div>
+                              {step.done && (
+                                <div className={`text-[10px] font-black px-2 py-0.5 rounded-full ${step.rejected ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                  {step.rejected ? 'Declined' : 'Done'}
+                                </div>
+                              )}
+                              {step.active && (
+                                <div className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#C9952A]/20 text-[#C9952A]">
+                                  Active
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* TAB 5: CALL LOGS */}
+              {profileTab === 'history' && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-4">
+                    <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider border-b border-[#e2dfd7] pb-3 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-[#C9952A]" /> Logged Communication & Follow-Ups
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Initial Contact Call (Call 1)', date: profileOffer.call1, remarks: profileOffer.call1Remarks, bg: 'bg-blue-50/50 border-blue-200' },
+                        { label: 'Secondary Follow-up Call (Call 2)', date: profileOffer.call2, remarks: profileOffer.call2Remarks, bg: 'bg-indigo-50/50 border-indigo-200' },
+                        { label: 'Offer Confirmation Call', date: profileOffer.confirm, remarks: profileOffer.confirmRemarks, bg: 'bg-emerald-50/50 border-emerald-200' },
+                      ].map((call, i) => (
+                        <div key={i} className={`p-4 rounded-2xl border ${call.bg} space-y-2`}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-[#1E2D4E] text-xs">{call.label}</span>
+                            <span className="text-[11px] font-mono text-[#777777] font-semibold">{call.date && call.date !== '—' ? call.date : 'Not Logged'}</span>
+                          </div>
+                          {call.remarks && (
+                            <p className="text-xs text-[#555555] italic bg-white/70 p-2.5 rounded-xl border border-white">"{call.remarks}"</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="border-t border-[#e2dfd7] bg-white px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 shadow-md">
+              <button 
+                onClick={() => setProfileOffer(null)} 
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] transition-colors"
+              >
+                Close Profile
               </button>
+
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                {/* Status Update Dropdown */}
+                {/* Premium Color-Coded Status Dropdown */}
                 <select
                   value={profileOffer.status || 'Pending Accept'}
                   disabled={saving}
                   onChange={(e) => handleUpdateOfferStatus(profileOffer.appNo, e.target.value)}
-                  className="px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 bg-slate-50 cursor-pointer outline-none focus:border-slate-600 focus:ring-2 ring-slate-300 transition-all shadow-2xs disabled:opacity-50"
+                  className={`px-3 py-2.5 rounded-xl border-2 text-xs font-extrabold cursor-pointer outline-none transition-all shadow-2xs disabled:opacity-50 ${
+                    profileOffer.status === 'Accepted' ? 'bg-emerald-50 border-emerald-300 text-emerald-800' :
+                    profileOffer.status === 'Joined' ? 'bg-teal-50 border-teal-300 text-teal-800' :
+                    profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-50 border-rose-300 text-rose-800' :
+                    'bg-blue-50 border-blue-300 text-blue-800'
+                  }`}
                 >
                   <option value="Pending Accept">⏳ Pending Accept</option>
                   <option value="Accepted">✅ Accepted</option>
                   <option value="Declined">❌ Declined</option>
                   <option value="Joined">🎉 Joined</option>
                 </select>
+
                 {/* Reject Offer */}
                 {(profileOffer.status === 'Pending Accept' || profileOffer.status === 'Accepted') && (
                   <button
                     onClick={() => handleRejectOffer(profileOffer.appNo)}
                     disabled={saving}
-                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 shadow-sm transition-colors disabled:opacity-50"
                   >
-                    <XCircle className="w-3.5 h-3.5" /> Reject
+                    <XCircle className="w-3.5 h-3.5" /> Reject Offer
                   </button>
                 )}
-                {/* Mark as Joined */}
+
+                {/* Mark Joined */}
                 {profileOffer.status === 'Accepted' && (
                   <button
                     onClick={() => handleMarkJoined(profileOffer.appNo)}
                     disabled={saving}
-                    className="px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-extrabold hover:bg-teal-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-extrabold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50"
                   >
                     <UserCheck className="w-3.5 h-3.5" /> Mark Joined
                   </button>
                 )}
+
                 {/* Accept Offer */}
                 {profileOffer.status === 'Pending Accept' && (
                   <button
                     onClick={() => { setProfileOffer(null); handleAcceptOffer(profileOffer.appNo); }}
                     disabled={saving}
-                    className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-extrabold hover:bg-emerald-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-extrabold hover:bg-emerald-700 shadow-sm transition-colors disabled:opacity-50"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Accept Offer
                   </button>
                 )}
+
                 {/* Edit Details */}
                 <button
                   onClick={() => { setProfileOffer(null); openDetailModal(profileOffer); }}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 shadow-md transition-colors flex items-center gap-2"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1E2D4E] text-white text-xs font-extrabold hover:bg-[#162340] shadow-sm transition-colors"
                 >
-                  <FileText className="w-3.5 h-3.5" /> Edit Details
+                  <Edit3 className="w-3.5 h-3.5" /> Edit Details
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
