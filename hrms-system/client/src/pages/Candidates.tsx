@@ -301,7 +301,7 @@ export default function CandidatesPage() {
                 className="px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
               >
                 <option value="">All Designations</option>
-                {Array.from(new Set(candidates.map(c => c.desig).filter(Boolean))).map(d => (
+                {Array.from(new Set((candidates || []).map(c => c.desig).filter(Boolean))).map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -348,7 +348,7 @@ export default function CandidatesPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filtered.length > 0 ? (
-                    filtered.map((c) => (
+                    (filtered || []).map((c) => (
                       <tr key={c.appNo} className="hover:bg-black/5 transition-colors font-medium">
                         <td className="py-3.5 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
                         <td className="py-3.5 px-4">
@@ -462,7 +462,7 @@ export default function CandidatesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e2dfd7]/50">
-                    {selRejData.map((c, idx) => (
+                    {(selRejData || []).map((c, idx) => (
                       <tr key={idx} className="hover:bg-black/5 font-medium">
                         <td className="py-2.5 px-3 font-mono">{c.appNo}</td>
                         <td className="py-2.5 px-3 font-bold text-[#1E2D4E]">{c.name}</td>
@@ -783,7 +783,7 @@ export default function CandidatesPage() {
                   </h4>
                   <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                     {activityLog.length > 0 ? (
-                      activityLog.map((a, idx) => (
+                      (activityLog || []).map((a, idx) => (
                         <div key={idx} className="p-3.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-1">
                           <div className="flex items-center justify-between font-extrabold text-[#1E2D4E]">
                             <span>{a.label || a.action_type}</span>
@@ -866,7 +866,7 @@ export default function CandidatesPage() {
                 <label className="block font-bold text-[#1E2D4E] mb-1">Finalized Designation Role</label>
                 <select value={offerForm.desig} onChange={(e) => setOfferForm({ ...offerForm, desig: e.target.value })} className="select-modern font-bold">
                   <option value="">Select Designation</option>
-                  {designations.map(d => <option key={d} value={d}>{d}</option>)}
+                  {(designations || []).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
 
