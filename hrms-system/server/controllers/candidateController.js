@@ -239,8 +239,8 @@ class CandidateController {
                 so.status as offer_status
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
-         WHERE LOWER(TRIM(c.status)) IN ('selected', 'offer sent', 'offer accepted', 'joined', 'hired')
-            OR so.id IS NOT NULL
+         WHERE LOWER(TRIM(c.status)) IN ('offer accepted', 'joined', 'hired')
+            OR LOWER(TRIM(so.status)) IN ('accepted', 'joined')
          ORDER BY c.updated_at DESC, c.created_at DESC`
       );
 
@@ -318,7 +318,7 @@ class CandidateController {
 
       return res.json({ success: true, employees, total: employees.length });
     } catch (err) {
-      return errorRes(res, 'Failed to fetch employees', [err.message], 500);
+      return errorRes(res, 'DB_ERR: ' + err.message, [err.message], 500);
     }
   }
 
