@@ -35,6 +35,8 @@ export default function CandidatesPage() {
   const [remarksText, setRemarksText] = useState('');
   
   const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
+  const [confirmStatusModal, setConfirmStatusModal] = useState<{ open: boolean; candidate: any | null; newStatus: string }>({ open: false, candidate: null, newStatus: '' });
+  const [highlightAppNo, setHighlightAppNo] = useState<string | null>(null);
   const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
   
@@ -133,6 +135,42 @@ export default function CandidatesPage() {
     } catch (e) {}
   };
 
+  const handleStatusSelect = (candidate: any, targetStatus: string) => {
+    if (!candidate || candidate.status === targetStatus) return;
+
+    if (targetStatus === 'Shortlisted' || targetStatus === 'Offer Sent') {
+      setDirectOfferModal({ open: true, candidate });
+      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
+      return;
+    }
+
+    setConfirmStatusModal({ open: true, candidate, newStatus: targetStatus });
+  };
+
+  const executeStatusChange = async () => {
+    if (!confirmStatusModal.candidate || !confirmStatusModal.newStatus || actionLoading) return;
+    const c = confirmStatusModal.candidate;
+    const targetStatus = confirmStatusModal.newStatus;
+
+    setActionLoading(true);
+    try {
+      if (targetStatus === 'Rejected') {
+        await API.rejectCandidate({ appNo: c.appNo, remarks: 'Status updated to Rejected', candName: c.name });
+      } else {
+        await API.updateCandidate(c.appNo, { status: targetStatus, remarks: `Status updated to ${targetStatus}` });
+      }
+      showToast(`${c.name} updated to ${targetStatus} 🎉`, 'success');
+      setHighlightAppNo(c.appNo);
+      setTimeout(() => setHighlightAppNo(null), 2500);
+      setConfirmStatusModal({ open: false, candidate: null, newStatus: '' });
+      loadCandidates();
+    } catch (err: any) {
+      showToast('Failed to update status: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleDeleteCandidate = async (appNo: string) => {
     if (!window.confirm('Are you sure you want to permanently delete this candidate?')) return;
     try {
@@ -228,6 +266,59 @@ export default function CandidatesPage() {
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
+      
+      {/* Professional Status Change Confirmation Modal */}
+      {confirmStatusModal.open && confirmStatusModal.candidate && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#1E2D4E]/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-[#e2dfd7] space-y-5 animate-scale-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#1E2D4E] text-white flex items-center justify-center font-black text-sm shadow-md">
+                  {confirmStatusModal.candidate.initials}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-[#1E2D4E] text-base">Move Candidate Status</h3>
+                  <div className="text-xs text-[#777777] font-semibold">{confirmStatusModal.candidate.name} ({confirmStatusModal.candidate.appNo})</div>
+                </div>
+              </div>
+              <button onClick={() => setConfirmStatusModal({ open: false, candidate: null, newStatus: '' })} className="text-[#888888] hover:text-[#1E2D4E]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-[#F9F7F4] p-4 rounded-2xl border border-[#e2dfd7] space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#777777] uppercase text-[10px]">Current Status</span>
+                <StatusBadge status={confirmStatusModal.candidate.status} size="sm" />
+              </div>
+              <div className="flex justify-center text-[#C9952A]">
+                <ChevronRight className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#777777] uppercase text-[10px]">New Status</span>
+                <StatusBadge status={confirmStatusModal.newStatus} size="sm" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e2dfd7]">
+              <button 
+                onClick={() => setConfirmStatusModal({ open: false, candidate: null, newStatus: '' })} 
+                className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs text-[#1E2D4E] hover:bg-[#F9F7F4] transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeStatusChange} 
+                disabled={actionLoading} 
+                className="btn-primary text-xs shadow-md disabled:opacity-50"
+              >
+                {actionLoading ? 'Updating...' : 'Confirm Status Change'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer />
 
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
