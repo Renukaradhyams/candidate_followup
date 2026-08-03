@@ -19,7 +19,7 @@ export default function InterviewPanelPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Scoring Side Panel
-  const [scorePanel, setScorePanel] = useState<{ open: boolean; interview: any | null; questions: any[]; round: 'HR' | 'Round 2' }>({ open: false, interview: null, questions: [], round: 'HR' });
+  const [scorePanel, setScorePanel] = useState<{ open: boolean; interview: any | null; questions: any[]; hrQuestions?: any[]; round: 'HR' | 'Round 2' }>({ open: false, interview: null, questions: [], round: 'HR' });
   const [scores, setScores] = useState<number[]>([]);
   const [remarks, setRemarks] = useState('');
   const [offeredSalary, setOfferedSalary] = useState('');
@@ -86,10 +86,17 @@ export default function InterviewPanelPage() {
     try {
       const qRes = await API.getInterviewQuestions(iv.desig, round);
       const questions = qRes.questions || [];
+      
+      let hrQuestions = [];
+      if (round === 'Round 2' && iv.hrScore) {
+        const hrQRes = await API.getInterviewQuestions(iv.desig, 'HR');
+        hrQuestions = hrQRes.questions || [];
+      }
+
       const previousScore = round === 'HR' ? iv.hrScore : iv.assignedScore;
       const initScores = questions.map((q: any) => previousScore?.scores?.[questions.indexOf(q)] || 0);
 
-      setScorePanel({ open: true, interview: iv, questions, round });
+      setScorePanel({ open: true, interview: iv, questions, hrQuestions, round });
       setScores(initScores);
       setRemarks(previousScore?.remarks || '');
       setOfferedSalary('');
@@ -362,10 +369,32 @@ export default function InterviewPanelPage() {
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+              {scorePanel.round === 'Round 2' && scorePanel.interview?.hrScore && scorePanel.hrQuestions && (
+                <div className="mb-6 bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
+                  <h4 className="font-extrabold text-[#1E2D4E] text-xs uppercase tracking-wider mb-3">HR Round 1 Evaluation Summary</h4>
+                  <div className="space-y-2 mb-3">
+                    {scorePanel.hrQuestions.map((hq: any, idx: number) => (
+                      <div key={hq.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#e2dfd7]">
+                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{hq.text}</span>
+                        <span className="font-black text-xs text-[#C9952A]">
+                          {scorePanel.interview.hrScore.scores?.[idx] || 0} / {hq.max || 10}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-blue-100">
+                    <span className="block text-[10px] font-black uppercase text-blue-800 mb-1">HR Remarks</span>
+                    <p className="text-xs font-medium text-[#555555]">
+                      {scorePanel.interview.hrScore.remarks || 'No remarks provided.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <h4 className="font-extrabold text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2">
                   <Star className="w-4 h-4 text-[#C9952A]" />
-                  <span>Evaluation Questions &amp; Scoring Rubric</span>
+                  <span>{scorePanel.round === 'Round 2' ? 'Management Evaluation Rubric' : 'Evaluation Questions & Scoring Rubric'}</span>
                 </h4>
                 
                 {scorePanel.questions.map((q, idx) => (
@@ -535,6 +564,29 @@ export default function InterviewPanelPage() {
 
             <div className="space-y-3 text-xs">
               <p className="text-[#555555] font-medium">Are you sure you want to approve candidate <strong>{approveModal.interview?.candidate}</strong> for final selection and offer issuance?</p>
+              
+              {approveModal.interview?.hrScore && (
+                <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]">
+                  <h4 className="font-extrabold text-[#1E2D4E] text-[10px] uppercase tracking-wider mb-1">HR Round 1 Summary</h4>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-[#555555]">Score:</span>
+                    <span className="font-black text-[#C9952A]">{approveModal.interview.hrScore.total} / {approveModal.interview.hrScore.maxTotal}</span>
+                  </div>
+                  <p className="text-[#777777] font-medium italic">"{approveModal.interview.hrScore.remarks || 'No remarks.'}"</p>
+                </div>
+              )}
+
+              {approveModal.interview?.assignedScore && (
+                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                  <h4 className="font-extrabold text-[#1E2D4E] text-[10px] uppercase tracking-wider mb-1">Round 2 Management Summary</h4>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-[#555555]">Score:</span>
+                    <span className="font-black text-blue-700">{approveModal.interview.assignedScore.total} / {approveModal.interview.assignedScore.maxTotal}</span>
+                  </div>
+                  <p className="text-[#777777] font-medium italic">"{approveModal.interview.assignedScore.remarks || 'No remarks.'}"</p>
+                </div>
+              )}
+
               <div>
                 <label className="block font-bold text-[#1E2D4E] mb-1">Approval Remarks</label>
                 <textarea rows={3} value={approveRemarks} onChange={(e) => setApproveRemarks(e.target.value)} placeholder="Final approval notes..." className="input-modern" />

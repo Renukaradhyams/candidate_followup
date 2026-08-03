@@ -244,9 +244,37 @@ export default function OfferProcessPage() {
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDetailOffer(null)} />
           <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-5 flex flex-col z-10 space-y-4">
-            <h3 className="font-extrabold text-[#1E2D4E] text-base">Offer Details — {detailOffer.name}</h3>
+            <h3 className="font-extrabold text-[#1E2D4E] text-base border-b border-[#e2dfd7] pb-3">Offer Details — {detailOffer.name}</h3>
 
-            <div className="space-y-3 text-xs flex-1">
+            <div className="space-y-4 overflow-y-auto pr-2 pb-2 text-xs flex-1">
+              
+              {/* Evaluation History Section */}
+              <div className="space-y-3 pb-3 border-b border-[#e2dfd7]">
+                <h4 className="font-extrabold text-[#777777] text-[10px] uppercase tracking-wider">Interview Evaluation History</h4>
+                
+                {detailOffer.hrScore ? (
+                  <div className="bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-black text-[#1E2D4E] text-[11px] uppercase tracking-wider">HR Round 1</span>
+                      <span className="font-black text-[#C9952A]">{detailOffer.hrScore.total} / {detailOffer.hrScore.maxTotal}</span>
+                    </div>
+                    <p className="text-[#555555] font-medium text-xs italic">"{detailOffer.hrScore.remarks || 'No remarks provided.'}"</p>
+                  </div>
+                ) : (
+                  <div className="text-[#888888] italic text-xs">No HR Round scores found.</div>
+                )}
+
+                {detailOffer.assignedScore && (
+                  <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-black text-[#1E2D4E] text-[11px] uppercase tracking-wider">Round 2 Management</span>
+                      <span className="font-black text-blue-700">{detailOffer.assignedScore.total} / {detailOffer.assignedScore.maxTotal}</span>
+                    </div>
+                    <p className="text-[#555555] font-medium text-xs italic">"{detailOffer.assignedScore.remarks || 'No remarks provided.'}"</p>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-[10px] font-extrabold uppercase text-[#777777] mb-1">Salary Offered (₹)</label>
                 <input

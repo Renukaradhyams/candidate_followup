@@ -139,6 +139,17 @@ export default function LoginPage() {
               </>
             )}
           </button>
+
+          <div className="pt-2 border-t border-[#e2dfd7]">
+            <button
+              type="button"
+              onClick={() => navigate('/candidate-entry')}
+              className="w-full py-3 px-4 rounded-xl border-2 border-[#1E2D4E] text-[#1E2D4E] bg-white font-extrabold text-xs tracking-wide hover:bg-[#F9F7F4] active:scale-[0.99] transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <span>Apply as a Candidate</span>
+              <User className="w-4 h-4" />
+            </button>
+          </div>
         </form>
 
         {/* Card Footer */}

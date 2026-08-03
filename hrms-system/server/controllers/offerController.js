@@ -4,7 +4,15 @@ const { logAction } = require('../utils/logger');
 
 const getOffers = async (req, res) => {
   try {
-    const [rows] = await db.query(`SELECT * FROM selection_offers ORDER BY created_at DESC`);
+    const [rows] = await db.query(`
+      SELECT 
+        so.*,
+        he.hr_score_json,
+        he.assigned_score_json
+      FROM selection_offers so
+      LEFT JOIN hr_evaluations he ON so.app_no = he.app_no
+      ORDER BY so.created_at DESC
+    `);
 
     const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
     const iso = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
@@ -30,7 +38,9 @@ const getOffers = async (req, res) => {
         call2Remarks: r.call2_remarks || '',
         confirm: fmt(r.confirm_date),
         confirmRemarks: r.confirm_remarks || '',
-        status: r.status || ''
+        status: r.status || '',
+        hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
+        assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null
       };
     });
 
