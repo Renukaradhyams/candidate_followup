@@ -35,7 +35,7 @@ export default function CandidatesPage() {
   const [remarksText, setRemarksText] = useState('');
   
   const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
-  const [offerForm, setOfferForm] = useState({ salary: '', doj: '', desig: '', department: '' });
+  const [offerForm, setOfferForm] = useState({ salary: "", doj: "", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
   
   const [callModal, setCallModal] = useState<{ open: boolean; candidate: any | null; step: number; callStatus: any }>({ open: false, candidate: null, step: 1, callStatus: null });
@@ -150,7 +150,7 @@ export default function CandidatesPage() {
     
     if (action === 'shortlist') {
       setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: '', doj: '', desig: candidate.desig || '', department: candidate.department || '' });
+      setOfferForm({ salary: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
       return;
     }
     
@@ -206,7 +206,8 @@ export default function CandidatesPage() {
         salaryOffered: offerForm.salary,
         estDoj: offerForm.doj,
         designation: offerForm.desig,
-        department: offerForm.department
+        department: offerForm.department,
+          remarks: offerForm.remarks
       });
       showToast('Candidate moved to Offer Desk successfully', 'success');
       setDirectOfferModal({ open: false, candidate: null });

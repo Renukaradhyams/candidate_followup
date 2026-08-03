@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { FileText, Phone, Calendar, CheckCircle2, XCircle, UserCheck, Trash2, X, Briefcase, DollarSign, Image as ImageIcon, FileCheck } from 'lucide-react';
+import { Search, FileText, Phone, Calendar, CheckCircle2, XCircle, UserCheck, Trash2, X, Briefcase, DollarSign, Image as ImageIcon, FileCheck } from 'lucide-react';
 
 export default function OfferProcessPage() {
   const navigate = useNavigate();
@@ -146,10 +146,8 @@ export default function OfferProcessPage() {
     }
   };
 
-  const handleChangeStatus = async (appNo: string) => {
-    if (saving) return;
-    const newStatus = prompt('Enter new status (Pending Accept, Accepted, Joined, Offer Rejected, Declined):');
-    if (!newStatus) return;
+  const handleChangeStatus = async (appNo: string, newStatus: string) => {
+    if (saving || !newStatus) return;
     setSaving(true);
     try {
       await API.updateOfferStatus({ appNo, status: newStatus });
@@ -201,13 +199,23 @@ export default function OfferProcessPage() {
 
           {/* Offer Table */}
           <div className="card-glass p-4 space-y-4">
-            <div className="overflow-x-auto">
+            <div className="flex items-center gap-3 bg-white border border-[#e2dfd7] rounded-xl px-3 py-1.5 w-full md:max-w-xs shadow-xs focus-within:ring-2 ring-emerald-500/20">
+                <Search className="w-4 h-4 text-[#888888]" />
+                <input 
+                  type="text"
+                  placeholder="Search by name, ID or designation..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none text-xs font-semibold text-[#1E2D4E] w-full placeholder:text-[#AAAAAA]"
+                />
+              </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888]">
                     <th className="py-2.5 px-3">Candidate</th>
                     <th className="py-2.5 px-3">Designation</th>
-                    <th className="py-2.5 px-3">Notice Period</th>
+                    <th className="py-2.5 px-3">Offered Salary</th>
                     <th className="py-2.5 px-3">Est. DOJ</th>
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3">Actions</th>
@@ -222,7 +230,7 @@ export default function OfferProcessPage() {
                           <div className="text-[10px] text-[#888888] font-mono">{o.appNo}</div>
                         </td>
                         <td className="py-3 px-3">{o.desig}</td>
-                        <td className="py-3 px-3">{o.noticePd || '—'}</td>
+                        <td className="py-3 px-3 font-mono font-bold text-[#1E2D4E]">{o.salary ? `₹ ${o.salary}` : '—'}</td>
                         <td className="py-3 px-3">{o.estDoj || '—'}</td>
                         <td className="py-3 px-3">
                           <span className={`badge ${
@@ -266,12 +274,18 @@ export default function OfferProcessPage() {
                                 Reject Offer
                               </button>
                             )}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleChangeStatus(o.appNo); }}
-                              className="px-2.5 py-1 rounded bg-blue-700 text-white font-bold text-[11px]"
-                            >
-                              Status
-                            </button>
+                            <select
+                                value={o.status}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => { e.stopPropagation(); handleChangeStatus(o.appNo, e.target.value); }}
+                                className="px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-700 font-bold text-[11px] outline-none cursor-pointer"
+                              >
+                                <option value="Pending Accept">Pending Accept</option>
+                                <option value="Accepted">Accepted</option>
+                                <option value="Joined">Joined</option>
+                                <option value="Offer Rejected">Offer Rejected</option>
+                                <option value="Declined">Declined</option>
+                              </select>
                             {o.status === 'Accepted' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkJoined(o.appNo); }}
@@ -455,6 +469,12 @@ export default function OfferProcessPage() {
                   <span>Salary & Offer Details</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+{drawerOffer.remarks && (
+                  <div className="col-span-1 sm:col-span-2 mb-2">
+                    <span className="text-[#777777] block text-[10.5px]">Shortlist Remarks</span>
+                    <span className="font-medium text-[#1E2D4E] text-xs italic">{drawerOffer.remarks}</span>
+                  </div>
+                )}
                   <div><span className="text-[#777777] block text-[10.5px]">Expected Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerOffer.expectedSalary ? `₹ ${drawerOffer.expectedSalary}` : '—'}</span></div>
                   <div><span className="text-[#777777] block text-[10.5px]">Previous Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{(drawerOffer.previousSalary || drawerOffer.currentSalary) ? `₹ ${drawerOffer.previousSalary || drawerOffer.currentSalary}` : '—'}</span></div>
                   <div><span className="text-[#777777] block text-[10.5px]">Notice Period</span><span className="font-bold text-[#1E2D4E]">{drawerOffer.noticePeriod || drawerOffer.offeredDoj || '—'}</span></div>

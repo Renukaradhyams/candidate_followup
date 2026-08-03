@@ -43,6 +43,7 @@ const getOffers = async (req, res) => {
         confirmRemarks: r.confirm_remarks || '',
         status: r.status || '',
         salary: r.salary || '',
+        remarks: r.remarks || '',
         department: r.cand_department || r.department || '',
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
         assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null
@@ -200,7 +201,7 @@ const updateOfferStatus = async (req, res) => {
 
 const createDirectOffer = async (req, res) => {
   try {
-    const { appNo, salaryOffered, estDoj, designation, department } = req.body;
+    const { appNo, salaryOffered, estDoj, designation, department, remarks } = req.body;
     if (!salaryOffered) return errorRes(res, 'Offered salary is mandatory', [], 400);
 
     const now = new Date();
@@ -219,8 +220,8 @@ const createDirectOffer = async (req, res) => {
     const finalDept = department || c.department;
 
     await db.query(
-      `INSERT INTO selection_offers (app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [appNo, c.name, finalDesig, finalDept, null, doj, 'Pending Accept', now, now]
+      `INSERT INTO selection_offers (app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [appNo, c.name, finalDesig, finalDept, null, doj, 'Pending Accept', now, now, remarks || null]
     );
 
     await db.query(
