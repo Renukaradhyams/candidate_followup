@@ -35,6 +35,7 @@ export default function OfferProcessPage() {
   const [finalDesignation, setFinalDesignation] = useState('');
   const [department, setDepartment] = useState('');
   const [otherSection, setOtherSection] = useState('');
+  const [offerRemarks, setOfferRemarks] = useState('');
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
   // Profile Modal State
@@ -184,7 +185,8 @@ export default function OfferProcessPage() {
         salaryOffered: combinedSalary, 
         department, 
         otherSection, 
-        finalDesignation 
+        finalDesignation,
+        remarks: offerRemarks
       });
       showToast('Offer joining details saved successfully! 🎉', 'success');
       loadOffers();
@@ -276,6 +278,7 @@ export default function OfferProcessPage() {
     setFinalDesignation(o.desig || '');
     setDepartment(o.department || '');
     setOtherSection('');
+    setOfferRemarks(o.remarks || '');
   };
 
   const renderStatusBadge = (status: string) => {
@@ -677,6 +680,17 @@ export default function OfferProcessPage() {
                         placeholder="e.g. 15 Days / Immediate" 
                       />
                     </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-wider">Shortlisting & Recruiter Remarks</label>
+                      <textarea 
+                        rows={2}
+                        value={offerRemarks} 
+                        onChange={(e) => setOfferRemarks(e.target.value)} 
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-bold text-xs outline-none focus:border-blue-500 focus:bg-white transition-all" 
+                        placeholder="Enter shortlisting notes, recruiter remarks or special conditions..." 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -951,9 +965,11 @@ export default function OfferProcessPage() {
                           <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Branch Location</span>
                           <span className="font-bold text-[#1E2D4E]">Main Branch (The Textile Mall)</span>
                         </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-0.5">Recruiter Notes</span>
-                          <span className="font-bold text-[#1E2D4E]">{profileOffer.remarks || 'None'}</span>
+                        <div className="sm:col-span-2">
+                          <span className="text-[10px] uppercase font-bold text-[#777777] block mb-1">Shortlisting & Recruiter Remarks</span>
+                          <span className="font-semibold text-[#1E2D4E] italic bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7] block">
+                            {profileOffer.remarks || candidateData?.remarks || 'No remarks recorded.'}
+                          </span>
                         </div>
                       </div>
                     </div>
