@@ -168,12 +168,45 @@ export default function OfferProcessPage() {
 
   const handleRejectOffer = async (appNo: string) => {
     if (saving) return;
-    const remarks = prompt('Reason for rejection:');
+    const remarks = window.prompt('Reason for rejection (optional):') ?? '';
     if (remarks === null) return;
     setSaving(true);
     try {
       await API.rejectOffer({ appNo, remarks });
       showToast('Offer marked as Rejected', 'error');
+      setProfileOffer(null);
+      loadOffers();
+    } catch (e: any) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMarkJoined = async (appNo: string) => {
+    if (saving) return;
+    const joiningDate = window.prompt('Enter Actual Date of Joining (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
+    if (!joiningDate) return;
+    setSaving(true);
+    try {
+      await API.markJoined({ appNo, joiningDate });
+      showToast('Candidate marked as Joined! 🎉 Moving to Employee directory...', 'success');
+      setProfileOffer(null);
+      setTimeout(() => { navigate('/employees'); }, 1500);
+    } catch (e: any) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateOfferStatus = async (appNo: string, status: string) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await API.updateOfferStatus({ appNo, status });
+      showToast(`Offer status updated to ${status}`, 'success');
+      setProfileOffer(prev => prev ? { ...prev, status } : null);
       loadOffers();
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
@@ -811,12 +844,60 @@ export default function OfferProcessPage() {
             
             {/* Modal Footer */}
             <div className="border-t border-slate-200 p-4 sm:p-5 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md z-10">
-              <button onClick={() => setProfileOffer(null)} className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                Close Profile
+              <button onClick={() => setProfileOffer(null)} className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                Close
               </button>
-              <button onClick={() => { setProfileOffer(null); openDetailModal(profileOffer); }} className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 shadow-md transition-colors flex items-center justify-center gap-2">
-                <FileText className="w-4 h-4" /> Edit Details
-              </button>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                {/* Status Update Dropdown */}
+                <select
+                  value={profileOffer.status || 'Pending Accept'}
+                  disabled={saving}
+                  onChange={(e) => handleUpdateOfferStatus(profileOffer.appNo, e.target.value)}
+                  className="px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 bg-slate-50 cursor-pointer outline-none focus:border-slate-600 focus:ring-2 ring-slate-300 transition-all shadow-2xs disabled:opacity-50"
+                >
+                  <option value="Pending Accept">⏳ Pending Accept</option>
+                  <option value="Accepted">✅ Accepted</option>
+                  <option value="Declined">❌ Declined</option>
+                  <option value="Joined">🎉 Joined</option>
+                </select>
+                {/* Reject Offer */}
+                {(profileOffer.status === 'Pending Accept' || profileOffer.status === 'Accepted') && (
+                  <button
+                    onClick={() => handleRejectOffer(profileOffer.appNo)}
+                    disabled={saving}
+                    className="px-4 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <XCircle className="w-3.5 h-3.5" /> Reject
+                  </button>
+                )}
+                {/* Mark as Joined */}
+                {profileOffer.status === 'Accepted' && (
+                  <button
+                    onClick={() => handleMarkJoined(profileOffer.appNo)}
+                    disabled={saving}
+                    className="px-4 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-extrabold hover:bg-teal-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" /> Mark Joined
+                  </button>
+                )}
+                {/* Accept Offer */}
+                {profileOffer.status === 'Pending Accept' && (
+                  <button
+                    onClick={() => { setProfileOffer(null); handleAcceptOffer(profileOffer.appNo); }}
+                    disabled={saving}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-extrabold hover:bg-emerald-700 shadow-md transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Accept Offer
+                  </button>
+                )}
+                {/* Edit Details */}
+                <button
+                  onClick={() => { setProfileOffer(null); openDetailModal(profileOffer); }}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 shadow-md transition-colors flex items-center gap-2"
+                >
+                  <FileText className="w-3.5 h-3.5" /> Edit Details
+                </button>
+              </div>
             </div>
 
           </div>
