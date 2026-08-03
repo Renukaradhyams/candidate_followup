@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -211,24 +213,24 @@ export default function OfferProcessPage() {
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
           {/* Header */}
-          <div className="flex flex-col gap-1 animate-fade-in">
+          <div className="flex flex-col gap-1 animate-fade-in-up">
             <div className="text-sm font-semibold text-slate-500">Home <ChevronRight className="inline w-4 h-4 mx-1"/> Offer Desk</div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Offer Desk</h1>
             <p className="text-slate-500 font-medium">Manage candidate offers, approvals and employee onboarding.</p>
           </div>
 
           {/* Analytics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             {[
               { label: 'Pending Offers', value: stats.pending, icon: <Clock className="w-5 h-5 text-blue-600"/>, bg: 'bg-blue-50' },
               { label: 'Accepted', value: stats.accepted, icon: <CheckCircle2 className="w-5 h-5 text-emerald-600"/>, bg: 'bg-emerald-50' },
               { label: 'Joined', value: stats.joined, icon: <UserCheck className="w-5 h-5 text-teal-600"/>, bg: 'bg-teal-50' },
               { label: 'Rejected', value: stats.rejected, icon: <XCircle className="w-5 h-5 text-rose-600"/>, bg: 'bg-rose-50' },
-              { label: 'Avg Salary', value: `₹ ${Math.round(stats.avgSalary || 0).toLocaleString()}`, icon: <DollarSign className="w-5 h-5 text-amber-600"/>, bg: 'bg-amber-50' },
+              { label: 'Avg Salary', value: \`₹ \${Math.round(stats.avgSalary || 0).toLocaleString()}\`, icon: <DollarSign className="w-5 h-5 text-amber-600"/>, bg: 'bg-amber-50' },
             ].map((stat, i) => (
-              <div key={i} className={`p-4 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1`}>
+              <div key={i} className={\`p-4 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1\`}>
                 <div className="flex items-center justify-between mb-3">
-                  <div className={`p-2 rounded-xl ${stat.bg}`}>{stat.icon}</div>
+                  <div className={\`p-2 rounded-xl \${stat.bg}\`}>{stat.icon}</div>
                 </div>
                 <div className="text-2xl font-black text-slate-900 mb-1">{stat.value}</div>
                 <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">{stat.label}</div>
@@ -249,11 +251,11 @@ export default function OfferProcessPage() {
                 <button
                   key={t.key}
                   onClick={() => setActiveFilter(t.key)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${
+                  className={\`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border \${
                     activeFilter === t.key 
                       ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
                       : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-                  }`}
+                  }\`}
                 >
                   {t.label}
                 </button>
@@ -282,7 +284,7 @@ export default function OfferProcessPage() {
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div className="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
@@ -299,7 +301,7 @@ export default function OfferProcessPage() {
                       <tr key={o.appNo} onClick={() => setProfileOffer(o)} className="hover:bg-slate-50 transition-colors cursor-pointer group">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm bg-${o.color}-600 shadow-sm`}>
+                            <div className={\`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm bg-\${o.color}-600 shadow-sm\`}>
                               {o.initials}
                             </div>
                             <div>
@@ -313,7 +315,7 @@ export default function OfferProcessPage() {
                           <div className="text-xs text-slate-500">{o.department}</div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-sm font-bold text-emerald-700 font-mono">{o.salary ? `₹ ${o.salary}` : '—'}</div>
+                          <div className="text-sm font-bold text-emerald-700 font-mono">{o.salary ? \`₹ \${o.salary}\` : '—'}</div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm font-bold text-slate-800">{o.estDoj || o.actualDoj || '—'}</div>
@@ -367,12 +369,12 @@ export default function OfferProcessPage() {
               </div>
 
               {/* Mobile Cards */}
-              <div className="md:hidden grid gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div className="md:hidden grid gap-4 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 {filtered.map(o => (
                   <div key={o.appNo} onClick={() => setProfileOffer(o)} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm relative cursor-pointer active:scale-[0.98] transition-transform">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm bg-${o.color}-600 shadow-sm`}>
+                        <div className={\`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm bg-\${o.color}-600 shadow-sm\`}>
                           {o.initials}
                         </div>
                         <div>
@@ -393,7 +395,7 @@ export default function OfferProcessPage() {
                       </div>
                       <div>
                         <div className="text-[10px] uppercase font-bold text-slate-500">Salary</div>
-                        <div className="text-sm font-bold text-emerald-700 font-mono">{o.salary ? `₹ ${o.salary}` : '—'}</div>
+                        <div className="text-sm font-bold text-emerald-700 font-mono">{o.salary ? \`₹ \${o.salary}\` : '—'}</div>
                       </div>
                       <div>
                         <div className="text-[10px] uppercase font-bold text-slate-500">Joining Date</div>
@@ -433,10 +435,10 @@ export default function OfferProcessPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={() => !saving && setDetailOffer(null)}></div>
           
-          <div className="bg-slate-50 w-full max-w-4xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] animate-scale-in overflow-hidden">
+          <div className="bg-slate-50 w-full max-w-4xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh] animate-fade-in-scale overflow-hidden">
             <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 bg-white">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-${detailOffer.color}-600 shadow-sm`}>
+                <div className={\`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-\${detailOffer.color}-600 shadow-sm\`}>
                   {detailOffer.initials}
                 </div>
                 <div>
@@ -505,12 +507,12 @@ export default function OfferProcessPage() {
                   
                   <div className="border-t border-slate-100 pt-4">
                     <div className="text-[10px] uppercase font-extrabold text-slate-400 mb-1">Previous Salary</div>
-                    <div className="font-bold text-slate-800 font-mono text-sm bg-slate-50 p-2 rounded-lg border border-slate-100">{detailOffer.currentSalary ? `₹ ${detailOffer.currentSalary}` : '—'}</div>
+                    <div className="font-bold text-slate-800 font-mono text-sm bg-slate-50 p-2 rounded-lg border border-slate-100">{detailOffer.currentSalary ? \`₹ \${detailOffer.currentSalary}\` : '—'}</div>
                   </div>
                   
                   <div className="border-t border-slate-100 pt-4">
                     <div className="text-[10px] uppercase font-extrabold text-slate-400 mb-1">Expected Salary</div>
-                    <div className="font-bold text-slate-800 font-mono text-sm bg-slate-50 p-2 rounded-lg border border-slate-100">{detailOffer.expectedSalary ? `₹ ${detailOffer.expectedSalary}` : '—'}</div>
+                    <div className="font-bold text-slate-800 font-mono text-sm bg-slate-50 p-2 rounded-lg border border-slate-100">{detailOffer.expectedSalary ? \`₹ \${detailOffer.expectedSalary}\` : '—'}</div>
                   </div>
                   
                   {detailOffer.remarks && (
@@ -542,14 +544,14 @@ export default function OfferProcessPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity" onClick={() => setProfileOffer(null)}></div>
           
-          <div className="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh] animate-scale-in overflow-hidden">
+          <div className="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh] animate-fade-in-scale overflow-hidden">
             {/* Header / Cover */}
             <div className="bg-white border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-5 relative shadow-sm z-10">
               <button onClick={() => setProfileOffer(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition-colors">
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-5">
-                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl bg-${profileOffer.color}-600 shadow-lg border-4 border-white`}>
+                <div className={\`w-20 h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-2xl bg-\${profileOffer.color}-600 shadow-lg border-4 border-white\`}>
                   {profileOffer.initials}
                 </div>
                 <div>
@@ -584,7 +586,7 @@ export default function OfferProcessPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 transition-colors hover:border-emerald-200">
                         <div className="text-[10px] uppercase font-extrabold text-slate-500 mb-1.5">Offered Salary</div>
-                        <div className="text-xl font-black text-emerald-700 font-mono">{profileOffer.salary ? `₹ ${profileOffer.salary}` : '—'}</div>
+                        <div className="text-xl font-black text-emerald-700 font-mono">{profileOffer.salary ? \`₹ \${profileOffer.salary}\` : '—'}</div>
                       </div>
                       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 transition-colors hover:border-blue-200">
                         <div className="text-[10px] uppercase font-extrabold text-slate-500 mb-1.5">Expected DOJ</div>
@@ -644,21 +646,21 @@ export default function OfferProcessPage() {
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 ${profileOffer.salary ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`text-sm font-bold ${profileOffer.salary ? 'text-slate-800' : 'text-slate-400'}`}>Offer Finalized</div>
+                        <div className={\`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 \${profileOffer.salary ? 'bg-emerald-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`text-sm font-bold \${profileOffer.salary ? 'text-slate-800' : 'text-slate-400'}\`}>Offer Finalized</div>
                         <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase">Salary & DOJ configured</div>
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'bg-emerald-500' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-500' : 'bg-slate-300'}`}></div>
-                        <div className={`text-sm font-bold ${['Accepted', 'Joined'].includes(profileOffer.status) ? 'text-emerald-700' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'text-rose-700' : 'text-slate-400'}`}>
+                        <div className={\`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 \${['Accepted', 'Joined'].includes(profileOffer.status) ? 'bg-emerald-500' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'bg-rose-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`text-sm font-bold \${['Accepted', 'Joined'].includes(profileOffer.status) ? 'text-emerald-700' : profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'text-rose-700' : 'text-slate-400'}\`}>
                           {profileOffer.status === 'Declined' || profileOffer.status === 'Offer Rejected' ? 'Offer Rejected' : 'Offer Accepted'}
                         </div>
                       </div>
 
                       <div className="relative">
-                        <div className={`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 ${profileOffer.status === 'Joined' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                        <div className={`text-sm font-bold ${profileOffer.status === 'Joined' ? 'text-slate-800' : 'text-slate-400'}`}>Joined Directory</div>
+                        <div className={\`absolute -left-[25px] top-0.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm z-10 \${profileOffer.status === 'Joined' ? 'bg-emerald-500' : 'bg-slate-300'}\`}></div>
+                        <div className={\`text-sm font-bold \${profileOffer.status === 'Joined' ? 'text-slate-800' : 'text-slate-400'}\`}>Joined Directory</div>
                         {profileOffer.status === 'Joined' && <div className="text-[10px] font-bold text-emerald-600 mt-1 uppercase">{profileOffer.actualDoj}</div>}
                       </div>
 
@@ -695,3 +697,7 @@ export default function OfferProcessPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync('client/src/pages/OfferProcess.tsx', code);
+console.log('Fixed OfferProcess.tsx completely');
