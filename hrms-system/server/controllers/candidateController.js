@@ -7,7 +7,8 @@ class CandidateController {
       const result = await candidateService.getCandidates(req.query);
       return res.json(result);
     } catch (err) {
-      return errorRes(res, 'Failed to fetch candidates', [err.message], 500);
+      console.error('getCandidates ERROR:', err);
+      return errorRes(res, 'DB_ERR: ' + err.message, [err.message], 500);
     }
   }
 

@@ -248,6 +248,12 @@ export const API = {
       body: JSON.stringify(p)
     });
   },
+  async updateOfferStatus(p: any) {
+    return apiFetch('/offers/update-status', {
+      method: 'POST',
+      body: JSON.stringify(p)
+    });
+  },
   async updateOfferDetails(p: any) {
     return apiFetch('/offers/update-details', {
       method: 'POST',
