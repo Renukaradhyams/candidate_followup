@@ -21,6 +21,7 @@ export default function EmployeesPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [desigFilter, setDesigFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
   // Drawer
   const [drawerEmp, setDrawerEmp] = useState<any | null>(null);
@@ -63,6 +64,16 @@ export default function EmployeesPage() {
     return { base, incentive: 0, total: base, rawBase: str, rawIncentive: '' };
   };
 
+  const newestEmployee = useMemo(() => {
+    if (!employees || employees.length === 0) return null;
+    return [...employees].sort((a, b) => {
+      const dateA = a.actualDoj || a.offeredDoj || a.date ? new Date(a.actualDoj || a.offeredDoj || a.date).getTime() : 0;
+      const dateB = b.actualDoj || b.offeredDoj || b.date ? new Date(b.actualDoj || b.offeredDoj || b.date).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return String(b.appNo || '').localeCompare(String(a.appNo || ''));
+    })[0];
+  }, [employees]);
+
   const loadEmployees = useCallback(async () => {
     try {
       const d = await API.getEmployees();
@@ -100,11 +111,22 @@ export default function EmployeesPage() {
       );
     }
 
-    // Organize alphabetically by name
-    list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    // Dynamic Sorting
+    if (sortBy === 'name') {
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (sortBy === 'newest') {
+      list.sort((a, b) => {
+        const dateA = a.actualDoj || a.offeredDoj || a.date ? new Date(a.actualDoj || a.offeredDoj || a.date).getTime() : 0;
+        const dateB = b.actualDoj || b.offeredDoj || b.date ? new Date(b.actualDoj || b.offeredDoj || b.date).getTime() : 0;
+        if (dateA !== dateB) return dateB - dateA;
+        return String(b.appNo || '').localeCompare(String(a.appNo || ''));
+      });
+    } else if (sortBy === 'salary') {
+      list.sort((a, b) => parseSalaryAndIncentive(b.salary).total - parseSalaryAndIncentive(a.salary).total);
+    }
 
     setFiltered(list);
-  }, [employees, desigFilter, searchQuery]);
+  }, [employees, desigFilter, searchQuery, sortBy]);
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
@@ -324,6 +346,16 @@ export default function EmployeesPage() {
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
+              >
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="newest">Sort: Newest Joined</option>
+                <option value="salary">Sort: Highest Package</option>
+              </select>
             </div>
           </div>
 
@@ -345,8 +377,8 @@ export default function EmployeesPage() {
             />
             <MetricCard
               title="Newest Joined"
-              value={employees.length > 0 ? employees[0]?.name : '—'}
-              subtext={employees.length > 0 ? `DOJ: ${employees[0]?.actualDoj || employees[0]?.offeredDoj || 'Recent'}` : 'No records'}
+              value={newestEmployee ? newestEmployee.name : '—'}
+              subtext={newestEmployee ? `DOJ: ${newestEmployee.actualDoj || newestEmployee.offeredDoj || 'Recent'}` : 'No records'}
               icon={Users}
               color="gold"
             />
