@@ -270,14 +270,11 @@ export default function OfferProcessPage() {
     if (saving) return;
     setSaving(true);
     try {
-      const matched = (offers || []).find(o => o.appNo === appNo);
-      const joiningDate = matched?.estDoj || new Date().toISOString().slice(0, 10);
-      await API.acceptOffer({ appNo, remarks: 'Accepted via Offer Desk', joiningDate });
-      showToast('Offer accepted & candidate Joined! 🎉 Redirecting to Employees...', 'success');
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      await API.acceptOffer({ appNo, remarks: 'Accepted via Offer Desk', joiningDate: todayStr });
+      showToast('Offer accepted & candidate marked as Joined! 🎉', 'success');
       loadOffers();
-      setTimeout(() => {
-        navigate('/employees');
-      }, 1200);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
     } finally {

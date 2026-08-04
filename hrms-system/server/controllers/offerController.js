@@ -169,23 +169,13 @@ const acceptOffer = async (req, res) => {
     const { appNo, remarks, joiningDate } = req.body;
 
     const now = new Date();
-    let status = 'Accepted';
-    let candStatus = 'Offer Accepted';
-    let dojQuery = '';
-    const queryParams = [now];
+    const doj = joiningDate ? new Date(joiningDate) : now;
+    const dojVal = isNaN(doj.getTime()) ? now : doj;
 
-    if (joiningDate) {
-      status = 'Joined';
-      candStatus = 'Joined';
-      dojQuery = ', actual_doj = ?';
-      queryParams.push(new Date(joiningDate));
-    }
-    queryParams.push(appNo);
+    await db.query(`UPDATE selection_offers SET status = 'Joined', actual_doj = ?, updated_at = ? WHERE app_no = ?`, [dojVal, now, appNo]);
+    await db.query(`UPDATE candidates SET status = 'Joined', updated_at = ? WHERE app_no = ?`, [now, appNo]);
 
-    await db.query(`UPDATE selection_offers SET status = ?, updated_at = ?${dojQuery} WHERE app_no = ?`, [status, ...queryParams]);
-    await db.query(`UPDATE candidates SET status = ?, updated_at = ? WHERE app_no = ?`, [candStatus, now, appNo]);
-
-    await logAction(req.user ? req.user.username : 'HR', 'ACCEPT_OFFER', 'OFFER', { appNo, remarks, joiningDate });
+    await logAction(req.user ? req.user.username : 'HR', 'ACCEPT_OFFER', 'OFFER', { appNo, remarks, joiningDate: dojVal });
 
     return res.json({ success: true });
   } catch (err) {
