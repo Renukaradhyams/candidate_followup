@@ -464,22 +464,58 @@ class CandidateService {
     return [];
   }
 
-  async getKPIs() {
+  async getKPIs(range, fromDate, toDate) {
     try {
       const [candRows] = await pool.query(`SELECT status, created_at FROM candidates`);
-      const total = candRows.length;
 
-      const todayStr = new Date().toDateString();
+      let startTime = 0;
+      let endTime = Infinity;
+      const now = new Date();
+      const todayStr = now.toDateString();
+
+      if (range === 'today') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        startTime = start.getTime();
+        endTime = startTime + 86400000 - 1;
+      } else if (range === 'yesterday') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        startTime = start.getTime();
+        endTime = startTime + 86400000 - 1;
+      } else if (range === 'week') {
+        startTime = Date.now() - 7 * 86400000;
+      } else if (range === 'month') {
+        startTime = Date.now() - 30 * 86400000;
+      } else if (range === 'last_month') {
+        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        startTime = firstDayLastMonth.getTime();
+        endTime = lastDayLastMonth.getTime();
+      } else if (range === 'custom' && fromDate) {
+        startTime = new Date(fromDate).getTime();
+        endTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : startTime + 86400000 - 1;
+      }
+
+      const filteredRows = (range && range !== 'all')
+        ? candRows.filter(r => {
+            if (!r.created_at) return false;
+            const t = new Date(r.created_at).getTime();
+            return t >= startTime && t <= endTime;
+          })
+        : candRows;
+
+      const total = filteredRows.length;
+      const totalCandidatesAll = candRows.length;
+
       const todayCandidates = candRows.filter(r => r.created_at && new Date(r.created_at).toDateString() === todayStr).length;
-      const pendingReview = candRows.filter(r => r.status === 'New').length;
-      const shortlisted = candRows.filter((r) =>
+      const pendingReview = filteredRows.filter(r => r.status === 'New').length;
+      const shortlisted = filteredRows.filter((r) =>
         ['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)
       ).length;
-      const selected = candRows.filter((r) => r.status === 'Selected').length;
-      const joined = candRows.filter((r) => r.status === 'Joined').length;
-      const offerAccepted = candRows.filter((r) => r.status === 'Offer Accepted').length;
-      const rejected = candRows.filter((r) => r.status === 'Rejected').length;
-      const hold = candRows.filter((r) => r.status === 'Hold').length;
+      const selected = filteredRows.filter((r) => r.status === 'Selected').length;
+      const joined = filteredRows.filter((r) => r.status === 'Joined').length;
+      const offerAccepted = filteredRows.filter((r) => r.status === 'Offer Accepted').length;
+      const rejected = filteredRows.filter((r) => r.status === 'Rejected').length;
+      const hold = filteredRows.filter((r) => r.status === 'Hold').length;
 
       let offerRows = [];
       try {
@@ -504,8 +540,55 @@ class CandidateService {
         activeEmployees = (empRows || []).length;
       } catch (e) {}
 
+      // Generate date-wise breakdown map
+      const dailyMap = {};
+      candRows.forEach(r => {
+        if (!r.created_at) return;
+        const d = new Date(r.created_at);
+        if (isNaN(d.getTime())) return;
+
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dateKey = `${yyyy}-${mm}-${dd}`;
+
+        if (!dailyMap[dateKey]) {
+          const formattedDate = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          dailyMap[dateKey] = {
+            date: dateKey,
+            formattedDate,
+            rawTimestamp: new Date(yyyy, d.getMonth(), d.getDate()).getTime(),
+            total: 0,
+            shortlisted: 0,
+            selected: 0,
+            joined: 0,
+            rejected: 0,
+            hold: 0,
+            new: 0
+          };
+        }
+
+        dailyMap[dateKey].total += 1;
+        if (['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)) {
+          dailyMap[dateKey].shortlisted += 1;
+        } else if (r.status === 'Selected') {
+          dailyMap[dateKey].selected += 1;
+        } else if (r.status === 'Joined') {
+          dailyMap[dateKey].joined += 1;
+        } else if (r.status === 'Rejected') {
+          dailyMap[dateKey].rejected += 1;
+        } else if (r.status === 'Hold') {
+          dailyMap[dateKey].hold += 1;
+        } else if (r.status === 'New') {
+          dailyMap[dateKey].new += 1;
+        }
+      });
+
+      const dailyBreakdown = Object.values(dailyMap).sort((a, b) => b.rawTimestamp - a.rawTimestamp);
+
       return {
         totalCandidates: total,
+        totalCandidatesAll,
         todayCandidates,
         pendingReview,
         interviewScheduled: interviewsToday,
@@ -530,7 +613,8 @@ class CandidateService {
         onboarding: offerAccepted,
         interviewsToday,
         newCandidates: pendingReview,
-        hold
+        hold,
+        dailyBreakdown
       };
     } catch (err) {
       return {

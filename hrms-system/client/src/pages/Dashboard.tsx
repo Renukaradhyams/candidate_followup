@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeRange, setActiveRange] = useState('today');
+  const [activeRange, setActiveRange] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -45,7 +45,8 @@ export default function DashboardPage() {
     onboarding: 0,
     interviewsToday: 0,
     rejected: 0,
-    hold: 0
+    hold: 0,
+    dailyBreakdown: [] as any[]
   });
 
   const [pendingActions, setPendingActions] = useState<{ text: string; priority: string }[]>([]);
@@ -61,10 +62,10 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     try {
       const [kData, pData, sData, cData] = await Promise.all([
-        API.getKPIs(activeRange),
+        API.getKPIs(activeRange, fromDate, toDate),
         API.getPendingActions(),
         API.getSourceBreakdown(),
-        API.getCandidates({ limit: 500 })
+        API.getCandidates({ limit: 1000 })
       ]);
 
       if (kData) setKpis(kData);
@@ -76,7 +77,7 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.warn('Dashboard data load warning:', err.message);
     }
-  }, [activeRange]);
+  }, [activeRange, fromDate, toDate]);
 
   useEffect(() => {
     if (!Auth.check()) {
@@ -88,39 +89,105 @@ export default function DashboardPage() {
     loadData();
   }, [navigate, loadData]);
 
-  // Date Filtering logic
+  // Date Filtering logic for candidates table
   useEffect(() => {
     let list = [...candidates];
 
     if (activeRange === 'today') {
       const today = new Date().toDateString();
       list = list.filter(c => c.rawDate && new Date(c.rawDate).toDateString() === today);
+    } else if (activeRange === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(yest.getDate() - 1);
+      const yestStr = yest.toDateString();
+      list = list.filter(c => c.rawDate && new Date(c.rawDate).toDateString() === yestStr);
     } else if (activeRange === 'week') {
-      const now = new Date();
-      const weekAgo = new Date(now.setDate(now.getDate() - 7)).getTime();
+      const weekAgo = Date.now() - 7 * 86400000;
       list = list.filter(c => c.rawDate && c.rawDate >= weekAgo);
     } else if (activeRange === 'month') {
-      const now = new Date();
-      const monthAgo = new Date(now.setMonth(now.getMonth() - 1)).getTime();
+      const monthAgo = Date.now() - 30 * 86400000;
       list = list.filter(c => c.rawDate && c.rawDate >= monthAgo);
+    } else if (activeRange === 'last_month') {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+      list = list.filter(c => c.rawDate && c.rawDate >= firstDay && c.rawDate <= lastDay);
     } else if (activeRange === 'custom' && fromDate) {
       const start = new Date(fromDate).getTime();
-      const end = toDate ? new Date(toDate).setHours(23, 59, 59) : start + 86400000;
+      const end = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : start + 86400000 - 1;
       list = list.filter(c => c.rawDate && c.rawDate >= start && c.rawDate <= end);
     }
+    // If activeRange === 'all', all candidates are retained
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        c.appNo.toLowerCase().includes(q) || 
-        c.phone.includes(q)
+        (c.name && c.name.toLowerCase().includes(q)) || 
+        (c.appNo && c.appNo.toLowerCase().includes(q)) || 
+        (c.phone && c.phone.includes(q))
       );
     }
 
     setFilteredCandidates(list);
     setCurrentPage(1);
   }, [candidates, activeRange, fromDate, toDate, searchQuery]);
+
+  // Compute Day-Wise / Date-Wise Breakdown
+  const dateWiseBreakdown = useMemo(() => {
+    const map: Record<string, {
+      date: string;
+      formattedDate: string;
+      rawTimestamp: number;
+      total: number;
+      shortlisted: number;
+      selected: number;
+      joined: number;
+      rejected: number;
+      hold: number;
+    }> = {};
+
+    filteredCandidates.forEach(c => {
+      let rawMs = c.rawDate;
+      if (!rawMs && c.date) {
+        rawMs = new Date(c.date).getTime();
+      }
+      if (!rawMs) return;
+
+      const d = new Date(rawMs);
+      if (isNaN(d.getTime())) return;
+
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!map[dateKey]) {
+        map[dateKey] = {
+          date: dateKey,
+          formattedDate: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+          rawTimestamp: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(),
+          total: 0,
+          shortlisted: 0,
+          selected: 0,
+          joined: 0,
+          rejected: 0,
+          hold: 0
+        };
+      }
+
+      map[dateKey].total += 1;
+      const status = (c.status || '').toLowerCase();
+      if (status === 'selected') {
+        map[dateKey].selected += 1;
+      } else if (status === 'joined') {
+        map[dateKey].joined += 1;
+      } else if (status === 'rejected') {
+        map[dateKey].rejected += 1;
+      } else if (status === 'hold') {
+        map[dateKey].hold += 1;
+      } else if (['shortlisted', '1st call done', '2nd call done', 'interview scheduled', 'interviewed'].includes(status)) {
+        map[dateKey].shortlisted += 1;
+      }
+    });
+
+    return Object.values(map).sort((a, b) => b.rawTimestamp - a.rawTimestamp);
+  }, [filteredCandidates]);
 
   const totalPages = Math.ceil(filteredCandidates.length / pageSize) || 1;
   const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -165,7 +232,9 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <div className="flex items-center bg-[#F9F7F4] p-1 rounded-xl border border-[#e2dfd7]">
                 {[
+                  { key: 'all', label: 'All Time' },
                   { key: 'today', label: 'Today' },
+                  { key: 'yesterday', label: 'Yesterday' },
                   { key: 'week', label: 'Week' },
                   { key: 'month', label: 'Month' },
                   { key: 'last_month', label: 'Last Month' }
@@ -374,6 +443,77 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Date-Wise Application Trends & Breakdown Table */}
+          <div className="card-glass p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e2dfd7] pb-3">
+              <div>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight flex items-center gap-2">
+                  <Calendar className="w-4.5 h-4.5 text-[#C9952A]" />
+                  <span>Date-Wise Application Trends &amp; Daily Breakdown</span>
+                </h3>
+                <p className="text-xs text-[#777777] font-medium mt-0.5">
+                  Day-by-day candidate registration breakdown and recruitment pipeline progress.
+                </p>
+              </div>
+              <span className="text-xs font-extrabold text-[#1E2D4E] bg-[#1E2D4E]/10 px-3 py-1 rounded-full self-start sm:self-auto">
+                {dateWiseBreakdown.length} Active Days
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/50">
+                    <th className="py-3 px-4">Applied Date</th>
+                    <th className="py-3 px-4 text-center">Total Applications</th>
+                    <th className="py-3 px-4 text-center">Shortlisted</th>
+                    <th className="py-3 px-4 text-center">Selected</th>
+                    <th className="py-3 px-4 text-center">Joined</th>
+                    <th className="py-3 px-4 text-center">Rejected</th>
+                    <th className="py-3 px-4 text-center">On Hold</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2dfd7]/60">
+                  {dateWiseBreakdown.length > 0 ? (
+                    dateWiseBreakdown.map((row) => (
+                      <tr key={row.date} className="hover:bg-black/5 transition-colors font-medium">
+                        <td className="py-3.5 px-4 font-bold text-[#1E2D4E] flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#C9952A]" />
+                          <span>{row.formattedDate}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-black text-[#1E2D4E]">{row.total}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-sky-800">{row.shortlisted}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-emerald-700">{row.selected}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-teal-800">{row.joined}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-rose-700">{row.rejected}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-amber-700">{row.hold}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-xs text-[#777777] font-semibold">
+                        No day-wise candidate records found for the selected date range.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {dateWiseBreakdown.length > 0 && (
+                  <tfoot>
+                    <tr className="border-t-2 border-[#e2dfd7] bg-[#F9F7F4] font-black text-xs text-[#1E2D4E]">
+                      <td className="py-3 px-4">Total ({dateWiseBreakdown.length} active days)</td>
+                      <td className="py-3 px-4 text-center">{dateWiseBreakdown.reduce((sum, r) => sum + r.total, 0)}</td>
+                      <td className="py-3 px-4 text-center text-sky-800">{dateWiseBreakdown.reduce((sum, r) => sum + r.shortlisted, 0)}</td>
+                      <td className="py-3 px-4 text-center text-emerald-700">{dateWiseBreakdown.reduce((sum, r) => sum + r.selected, 0)}</td>
+                      <td className="py-3 px-4 text-center text-teal-800">{dateWiseBreakdown.reduce((sum, r) => sum + r.joined, 0)}</td>
+                      <td className="py-3 px-4 text-center text-rose-700">{dateWiseBreakdown.reduce((sum, r) => sum + r.rejected, 0)}</td>
+                      <td className="py-3 px-4 text-center text-amber-700">{dateWiseBreakdown.reduce((sum, r) => sum + r.hold, 0)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
             </div>
           </div>
 
