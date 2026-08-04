@@ -170,7 +170,10 @@ const getInterviews = async (req, res) => {
 
     return res.json({ interviews });
   } catch (err) {
-    console.error('getInterviews error:', err);
+    // Log the actual DB error with full details for diagnostics
+    console.error('[getInterviews ERROR] DB query failed:', err.code, err.message);
+    // Return HTTP 200 with empty array to maintain backward API compatibility
+    // InterviewPanel.tsx checks (res && res.interviews) before rendering
     return res.json({ interviews: [] });
   }
 };

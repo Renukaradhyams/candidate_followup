@@ -163,6 +163,85 @@ app.get('/api/wipe-db', async (req, res) => {
   res.json({ success: true });
 });
 
+// ── Self-Healing DB Migration ─────────────────────────────────────────────────
+// Hit /api/fix-db-schema once to create any missing tables on the live server
+app.get('/api/fix-db-schema', async (req, res) => {
+  const results = [];
+  try {
+    const conn = await pool.getConnection();
+    const migrations = [
+      `CREATE TABLE IF NOT EXISTS \`page_visibility\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`role_page_key\` VARCHAR(200) NOT NULL UNIQUE,
+        \`role\` VARCHAR(100) NOT NULL,
+        \`page_key\` VARCHAR(100) NOT NULL,
+        \`allowed\` BOOLEAN DEFAULT TRUE,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+      `CREATE TABLE IF NOT EXISTS \`department_sections\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`department\` VARCHAR(100) NOT NULL,
+        \`section_name\` VARCHAR(100) NOT NULL,
+        \`description\` VARCHAR(255),
+        \`active\` BOOLEAN DEFAULT TRUE,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`dept_sec\` (\`department\`, \`section_name\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+      `CREATE TABLE IF NOT EXISTS \`department_hiring_targets\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`department\` VARCHAR(100) NOT NULL,
+        \`section\` VARCHAR(100) NOT NULL,
+        \`designation\` VARCHAR(100) NOT NULL,
+        \`required_openings\` INT DEFAULT 10,
+        \`hiring_target\` INT DEFAULT 10,
+        \`remarks\` TEXT,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`dept_sec_desig\` (\`department\`, \`section\`, \`designation\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+    ];
+    for (const sql of migrations) {
+      try {
+        await conn.query(sql);
+        results.push({ ok: true, sql: sql.substring(0, 60) });
+      } catch (e) {
+        results.push({ ok: false, sql: sql.substring(0, 60), error: e.message });
+      }
+    }
+    // Seed default page_visibility rows (idempotent)
+    const defaultVisibility = [
+      ['HR_dashboard','HR','dashboard',true],['HR_candidates','HR','candidates',true],
+      ['HR_interview','HR','interview',true],['HR_offer','HR','offer',true],
+      ['HR_onboarding','HR','onboarding',true],['HR_exit','HR','exit',true],
+      ['HR_employees','HR','employees',true],['HR_settings','HR','settings',false],
+      ['HR_dept-hiring','HR','dept-hiring',true],
+      ['Manager_dashboard','Manager','dashboard',true],['Manager_candidates','Manager','candidates',true],
+      ['Manager_interview','Manager','interview',true],['Manager_offer','Manager','offer',false],
+      ['Manager_onboarding','Manager','onboarding',true],['Manager_exit','Manager','exit',true],
+      ['Manager_employees','Manager','employees',true],['Manager_settings','Manager','settings',false],
+      ['Manager_dept-hiring','Manager','dept-hiring',true],
+      ['Admin_dashboard','Admin','dashboard',true],['Admin_candidates','Admin','candidates',true],
+      ['Admin_interview','Admin','interview',true],['Admin_offer','Admin','offer',true],
+      ['Admin_onboarding','Admin','onboarding',true],['Admin_exit','Admin','exit',true],
+      ['Admin_employees','Admin','employees',true],['Admin_settings','Admin','settings',true],
+      ['Admin_dept-hiring','Admin','dept-hiring',true]
+    ];
+    for (const [key, role, page, allowed] of defaultVisibility) {
+      try {
+        await conn.query(
+          `INSERT INTO page_visibility (role_page_key, role, page_key, allowed) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE allowed=allowed`,
+          [key, role, page, allowed ? 1 : 0]
+        );
+      } catch(e) {}
+    }
+    conn.release();
+    res.json({ success: true, message: 'Schema fix complete. Missing tables created.', results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/v1', v1Routes);
 app.use('/api', legacyRoutes);

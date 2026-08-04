@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcrypt');
 
 // Log only to console (no file writing to avoid permission issues on Hostinger)
@@ -261,6 +262,16 @@ async function autoInitializeDatabase(pool) {
         \`admin_visible\` BOOLEAN DEFAULT TRUE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+      // page_visibility table: used by settingsController.getPageSettings / savePageSettings
+      `CREATE TABLE IF NOT EXISTS \`page_visibility\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`role_page_key\` VARCHAR(200) NOT NULL UNIQUE,
+        \`role\` VARCHAR(100) NOT NULL,
+        \`page_key\` VARCHAR(100) NOT NULL,
+        \`allowed\` BOOLEAN DEFAULT TRUE,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
       `CREATE TABLE IF NOT EXISTS \`broadcast_messages\` (
         \`id\` INT AUTO_INCREMENT PRIMARY KEY,
         \`title\` VARCHAR(255) NOT NULL,
@@ -452,6 +463,50 @@ async function autoInitializeDatabase(pool) {
       try {
         await connection.query(`INSERT IGNORE INTO designations (name) VALUES (?)`, [r]);
       } catch(e) {}
+    }
+
+    // Seed default page_visibility rows (allow all by default for all roles)
+    try {
+      const defaultVisibility = [
+        ['HR_dashboard', 'HR', 'dashboard', true],
+        ['HR_candidates', 'HR', 'candidates', true],
+        ['HR_interview', 'HR', 'interview', true],
+        ['HR_offer', 'HR', 'offer', true],
+        ['HR_onboarding', 'HR', 'onboarding', true],
+        ['HR_exit', 'HR', 'exit', true],
+        ['HR_employees', 'HR', 'employees', true],
+        ['HR_settings', 'HR', 'settings', false],
+        ['HR_dept-hiring', 'HR', 'dept-hiring', true],
+        ['Manager_dashboard', 'Manager', 'dashboard', true],
+        ['Manager_candidates', 'Manager', 'candidates', true],
+        ['Manager_interview', 'Manager', 'interview', true],
+        ['Manager_offer', 'Manager', 'offer', false],
+        ['Manager_onboarding', 'Manager', 'onboarding', true],
+        ['Manager_exit', 'Manager', 'exit', true],
+        ['Manager_employees', 'Manager', 'employees', true],
+        ['Manager_settings', 'Manager', 'settings', false],
+        ['Manager_dept-hiring', 'Manager', 'dept-hiring', true],
+        ['Admin_dashboard', 'Admin', 'dashboard', true],
+        ['Admin_candidates', 'Admin', 'candidates', true],
+        ['Admin_interview', 'Admin', 'interview', true],
+        ['Admin_offer', 'Admin', 'offer', true],
+        ['Admin_onboarding', 'Admin', 'onboarding', true],
+        ['Admin_exit', 'Admin', 'exit', true],
+        ['Admin_employees', 'Admin', 'employees', true],
+        ['Admin_settings', 'Admin', 'settings', true],
+        ['Admin_dept-hiring', 'Admin', 'dept-hiring', true]
+      ];
+      for (const [key, role, page, allowed] of defaultVisibility) {
+        await connection.query(
+          `INSERT INTO page_visibility (role_page_key, role, page_key, allowed)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE allowed = allowed`,
+          [key, role, page, allowed ? 1 : 0]
+        );
+      }
+      logDebug(`[Auto DB Initializer] page_visibility seeded with defaults`);
+    } catch(e) {
+      logDebug(`[Auto DB Initializer] page_visibility seed warning:`, e.message);
     }
 
     // ------------------

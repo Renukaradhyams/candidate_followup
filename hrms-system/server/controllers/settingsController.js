@@ -81,6 +81,10 @@ const getPageSettings = async (req, res) => {
     });
     return res.json(settings);
   } catch (err) {
+    // Log the actual DB error for diagnostics — NEVER silently hide it
+    console.error('[getPageSettings ERROR] DB query failed:', err.code, err.message);
+    // Return HTTP 200 with empty object to maintain backward API compatibility
+    // Frontend (Sidebar.tsx, Settings.tsx) expect {} on failure and use hardcoded defaults
     return res.json({});
   }
 };

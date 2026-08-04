@@ -1,5 +1,4 @@
 const mysql = require('mysql2/promise');
-const path = require('path');
 
 // NOTE: Do NOT call dotenv.config() here.
 // server/index.js handles all env loading BEFORE this module is required.
@@ -21,12 +20,14 @@ const pool = mysql.createPool({
   database: dbName,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
+  queueLimit: 50,        // Allow up to 50 queued requests (was 0 = no queue limit, can cause memory issues)
   dateStrings: true,
-  connectTimeout: 10000,
+  connectTimeout: 5000,  // 5s max per connection attempt (was 10s - too slow for Passenger timeout)
+  enableKeepAlive: true, // Keep connections alive to prevent stale connection 503s
+  keepAliveInitialDelay: 0
 });
 
-// Verify connection at startup (non-blocking)
+// Verify connection at startup (non-blocking - NEVER blocks the app from starting)
 pool.getConnection()
   .then(conn => {
     console.log(`====================================================`);
@@ -45,6 +46,7 @@ pool.getConnection()
     console.error(`  Error Code: ${err.code || 'UNKNOWN'}`);
     console.error(`  Error Message: ${err.message}`);
     console.error(`====================================================`);
+    // DO NOT exit here — app stays alive so health endpoint works even when DB is down
   });
 
 module.exports = pool;
