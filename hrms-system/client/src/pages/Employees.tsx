@@ -13,6 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 
 import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
+import { BSC_DEPARTMENTS } from '../utils/bscDepartments';
 
 export default function EmployeesPage() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function EmployeesPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [desigFilter, setDesigFilter] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
   // Recruitment Analytics & Pipeline Date Range Filter State
@@ -110,6 +112,10 @@ export default function EmployeesPage() {
       list = list.filter(e => isDateInRange(getBusinessDate(e, 'EMPLOYEES'), activeRange, fromDate, toDate));
     }
 
+    if (deptFilter) {
+      list = list.filter(e => (e.department || '').toLowerCase().trim() === deptFilter.toLowerCase().trim());
+    }
+
     if (desigFilter) {
       list = list.filter(e => e.desig === desigFilter);
     }
@@ -137,7 +143,7 @@ export default function EmployeesPage() {
     }
 
     setFiltered(list);
-  }, [employees, desigFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
+  }, [employees, deptFilter, desigFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
@@ -297,6 +303,11 @@ export default function EmployeesPage() {
 
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
+  const uniqueDepts = useMemo(() => {
+    const fromEmp = employees.map(e => e.department).filter(Boolean);
+    const set = new Set([...BSC_DEPARTMENTS, ...fromEmp]);
+    return Array.from(set).sort();
+  }, [employees]);
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
@@ -415,6 +426,17 @@ export default function EmployeesPage() {
                   className="pl-9 pr-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] w-56 shadow-xs"
                 />
               </div>
+
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
+              >
+                <option value="">All Departments</option>
+                {uniqueDepts.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
 
               <select
                 value={desigFilter}
