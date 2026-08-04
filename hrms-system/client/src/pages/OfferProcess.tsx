@@ -147,6 +147,10 @@ export default function OfferProcessPage() {
     let list = [...(offers || [])];
 
     const getItemDate = (item: any): Date | null => {
+      if (item.status === 'Joined' && item.actualDoj) {
+        const d = new Date(item.actualDoj);
+        if (!isNaN(d.getTime())) return d;
+      }
       if (item.rawDate) {
         const d = new Date(item.rawDate);
         if (!isNaN(d.getTime())) return d;

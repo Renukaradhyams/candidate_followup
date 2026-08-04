@@ -244,11 +244,13 @@ class CandidateController {
                 so.est_doj as offer_est_doj, 
                 so.actual_doj as offer_actual_doj,
                 so.status as offer_status,
-                so.remarks as offer_remarks
+                so.remarks as offer_remarks,
+                so.updated_at as offer_updated_at
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
-         WHERE LOWER(TRIM(c.status)) IN ('offer accepted', 'joined', 'hired')
-            OR LOWER(TRIM(so.status)) IN ('accepted', 'joined')
+         WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired')
+            OR LOWER(TRIM(so.status)) = 'joined'
+         GROUP BY c.app_no
          ORDER BY LOWER(c.name) ASC`
       );
 
@@ -261,6 +263,13 @@ class CandidateController {
         const colorIndex = ((r.name ? r.name.charCodeAt(0) : 0) + (r.name ? r.name.charCodeAt(1) || 0 : 0)) % colors.length;
         
         const createdDate = new Date(r.created_at || Date.now());
+
+        // Joining Date for filtering Joined employees
+        const joiningDateObj = r.offer_actual_doj 
+          ? new Date(r.offer_actual_doj) 
+          : (r.offered_doj ? new Date(r.offered_doj) : (r.offer_updated_at ? new Date(r.offer_updated_at) : createdDate));
+        
+        const rawDate = isNaN(joiningDateObj.getTime()) ? createdDate.getTime() : joiningDateObj.getTime();
 
         const offeredDoj = r.offered_doj 
           ? new Date(r.offered_doj).toISOString().split('T')[0] 
@@ -285,7 +294,7 @@ class CandidateController {
           department: r.department || '',
           branch: r.branch || '',
           reportingManager: r.reporting_manager || '',
-          status: r.status || r.offer_status || 'Joined',
+          status: 'Joined',
           salary: salaryOffered,
           expectedSalary: r.expected_salary || '',
           previousSalary: r.current_salary || r.previous_salary || '',
@@ -321,8 +330,8 @@ class CandidateController {
           q4: r.q4 || '',
           remarks: r.remarks || r.offer_remarks || '',
           createdAt: r.created_at || null,
-          rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime(),
-          date: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          rawDate,
+          date: joiningDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
         };
       });
 

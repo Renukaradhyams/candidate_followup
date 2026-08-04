@@ -27,6 +27,11 @@ const getOffers = async (req, res) => {
       const colorIndex = (r.name.charCodeAt(0) + (r.name.charCodeAt(1) || 0)) % colors.length;
 
       const createdDate = new Date(r.created_at || Date.now());
+      const isJoinedStatus = (r.status || '').toLowerCase().trim() === 'joined';
+      const joinedDateObj = r.actual_doj ? new Date(r.actual_doj) : (r.updated_at ? new Date(r.updated_at) : createdDate);
+      const rawDate = isJoinedStatus
+        ? (isNaN(joinedDateObj.getTime()) ? createdDate.getTime() : joinedDateObj.getTime())
+        : (isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime());
 
       return {
         appNo: r.app_no,
@@ -50,7 +55,7 @@ const getOffers = async (req, res) => {
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
         assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null,
         createdAt: r.created_at || null,
-        rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime(),
+        rawDate,
         date: fmt(r.created_at)
       };
     });

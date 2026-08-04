@@ -105,6 +105,10 @@ export default function EmployeesPage() {
     let list = [...employees];
 
     const getItemDate = (item: any): Date | null => {
+      if (item.actualDoj) {
+        const d = new Date(item.actualDoj);
+        if (!isNaN(d.getTime())) return d;
+      }
       if (item.rawDate) {
         const d = new Date(item.rawDate);
         if (!isNaN(d.getTime())) return d;
@@ -115,10 +119,6 @@ export default function EmployeesPage() {
       }
       if (item.date) {
         const d = new Date(item.date);
-        if (!isNaN(d.getTime())) return d;
-      }
-      if (item.actualDoj) {
-        const d = new Date(item.actualDoj);
         if (!isNaN(d.getTime())) return d;
       }
       if (item.offeredDoj) {
