@@ -196,39 +196,35 @@ export default function DepartmentHiringPage() {
   // Calculate Filled Sales Executives count per Department & Section
   const filledSalesExecCountMap = useMemo(() => {
     const map: Record<string, number> = {};
+    const processedEmpIds = new Set<string>();
 
-    // Count from onboarded employees directory
     employees.forEach(emp => {
-      const desig = (emp.desig || emp.designation || '').toLowerCase();
-      // Only count Sales Executives
-      const isSalesExec = desig.includes('sales') || desig.includes('executive') || desig === 'sales executive';
-      if (!isSalesExec && desig !== '') return;
+      const empId = String(emp.id || emp.appNo || emp.employeeCode || emp.app_no || '');
+      if (empId && processedEmpIds.has(empId)) return;
+      if (empId) processedEmpIds.add(empId);
 
-      const dept = emp.department || 'Mens';
-      const sec = emp.section || (activeDeptSectionsMap[dept] ? activeDeptSectionsMap[dept][0] : 'General');
-      
-      const key = `${dept}||${sec}`;
-      map[key] = (map[key] || 0) + 1;
-      map[dept] = (map[dept] || 0) + 1;
-    });
+      const desig = (emp.desig || emp.designation || '').toLowerCase().trim();
+      if (!desig) return;
 
-    // Count from joined candidates
-    candidates.forEach(cand => {
-      if (cand.status === 'Joined') {
-        const desig = (cand.designation || '').toLowerCase();
-        const isSalesExec = desig.includes('sales') || desig.includes('executive') || desig === 'sales executive';
-        if (!isSalesExec && desig !== '') return;
+      // Strictly check for Sales Executive roles
+      const isSalesExec = desig.includes('sales executive') || 
+                          desig.includes('sales staff') || 
+                          desig.includes('sales exec') || 
+                          desig === 'sales executive' || 
+                          desig === 'sales';
+      if (!isSalesExec) return;
 
-        const dept = cand.department || 'Mens';
-        const sec = cand.section || (activeDeptSectionsMap[dept] ? activeDeptSectionsMap[dept][0] : 'General');
+      const dept = emp.department || emp.dept;
+      const sec = emp.section;
 
+      if (dept && sec) {
         const key = `${dept}||${sec}`;
         map[key] = (map[key] || 0) + 1;
       }
     });
 
     return map;
-  }, [employees, candidates, activeDeptSectionsMap]);
+  }, [employees]);
 
   // Build Department Hierarchy Nodes (Tree Data)
   const treeHierarchy = useMemo(() => {
@@ -244,13 +240,14 @@ export default function DepartmentHiringPage() {
         const rowKey = `${dept}||${sec}||Sales Executive`;
         const target = targets[rowKey];
 
-        const required = target ? target.required : 10;
         const filled = filledSalesExecCountMap[`${dept}||${sec}`] || 0;
+        const required = target ? target.required : (filled > 0 ? filled : 0);
         const remaining = Math.max(0, required - filled);
-        const percentage = required > 0 ? Math.round((filled / required) * 100) : 0;
+        const percentage = required > 0 ? Math.round((filled / required) * 100) : (filled > 0 ? 100 : 100);
 
         let status: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant' = 'In Progress';
-        if (percentage >= 100) status = 'Completed';
+        if (required === 0 && filled === 0) status = 'Completed';
+        else if (percentage >= 100) status = 'Completed';
         else if (percentage >= 75) status = 'Almost Full';
         else if (percentage > 0) status = 'In Progress';
         else status = 'Vacant';
@@ -272,7 +269,7 @@ export default function DepartmentHiringPage() {
       });
 
       const deptRemaining = Math.max(0, deptReq - deptFilled);
-      const deptPct = deptReq > 0 ? Math.round((deptFilled / deptReq) * 100) : 0;
+      const deptPct = deptReq > 0 ? Math.round((deptFilled / deptReq) * 100) : (deptFilled > 0 ? 100 : 100);
 
       let deptStatus: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant' = 'In Progress';
       if (deptPct >= 100) deptStatus = 'Completed';
@@ -361,15 +358,14 @@ export default function DepartmentHiringPage() {
     let totalSections = 0;
     let totalReq = 0;
     let totalFilled = 0;
-    let totalRemaining = 0;
 
     filteredTreeHierarchy.forEach(d => {
       totalSections += d.sections.length;
       totalReq += d.required;
       totalFilled += d.filled;
-      totalRemaining += d.remaining;
     });
 
+    const totalRemaining = Math.max(0, totalReq - totalFilled);
     const overallPct = totalReq > 0 ? Math.round((totalFilled / totalReq) * 100) : 0;
 
     return {
@@ -438,17 +434,19 @@ export default function DepartmentHiringPage() {
   };
 
   const toggleExpandDept = (dept: string) => {
-    setExpandedDepts(prev => ({ ...prev, [dept]: !prev[dept] }));
+    setExpandedDepts(prev => ({ ...prev, [dept]: prev[dept] === false ? true : false }));
   };
 
   const expandAllTree = () => {
     const allExp: Record<string, boolean> = {};
-    BSC_DEPARTMENTS.forEach(d => { allExp[d] = true; });
+    Object.keys(activeDeptSectionsMap).forEach(d => { allExp[d] = true; });
     setExpandedDepts(allExp);
   };
 
   const collapseAllTree = () => {
-    setExpandedDepts({});
+    const allColl: Record<string, boolean> = {};
+    Object.keys(activeDeptSectionsMap).forEach(d => { allColl[d] = false; });
+    setExpandedDepts(allColl);
   };
 
   const isHR = session?.role === 'HR' || session?.role === 'Admin' || session?.role === 'Super Admin';
@@ -658,7 +656,7 @@ export default function DepartmentHiringPage() {
             <div className="space-y-3">
               {filteredTreeHierarchy.length > 0 ? (
                 filteredTreeHierarchy.map((deptNode) => {
-                  const isExpanded = expandedDepts[deptNode.department] ?? true;
+                  const isExpanded = expandedDepts[deptNode.department] !== false;
 
                   let deptBadgeColor = 'blue';
                   if (deptNode.status === 'Completed') deptBadgeColor = 'green';

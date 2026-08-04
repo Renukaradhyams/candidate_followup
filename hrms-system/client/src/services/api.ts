@@ -324,7 +324,10 @@ export const API = {
   async getDepartmentSections() { return apiFetch('/dept-hiring/sections'); },
   async addDepartmentSection(payload: any) { return apiFetch('/dept-hiring/sections/add', { method: 'POST', body: JSON.stringify(payload) }); },
   async editDepartmentSection(payload: any) { return apiFetch('/dept-hiring/sections/edit', { method: 'POST', body: JSON.stringify(payload) }); },
-  async deleteDepartmentSection(id: number | string) { return apiFetch('/dept-hiring/sections/delete', { method: 'POST', body: JSON.stringify({ id }) }); },
+  async deleteDepartmentSection(payload: number | string | { id?: number | string; department?: string; sectionName?: string }) { 
+    const bodyObj = typeof payload === 'object' ? payload : { id: payload };
+    return apiFetch('/dept-hiring/sections/delete', { method: 'POST', body: JSON.stringify(bodyObj) }); 
+  },
 
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {

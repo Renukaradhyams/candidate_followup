@@ -213,12 +213,14 @@ class DeptHiringController {
   // POST /api/dept-hiring/sections/delete
   async deleteDepartmentSection(req, res) {
     try {
-      const { id } = req.body;
-      if (!id) {
-        return res.status(400).json({ success: false, error: 'Section ID is required' });
+      const { id, department, sectionName } = req.body;
+      if (id) {
+        await pool.query(`DELETE FROM department_sections WHERE id = ?`, [id]);
+      } else if (department && sectionName) {
+        await pool.query(`DELETE FROM department_sections WHERE department = ? AND section_name = ?`, [department, sectionName]);
+      } else {
+        return res.status(400).json({ success: false, error: 'Section ID or Department & Section Name required' });
       }
-
-      await pool.query(`UPDATE department_sections SET active = FALSE WHERE id = ?`, [id]);
       return res.json({ success: true, message: 'Section deleted successfully' });
     } catch (err) {
       console.error('[deleteDepartmentSection Error]', err);

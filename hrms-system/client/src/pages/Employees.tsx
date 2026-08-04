@@ -742,10 +742,29 @@ export default function EmployeesPage() {
                       <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
                     </div>
                     <div className="pt-2 border-t border-[#e2dfd7]/60">
-                      <span className="text-[#777777] block text-[10.5px] mb-1 font-bold uppercase">Shortlisting & HR Remarks:</span>
+                      <span className="text-[#777777] block text-[10.5px] mb-1 font-bold uppercase">Shortlisting &amp; HR Remarks:</span>
                       <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] italic">
                         {drawerEmp.remarks || 'No remarks recorded.'}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Optional Interview Questions & Evaluation Section */}
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#C9952A]" />
+                      <span>Interview Questions &amp; Evaluation Notes (Optional)</span>
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {drawerEmp.questionNotes || drawerEmp.evaluationNotes ? (
+                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#1E2D4E] font-medium whitespace-pre-wrap">
+                          {drawerEmp.questionNotes || drawerEmp.evaluationNotes}
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#777777] text-center font-medium italic">
+                          No interview question evaluations recorded (Optional).
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

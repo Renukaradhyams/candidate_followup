@@ -802,7 +802,7 @@ export default function SectionAllocationPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#777777]">Reporting Manager:</span>
-                    <strong className="text-[#1E2D4E]">Store Head / Floor Supervisor</strong>
+                    <strong className="text-[#1E2D4E]">{overviewModal.emp.department} Department Manager</strong>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-[#777777]">Workplace:</span>

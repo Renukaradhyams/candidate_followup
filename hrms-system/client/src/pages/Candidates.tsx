@@ -746,6 +746,25 @@ export default function CandidatesPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Optional Interview Questions & Evaluation Section */}
+                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
+                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-[#C9952A]" />
+                      <span>Interview Questions &amp; Shortlist Evaluation (Optional)</span>
+                    </h4>
+                    <div className="space-y-2 text-xs">
+                      {drawerCandidate.questionNotes || drawerCandidate.evaluationNotes ? (
+                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#1E2D4E] font-medium whitespace-pre-wrap">
+                          {drawerCandidate.questionNotes || drawerCandidate.evaluationNotes}
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#777777] text-center font-medium italic">
+                          No interview question evaluations recorded yet (Optional).
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
