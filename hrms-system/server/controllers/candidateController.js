@@ -256,6 +256,19 @@ class CandidateController {
 
       const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
 
+      const formatLocalDate = (d) => {
+        if (!d) return '';
+        if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+          return d.slice(0, 10);
+        }
+        const dt = new Date(d);
+        if (isNaN(dt.getTime())) return '';
+        const yyyy = dt.getFullYear();
+        const mm = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd = String(dt.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
       const employees = rows.map(r => {
         const initials = r.name
           ? r.name.split(' ').slice(0, 2).map(w => w[0] || '').join('').toUpperCase()
@@ -271,9 +284,10 @@ class CandidateController {
         
         const rawDate = isNaN(joiningDateObj.getTime()) ? createdDate.getTime() : joiningDateObj.getTime();
 
-        const offeredDoj = r.offered_doj 
-          ? new Date(r.offered_doj).toISOString().split('T')[0] 
-          : (r.offer_est_doj ? new Date(r.offer_est_doj).toISOString().split('T')[0] : (r.offer_actual_doj ? new Date(r.offer_actual_doj).toISOString().split('T')[0] : ''));
+        const actualDojStr = formatLocalDate(r.offer_actual_doj || r.offered_doj || r.offer_updated_at || r.updated_at || r.created_at);
+        const offeredDoj = formatLocalDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj);
+        const estDojStr = formatLocalDate(r.offer_est_doj || r.offered_doj);
+        const dobStr = formatLocalDate(r.dob);
 
         const salaryOffered = r.salary || r.expected_salary || '—';
 
@@ -285,7 +299,7 @@ class CandidateController {
           color: colors[colorIndex],
           phone: r.phone || '',
           email: r.email || '',
-          dob: r.dob ? new Date(r.dob).toISOString().split('T')[0] : '',
+          dob: dobStr,
           gender: r.gender || '',
           cityState: r.city_state || '',
           address: r.address || '',
@@ -300,8 +314,8 @@ class CandidateController {
           previousSalary: r.current_salary || r.previous_salary || '',
           currentSalary: r.current_salary || '',
           offeredDoj,
-          actualDoj: r.offer_actual_doj ? new Date(r.offer_actual_doj).toISOString().split('T')[0] : '',
-          estDoj: r.offer_est_doj ? new Date(r.offer_est_doj).toISOString().split('T')[0] : '',
+          actualDoj: actualDojStr,
+          estDoj: estDojStr,
           noticePeriod: r.notice_period || r.offer_notice_pd || '',
           experience: r.experience || '',
           qualification: r.qualification || '',
