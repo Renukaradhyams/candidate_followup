@@ -466,7 +466,7 @@ class CandidateService {
 
   async getKPIs(range, fromDate, toDate) {
     try {
-      const [candRows] = await pool.query(`SELECT status, created_at FROM candidates`);
+      const [candRows] = await pool.query(`SELECT id, app_no, status, created_at FROM candidates`);
 
       let startTime = 0;
       let endTime = Infinity;
@@ -491,8 +491,14 @@ class CandidateService {
         startTime = firstDayLastMonth.getTime();
         endTime = lastDayLastMonth.getTime();
       } else if (range === 'custom' && fromDate) {
-        startTime = new Date(fromDate).getTime();
-        endTime = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : startTime + 86400000 - 1;
+        const fParts = fromDate.split('-').map(Number);
+        startTime = new Date(fParts[0], fParts[1] - 1, fParts[2], 0, 0, 0).getTime();
+        if (toDate) {
+          const tParts = toDate.split('-').map(Number);
+          endTime = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
+        } else {
+          endTime = startTime + 86400000 - 1;
+        }
       }
 
       const filteredRows = (range && range !== 'all')
@@ -503,36 +509,67 @@ class CandidateService {
           })
         : candRows;
 
+      // 1. Total Pipeline = Total registered candidates
       const total = filteredRows.length;
       const totalCandidatesAll = candRows.length;
 
-      const todayCandidates = candRows.filter(r => r.created_at && new Date(r.created_at).toDateString() === todayStr).length;
-      const pendingReview = filteredRows.filter(r => r.status === 'New').length;
-      const shortlisted = filteredRows.filter((r) =>
-        ['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)
-      ).length;
-      const selected = filteredRows.filter((r) => r.status === 'Selected').length;
-      const joined = filteredRows.filter((r) => r.status === 'Joined').length;
-      const offerAccepted = filteredRows.filter((r) => r.status === 'Offer Accepted').length;
-      const rejected = filteredRows.filter((r) => r.status === 'Rejected').length;
-      const hold = filteredRows.filter((r) => r.status === 'Hold').length;
-
       let offerRows = [];
       try {
-        const [oRows] = await pool.query(`SELECT status FROM selection_offers`);
+        const [oRows] = await pool.query(`SELECT app_no, status, created_at FROM selection_offers`);
         offerRows = oRows || [];
       } catch (e) {}
 
-      const offerPending = offerRows.filter(r => r.status === 'Pending').length;
-      const acceptedOffers = offerRows.filter((r) => r.status === 'Accepted').length;
-      const offerDeclined = offerRows.filter(r => r.status === 'Rejected').length;
-      const acceptanceRate = offerRows.length > 0 ? Math.round((acceptedOffers / offerRows.length) * 100) : 0;
+      const offerAppNos = new Set(offerRows.map(o => o.app_no).filter(Boolean));
 
+      // 2. Shortlisted = Candidates in Offer Desk OR candidates with status in shortlisted/interviewed/selected/joined stages
+      const shortlisted = filteredRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        const isInOfferDesk = r.app_no && offerAppNos.has(r.app_no);
+        const isShortlistedStatus = [
+          'shortlisted', '1st call done', '2nd call done', 'interview scheduled', 
+          'interviewed', 'selected', 'offer accepted', 'joined', 'hired'
+        ].includes(s);
+        return isInOfferDesk || isShortlistedStatus;
+      }).length;
+
+      // 3. Selected Pool = Current Selected Candidates (status = Selected)
+      const selected = filteredRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        return s === 'selected';
+      }).length;
+
+      // 4. Joined Staff = Employees in Employee Directory (status = Joined or Hired)
+      const joined = filteredRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        return s === 'joined' || s === 'hired';
+      }).length;
+
+      // 5. Acceptance Rate = (Joined Staff ÷ Shortlisted) * 100 (0% if Shortlisted is 0)
+      const acceptanceRate = shortlisted > 0 ? Math.round((joined / shortlisted) * 100) : 0;
+
+      // 6. Awaiting Joining = Candidates inside Offer Desk whose status is
+      // Pending Acceptance, Accepted, Offer Sent, Awaiting Joining but NOT Joined
+      const awaitingJoining = offerRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        return ['pending', 'pending acceptance', 'accepted', 'offer sent', 'awaiting joining'].includes(s);
+      }).length;
+
+      // 7. Interviews Today = Show interviews scheduled for today only
       let interviewsToday = 0;
       try {
         const [schedRows] = await pool.query(`SELECT interview_date FROM interview_schedules WHERE interview_date IS NOT NULL`);
-        interviewsToday = (schedRows || []).filter((r) => r.interview_date && new Date(r.interview_date).toDateString() === todayStr).length;
+        interviewsToday = (schedRows || []).filter(r => {
+          if (!r.interview_date) return false;
+          const d = new Date(r.interview_date);
+          return d.getFullYear() === now.getFullYear() &&
+                 d.getMonth() === now.getMonth() &&
+                 d.getDate() === now.getDate();
+        }).length;
       } catch (e) {}
+
+      // 9. Drop-off Metrics: Rejected & Hold
+      const rejected = filteredRows.filter(r => (r.status || '').toLowerCase().trim() === 'rejected').length;
+      const hold = filteredRows.filter(r => (r.status || '').toLowerCase().trim() === 'hold').length;
 
       let activeEmployees = 0;
       try {
@@ -540,7 +577,10 @@ class CandidateService {
         activeEmployees = (empRows || []).length;
       } catch (e) {}
 
-      // Generate date-wise breakdown map
+      const pendingReview = filteredRows.filter(r => (r.status || '').toLowerCase().trim() === 'new').length;
+      const todayCandidates = candRows.filter(r => r.created_at && new Date(r.created_at).toDateString() === todayStr).length;
+
+      // Date-wise breakdown map
       const dailyMap = {};
       candRows.forEach(r => {
         if (!r.created_at) return;
@@ -569,19 +609,16 @@ class CandidateService {
         }
 
         dailyMap[dateKey].total += 1;
-        if (['Shortlisted', '1st Call Done', '2nd Call Done', 'Interview Scheduled', 'Interviewed'].includes(r.status)) {
+        const s = (r.status || '').toLowerCase().trim();
+        const isInOffer = r.app_no && offerAppNos.has(r.app_no);
+        if (isInOffer || ['shortlisted', '1st call done', '2nd call done', 'interview scheduled', 'interviewed', 'selected', 'joined', 'hired'].includes(s)) {
           dailyMap[dateKey].shortlisted += 1;
-        } else if (r.status === 'Selected') {
-          dailyMap[dateKey].selected += 1;
-        } else if (r.status === 'Joined') {
-          dailyMap[dateKey].joined += 1;
-        } else if (r.status === 'Rejected') {
-          dailyMap[dateKey].rejected += 1;
-        } else if (r.status === 'Hold') {
-          dailyMap[dateKey].hold += 1;
-        } else if (r.status === 'New') {
-          dailyMap[dateKey].new += 1;
         }
+        if (s === 'selected') dailyMap[dateKey].selected += 1;
+        if (s === 'joined' || s === 'hired') dailyMap[dateKey].joined += 1;
+        if (s === 'rejected') dailyMap[dateKey].rejected += 1;
+        if (s === 'hold') dailyMap[dateKey].hold += 1;
+        if (s === 'new') dailyMap[dateKey].new += 1;
       });
 
       const dailyBreakdown = Object.values(dailyMap).sort((a, b) => b.rawTimestamp - a.rawTimestamp);
@@ -597,20 +634,19 @@ class CandidateService {
         round2Cleared: selected,
         selected,
         rejected,
-        offerPending,
-        offerAccepted,
-        offerDeclined,
-        joiningPending: offerAccepted,
+        offerPending: awaitingJoining,
+        offerAccepted: awaitingJoining,
+        offerDeclined: 0,
+        joiningPending: awaitingJoining,
         employeesJoined: joined,
-        exitPending: 0,
-        completedExit: 0,
         activeEmployees,
         acceptanceRate,
         avgDays: 5,
         total,
         shortlisted,
         joined,
-        onboarding: offerAccepted,
+        onboarding: awaitingJoining,
+        awaitingJoining,
         interviewsToday,
         newCandidates: pendingReview,
         hold,

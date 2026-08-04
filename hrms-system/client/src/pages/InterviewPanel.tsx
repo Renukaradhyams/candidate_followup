@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
@@ -10,6 +10,8 @@ import { Target, Search, Share2, Copy, CheckCircle, XCircle, RefreshCw, X, Award
 
 export default function InterviewPanelPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get('filter');
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -73,6 +75,18 @@ export default function InterviewPanelPage() {
   useEffect(() => {
     let list = [...interviews];
 
+    if (filterParam === 'today') {
+      const now = new Date();
+      list = list.filter(i => {
+        if (!i.interviewDate && !i.date) return false;
+        const d = new Date(i.interviewDate || i.date);
+        return !isNaN(d.getTime()) &&
+               d.getFullYear() === now.getFullYear() &&
+               d.getMonth() === now.getMonth() &&
+               d.getDate() === now.getDate();
+      });
+    }
+
     if (activeFilter === 'pending') list = list.filter(i => !i.hrScore);
     if (activeFilter === 'inprogress') list = list.filter(i => i.hrScore && !i.assignedScore);
     if (activeFilter === 'completed') list = list.filter(i => i.hrScore && i.assignedScore);
@@ -83,11 +97,11 @@ export default function InterviewPanelPage() {
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(i => i.candidate.toLowerCase().includes(q) || i.appNo.toLowerCase().includes(q));
+      list = list.filter(i => (i.candidate && i.candidate.toLowerCase().includes(q)) || (i.appNo && i.appNo.toLowerCase().includes(q)));
     }
 
     setFiltered(list);
-  }, [interviews, activeFilter, searchQuery, session]);
+  }, [interviews, activeFilter, searchQuery, session, filterParam]);
 
   const isPassing = (score: number, max: number) => (score / (max || 1)) * 100 >= 60;
 

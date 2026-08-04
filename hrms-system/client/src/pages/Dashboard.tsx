@@ -193,11 +193,12 @@ export default function DashboardPage() {
   const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const stages = [
-    { label: 'Applied Candidates', val: kpis.total || 0, color: '#1E2D4E' },
-    { label: 'Shortlisted Pool', val: kpis.shortlisted || 0, color: '#2a3f6e' },
-    { label: 'Interview Round', val: kpis.interviewsToday || 0, color: '#C9952A' },
-    { label: 'Offers & Selection', val: kpis.selected || 0, color: '#2d8a4e' },
-    { label: 'Onboarded Employees', val: kpis.joined || 0, color: '#1a8a84' }
+    { label: 'Applied', val: kpis.total || 0, color: '#1E2D4E' },
+    { label: 'Shortlisted', val: kpis.shortlisted || 0, color: '#2a3f6e' },
+    { label: 'Interview Scheduled', val: kpis.interviewsToday || 0, color: '#C9952A' },
+    { label: 'Selected', val: kpis.selected || 0, color: '#2d8a4e' },
+    { label: 'Offer Desk', val: kpis.shortlisted || 0, color: '#1a8a84' },
+    { label: 'Joined', val: kpis.joined || 0, color: '#0d5c58' }
   ];
 
   return (
@@ -277,7 +278,7 @@ export default function DashboardPage() {
             <MetricCard
               title="Total Pipeline"
               value={kpis.total}
-              subtext="All registered applicants"
+              subtext="All registered candidates"
               icon={Users}
               color="gold"
               onClick={() => navigate('/candidates')}
@@ -285,23 +286,23 @@ export default function DashboardPage() {
             <MetricCard
               title="Shortlisted"
               value={kpis.shortlisted}
-              subtext="Screened & ready for interview"
+              subtext="Candidates in Offer Desk"
               icon={Clock}
               color="navy"
-              onClick={() => navigate('/candidates?status=Shortlisted')}
+              onClick={() => navigate('/offer-process')}
             />
             <MetricCard
               title="Selected Pool"
               value={kpis.selected}
-              subtext="Passed technical & HR rounds"
+              subtext="Current selected candidates"
               icon={CheckCircle}
               color="emerald"
-              onClick={() => navigate('/offer-process')}
+              onClick={() => navigate('/interview-panel')}
             />
             <MetricCard
               title="Joined Staff"
               value={kpis.joined}
-              subtext="Successfully onboarded"
+              subtext="Employees in Employee Directory"
               icon={UserCheck}
               color="teal"
               onClick={() => navigate('/employees')}
@@ -313,7 +314,7 @@ export default function DashboardPage() {
             <MetricCard
               title="Acceptance Rate"
               value={`${kpis.acceptanceRate}%`}
-              subtext="Offer accept conversion"
+              subtext="Joined ÷ Shortlisted × 100"
               icon={Percent}
               color="indigo"
             />
@@ -326,19 +327,19 @@ export default function DashboardPage() {
             />
             <MetricCard
               title="Awaiting Joining"
-              value={kpis.onboarding}
-              subtext="Offers accepted by candidates"
+              value={kpis.awaitingJoining ?? kpis.onboarding}
+              subtext="Offer Desk pending acceptance"
               icon={UserPlus}
               color="emerald"
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/offer-process?filter=pending')}
             />
             <MetricCard
               title="Interviews Today"
               value={kpis.interviewsToday}
-              subtext="Scheduled for today"
+              subtext="Today's scheduled interviews"
               icon={CalendarCheck}
               color="rose"
-              onClick={() => navigate('/interview-panel')}
+              onClick={() => navigate('/interview-panel?filter=today')}
             />
           </div>
 

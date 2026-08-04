@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
@@ -14,12 +14,13 @@ import {
 
 export default function OfferProcessPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [offers, setOffers] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState(() => searchParams.get('filter') || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   
   const [loading, setLoading] = useState(true);
