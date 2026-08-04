@@ -49,53 +49,68 @@ class CandidateService {
       fromDate, toDate, q, page = 1, limit = 500, sortDir = 'asc' 
     } = filters;
 
-    let query = `SELECT * FROM candidates WHERE 1=1`;
+    // Auto-synchronize candidate status to 'Joined' if offer status is 'Joined'
+    try {
+      await pool.query(`
+        UPDATE candidates c
+        JOIN selection_offers so ON c.app_no = so.app_no
+        SET c.status = 'Joined'
+        WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+      `);
+    } catch (e) {}
+
+    let query = `
+      SELECT c.*, so.status as offer_status 
+      FROM candidates c 
+      LEFT JOIN selection_offers so ON c.app_no = so.app_no 
+      WHERE 1=1
+    `;
     const params = [];
 
     if (status && status !== 'all') {
-      query += ` AND LOWER(status) = LOWER(?)`;
-      params.push(status);
+      query += ` AND (LOWER(c.status) = LOWER(?) OR LOWER(so.status) = LOWER(?))`;
+      params.push(status, status);
     }
     if (desig) {
-      query += ` AND designation = ?`;
+      query += ` AND c.designation = ?`;
       params.push(desig);
     }
     if (source) {
-      query += ` AND source = ?`;
+      query += ` AND c.source = ?`;
       params.push(source);
     }
     if (gender) {
-      query += ` AND LOWER(gender) = LOWER(?)`;
+      query += ` AND LOWER(c.gender) = LOWER(?)`;
       params.push(gender);
     }
     if (cityState) {
-      query += ` AND LOWER(city_state) LIKE ?`;
+      query += ` AND LOWER(c.city_state) LIKE ?`;
       params.push(`%${cityState.toLowerCase()}%`);
     }
     if (minSalary) {
-      query += ` AND expected_salary >= ?`;
+      query += ` AND c.expected_salary >= ?`;
       params.push(parseFloat(minSalary));
     }
     if (maxSalary) {
-      query += ` AND expected_salary <= ?`;
+      query += ` AND c.expected_salary <= ?`;
       params.push(parseFloat(maxSalary));
     }
     if (fromDate) {
-      query += ` AND created_at >= ?`;
+      query += ` AND c.created_at >= ?`;
       params.push(new Date(fromDate));
     }
     if (toDate) {
-      query += ` AND created_at <= ?`;
+      query += ` AND c.created_at <= ?`;
       params.push(new Date(new Date(toDate).setHours(23, 59, 59)));
     }
     if (q) {
-      query += ` AND (LOWER(name) LIKE ? OR LOWER(app_no) LIKE ? OR phone LIKE ? OR LOWER(email) LIKE ?)`;
+      query += ` AND (LOWER(c.name) LIKE ? OR LOWER(c.app_no) LIKE ? OR c.phone LIKE ? OR LOWER(c.email) LIKE ?)`;
       const term = `%${q.toLowerCase()}%`;
       params.push(term, term, term, term);
     }
 
     const order = sortDir.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-    query += ` ORDER BY created_at ${order}`;
+    query += ` ORDER BY c.created_at ${order}`;
 
     const [allRows] = await pool.query(query, params);
     const total = allRows.length;
@@ -120,6 +135,7 @@ class CandidateService {
 
       const createdDate = new Date(r.created_at);
       const daysIn = Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86400000));
+      const computedStatus = (r.offer_status && r.offer_status.toLowerCase() === 'joined') ? 'Joined' : r.status;
 
       return {
         id: r.id,
@@ -149,7 +165,7 @@ class CandidateService {
         sourceDetail: r.source_detail || '',
         date: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
         rawDate: createdDate.getTime(),
-        status: r.status,
+        status: computedStatus,
         daysIn,
         resumeUrl: r.resume_url || '',
         bloodGroup: r.blood_group || '',
@@ -466,7 +482,21 @@ class CandidateService {
 
   async getKPIs(range, fromDate, toDate) {
     try {
-      const [candRows] = await pool.query(`SELECT id, app_no, status, created_at FROM candidates`);
+      // Auto-synchronize candidate status to Joined for any candidates marked Joined in selection_offers
+      try {
+        await pool.query(`
+          UPDATE candidates c
+          JOIN selection_offers so ON c.app_no = so.app_no
+          SET c.status = 'Joined'
+          WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+        `);
+      } catch (e) {}
+
+      const [candRows] = await pool.query(`
+        SELECT c.id, c.app_no, c.status, c.created_at, c.updated_at, so.actual_doj, so.status as offer_status
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+      `);
 
       let startTime = 0;
       let endTime = Infinity;
@@ -509,19 +539,19 @@ class CandidateService {
           })
         : candRows;
 
-      // 1. Total Pipeline = Total registered candidates
+      // 1. Total Pipeline = Total registered candidates in selected range (created_at)
       const total = filteredRows.length;
       const totalCandidatesAll = candRows.length;
 
       let offerRows = [];
       try {
-        const [oRows] = await pool.query(`SELECT app_no, status, created_at FROM selection_offers`);
+        const [oRows] = await pool.query(`SELECT app_no, status, created_at, actual_doj FROM selection_offers`);
         offerRows = oRows || [];
       } catch (e) {}
 
       const offerAppNos = new Set(offerRows.map(o => o.app_no).filter(Boolean));
 
-      // 2. Shortlisted = Candidates in Offer Desk OR candidates with status in shortlisted/interviewed/selected/joined stages
+      // 2. Shortlisted = Candidates in Offer Desk OR with status in shortlisted/interviewed/selected/joined stages
       const shortlisted = filteredRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
         const isInOfferDesk = r.app_no && offerAppNos.has(r.app_no);
@@ -539,9 +569,19 @@ class CandidateService {
       }).length;
 
       // 4. Joined Staff = Employees in Employee Directory (status = Joined or Hired)
-      const joined = filteredRows.filter(r => {
+      // For date filtering: uses actual joining date (actual_doj / updated_at / created_at)
+      const joined = candRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
-        return s === 'joined' || s === 'hired';
+        const os = (r.offer_status || '').toLowerCase().trim();
+        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        if (!isJoined) return false;
+
+        if (!range || range === 'all') return true;
+
+        const joiningDate = r.actual_doj ? new Date(r.actual_doj) : (r.updated_at ? new Date(r.updated_at) : new Date(r.created_at));
+        if (isNaN(joiningDate.getTime())) return true;
+        const t = joiningDate.getTime();
+        return t >= startTime && t <= endTime;
       }).length;
 
       // 5. Acceptance Rate = (Joined Staff ÷ Shortlisted) * 100 (0% if Shortlisted is 0)

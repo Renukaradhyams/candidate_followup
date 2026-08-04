@@ -143,6 +143,8 @@ const getInterviews = async (req, res) => {
 
       const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 
+      const createdDate = new Date(r.created_at || Date.now());
+
       return {
         appNo: r.app_no,
         candidate: r.candidate_name,
@@ -164,7 +166,9 @@ const getInterviews = async (req, res) => {
         assignedName: tk.assignedName || '',
         assignedDesig: tk.assignedDesig || '',
         tokenStatus: tk.tokenStatus || '',
-        token: tk.token || ''
+        token: tk.token || '',
+        createdAt: r.created_at || null,
+        rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime()
       };
     });
 

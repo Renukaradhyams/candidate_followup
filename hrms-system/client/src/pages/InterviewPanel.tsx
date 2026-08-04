@@ -78,6 +78,13 @@ export default function InterviewPanelPage() {
     if (filterParam === 'today') {
       const now = new Date();
       list = list.filter(i => {
+        const rawMs = i.rawDate || (i.createdAt ? new Date(i.createdAt).getTime() : 0);
+        if (rawMs) {
+          const d = new Date(rawMs);
+          return d.getFullYear() === now.getFullYear() &&
+                 d.getMonth() === now.getMonth() &&
+                 d.getDate() === now.getDate();
+        }
         if (!i.interviewDate && !i.date) return false;
         const d = new Date(i.interviewDate || i.date);
         return !isNaN(d.getTime()) &&
