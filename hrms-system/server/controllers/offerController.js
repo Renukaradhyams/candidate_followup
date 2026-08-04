@@ -129,8 +129,8 @@ const logOfferCall = async (req, res) => {
 
 const updateOfferDetails = async (req, res) => {
   try {
-    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation, remarks } = req.body;
-    if (!noticePd && !estDoj && !salaryOffered && !department && !finalDesignation && remarks === undefined) return errorRes(res, 'Enter at least one field', [], 400);
+    const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation, remarks, status } = req.body;
+    if (!appNo) return errorRes(res, 'Application number is required', [], 400);
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
@@ -140,6 +140,7 @@ const updateOfferDetails = async (req, res) => {
     if (finalDesignation) { updFields.push('designation = ?'); params.push(finalDesignation); }
     if (department) { updFields.push('department = ?'); params.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     if (remarks !== undefined) { updFields.push('remarks = ?'); params.push(remarks); }
+    if (status) { updFields.push('status = ?'); params.push(status); }
 
     params.push(appNo);
     await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
@@ -153,10 +154,11 @@ const updateOfferDetails = async (req, res) => {
     if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
     if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     if (remarks !== undefined) { candUpd.push('remarks = ?'); candParams.push(remarks); }
+    if (status) { candUpd.push('status = ?'); candParams.push(status); }
     candParams.push(appNo);
     await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 
-    await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_DETAILS', 'OFFER', { appNo, noticePd, estDoj, salaryOffered });
+    await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_DETAILS', 'OFFER', { appNo, noticePd, estDoj, salaryOffered, status });
 
     return res.json({ success: true });
   } catch (err) {
@@ -172,8 +174,8 @@ const acceptOffer = async (req, res) => {
     const doj = joiningDate ? new Date(joiningDate) : now;
     const dojVal = isNaN(doj.getTime()) ? now : doj;
 
-    await db.query(`UPDATE selection_offers SET status = 'Joined', actual_doj = ?, updated_at = ? WHERE app_no = ?`, [dojVal, now, appNo]);
-    await db.query(`UPDATE candidates SET status = 'Joined', updated_at = ? WHERE app_no = ?`, [now, appNo]);
+    await db.query(`UPDATE selection_offers SET status = 'Accepted', actual_doj = ?, updated_at = ? WHERE app_no = ?`, [dojVal, now, appNo]);
+    await db.query(`UPDATE candidates SET status = 'Accepted', updated_at = ? WHERE app_no = ?`, [now, appNo]);
 
     await logAction(req.user ? req.user.username : 'HR', 'ACCEPT_OFFER', 'OFFER', { appNo, remarks, joiningDate: dojVal });
 
@@ -188,7 +190,7 @@ const rejectOffer = async (req, res) => {
     const { appNo, remarks } = req.body;
 
     const now = new Date();
-    await db.query(`UPDATE selection_offers SET status = 'Offer Rejected', updated_at = ? WHERE app_no = ?`, [now, appNo]);
+    await db.query(`UPDATE selection_offers SET status = 'Offer Rejected', remarks = COALESCE(?, remarks), updated_at = ? WHERE app_no = ?`, [remarks || null, now, appNo]);
     await db.query(`UPDATE candidates SET status = 'Offer Rejected', updated_at = ? WHERE app_no = ?`, [now, appNo]);
 
     await logAction(req.user ? req.user.username : 'HR', 'REJECT_OFFER', 'OFFER', { appNo, remarks });
@@ -220,8 +222,11 @@ const markJoined = async (req, res) => {
 
 const updateOfferStatus = async (req, res) => {
   try {
-    const { appNo, status } = req.body;
-    await db.query(`UPDATE selection_offers SET status = ?, updated_at = ? WHERE app_no = ?`, [status, new Date(), appNo]);
+    const { appNo, status, remarks } = req.body;
+    const now = new Date();
+    await db.query(`UPDATE selection_offers SET status = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE app_no = ?`, [status, remarks || null, now, appNo]);
+    await db.query(`UPDATE candidates SET status = ?, updated_at = ? WHERE app_no = ?`, [status, now, appNo]);
+    await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_STATUS', 'OFFER', { appNo, status, remarks });
     return res.json({ success: true });
   } catch (err) {
     return errorRes(res, 'Failed to update offer status', [err.message], 500);

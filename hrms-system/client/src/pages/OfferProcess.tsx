@@ -6,7 +6,7 @@ import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import {
   Search, FileText, Phone, Calendar, CheckCircle2, XCircle,
-  UserCheck, X, Briefcase, DollarSign,
+  UserCheck, X, Briefcase, DollarSign, Save,
   FileCheck, ChevronRight, TrendingUp, User,
   Loader2, Clock, Award, Edit3,
   GraduationCap, CheckCheck, AlertTriangle, Activity, Banknote, Star
@@ -44,6 +44,7 @@ export default function OfferProcessPage() {
   const [department, setDepartment] = useState('');
   const [otherSection, setOtherSection] = useState('');
   const [offerRemarks, setOfferRemarks] = useState('');
+  const [offerStatus, setOfferStatus] = useState('Pending Accept');
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().slice(0, 10));
 
   // Profile Modal State
@@ -202,9 +203,10 @@ export default function OfferProcessPage() {
         department, 
         otherSection, 
         finalDesignation,
-        remarks: offerRemarks
+        remarks: offerRemarks,
+        status: offerStatus
       });
-      showToast('Offer joining details saved successfully! 🎉', 'success');
+      showToast('Offer joining details saved successfully!', 'success');
       loadOffers();
       setDetailOffer(null);
     } catch (e: any) {
@@ -221,7 +223,7 @@ export default function OfferProcessPage() {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       await API.acceptOffer({ appNo, remarks: 'Accepted via Offer Desk', joiningDate: todayStr });
-      showToast('Offer accepted & candidate marked as Joined! 🎉', 'success');
+      showToast('Offer accepted & candidate marked as Accepted!', 'success');
       loadOffers();
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
@@ -238,7 +240,7 @@ export default function OfferProcessPage() {
     try {
       await API.rejectOffer({ appNo, remarks });
       showToast('Offer marked as Rejected', 'error');
-      setProfileOffer(null);
+      setProfileOffer(prev => prev ? { ...prev, status: 'Offer Rejected' } : null);
       loadOffers();
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
@@ -292,6 +294,7 @@ export default function OfferProcessPage() {
     setDepartment(o.department || '');
     setOtherSection('');
     setOfferRemarks(o.remarks || '');
+    setOfferStatus(o.status || 'Pending Accept');
   };
 
   const renderStatusBadge = (status: string) => {
@@ -765,6 +768,20 @@ export default function OfferProcessPage() {
                       />
                     </div>
 
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-wider">Offer Status</label>
+                      <select 
+                        value={offerStatus} 
+                        onChange={(e) => setOfferStatus(e.target.value)} 
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 font-bold text-xs outline-none focus:border-blue-500 focus:bg-white transition-all cursor-pointer"
+                      >
+                        <option value="Pending Accept">⏳ Pending Accept</option>
+                        <option value="Accepted">✅ Accepted</option>
+                        <option value="Offer Rejected">❌ Offer Rejected / Declined</option>
+                        <option value="Joined">🎉 Joined</option>
+                      </select>
+                    </div>
+
                     <div className="sm:col-span-2">
                       <label className="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-wider">Shortlisting & Recruiter Remarks</label>
                       <textarea 
@@ -1012,6 +1029,41 @@ export default function OfferProcessPage() {
                           <div className="text-2xl font-black text-[#1E2D4E] font-mono">{fmtINR(sal.total)}</div>
                           <div className="text-[10px] text-[#C9952A]/80 font-medium">Total Monthly Compensation</div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Status Management & Save Card */}
+                    <div className="bg-white rounded-2xl border-2 border-[#1E2D4E]/20 shadow-xs p-5 space-y-3">
+                      <div className="text-[10px] font-black uppercase text-[#1E2D4E] tracking-wider flex items-center justify-between border-b border-[#e2dfd7] pb-2">
+                        <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-[#C9952A]" /> Update Offer Status</span>
+                        <span className="text-[11px] font-bold text-slate-500">Current Status: {renderOfferStatus(profileOffer.status)}</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                        <select
+                          value={profileOffer.status || 'Pending Accept'}
+                          onChange={(e) => setProfileOffer({ ...profileOffer, status: e.target.value })}
+                          className="flex-1 w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-[#F9F7F4] text-xs font-extrabold text-[#1E2D4E] outline-none focus:border-[#1E2D4E]"
+                        >
+                          <option value="Pending Accept">⏳ Pending Accept</option>
+                          <option value="Accepted">✅ Accepted</option>
+                          <option value="Offer Rejected">❌ Offer Rejected / Declined</option>
+                          <option value="Joined">🎉 Joined</option>
+                        </select>
+                        <button
+                          onClick={async () => {
+                            if (profileOffer.status === 'Joined') {
+                              await handleMarkJoined(profileOffer.appNo);
+                            } else if (profileOffer.status === 'Offer Rejected' || profileOffer.status === 'Declined') {
+                              await handleRejectOffer(profileOffer.appNo);
+                            } else {
+                              await handleUpdateOfferStatus(profileOffer.appNo, profileOffer.status);
+                            }
+                          }}
+                          disabled={saving}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#1E2D4E] text-white text-xs font-extrabold hover:bg-[#162340] shadow-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Save Status
+                        </button>
                       </div>
                     </div>
 
