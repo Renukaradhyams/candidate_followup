@@ -518,6 +518,8 @@ class CandidateService {
 
   async getKPIs(range, fromDate, toDate) {
     try {
+      const todayStr = new Date().toDateString();
+
       // Auto-synchronize candidate status to Joined for any candidates marked Joined in selection_offers
       try {
         await pool.query(`
@@ -743,14 +745,16 @@ class CandidateService {
       const actions = rows.map(r => ({
         appNo: r.app_no,
         candidate: r.name,
+        text: `${r.name || 'Candidate'} (${r.desig || 'General'}) - ${r.status === 'New' ? 'Screening Required' : 'Follow-up Needed'}`,
         desig: r.desig,
         actionNeeded: r.status === 'New' ? 'Screen Candidate' : r.status === 'Interview Scheduled' ? 'Conduct Interview' : 'Follow-up Call',
         badgeColor: r.status === 'New' ? 'amber' : 'navy',
+        priority: r.status === 'New' ? 'urgent' : 'normal',
         urgency: 'High'
       }));
-      return { actions };
+      return { actions, items: actions };
     } catch (err) {
-      return { actions: [] };
+      return { actions: [], items: [] };
     }
   }
 
