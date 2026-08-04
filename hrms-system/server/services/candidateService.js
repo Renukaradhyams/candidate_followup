@@ -60,6 +60,28 @@ class CandidateService {
       `);
     } catch (e) {}
 
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS employees (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id VARCHAR(100) NULL UNIQUE,
+          app_no VARCHAR(50) NULL,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(150) NULL,
+          phone VARCHAR(20) NULL,
+          department VARCHAR(150) NULL,
+          designation VARCHAR(150) NULL,
+          section VARCHAR(150) NULL,
+          branch VARCHAR(150) NULL,
+          status VARCHAR(50) DEFAULT 'Joined',
+          joining_date DATE NULL,
+          salary DECIMAL(10,2) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+    } catch (e) {}
+
     let query = `
       SELECT c.*, 
              so.status as offer_status,

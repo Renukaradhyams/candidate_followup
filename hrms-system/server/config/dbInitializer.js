@@ -231,7 +231,7 @@ async function autoInitializeDatabase(pool) {
         \`candidate_id\` INT NULL,
         \`app_no\` VARCHAR(50) NOT NULL,
         \`action_type\` VARCHAR(100) NOT NULL,
-        \`icon\` VARCHAR(20) DEFAULT '📋',
+        \`icon\` VARCHAR(20) DEFAULT 'dY"<',
         \`label\` VARCHAR(255) NOT NULL,
         \`score\` INT DEFAULT 0,
         \`max_score\` INT DEFAULT 60,
@@ -240,6 +240,24 @@ async function autoInitializeDatabase(pool) {
         \`by_user\` VARCHAR(150) NULL,
         \`color\` VARCHAR(50) DEFAULT 'navy',
         \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+      `CREATE TABLE IF NOT EXISTS \`employees\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`employee_id\` VARCHAR(100) NULL UNIQUE,
+        \`app_no\` VARCHAR(50) NULL,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`email\` VARCHAR(150) NULL,
+        \`phone\` VARCHAR(20) NULL,
+        \`department\` VARCHAR(150) NULL,
+        \`designation\` VARCHAR(150) NULL,
+        \`section\` VARCHAR(150) NULL,
+        \`branch\` VARCHAR(150) NULL,
+        \`status\` VARCHAR(50) DEFAULT 'Joined',
+        \`joining_date\` DATE NULL,
+        \`salary\` DECIMAL(10,2) NULL,
+        \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
       `CREATE TABLE IF NOT EXISTS \`interview_questions\` (
