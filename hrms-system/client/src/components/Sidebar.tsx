@@ -29,12 +29,12 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   const role = session?.role || 'HR';
 
   const roleNavMap: Record<string, string[]> = {
-    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings', 'broadcast'],
-    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'settings', 'broadcast'],
-    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'form', 'broadcast'],
+    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
+    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
+    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast'],
     'Recruiter':   ['dashboard', 'candidates', 'interview', 'form', 'broadcast'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'broadcast'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'dept_hiring', 'section_allocation', 'broadcast'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -79,6 +79,8 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'openings', href: '/openings', label: 'Manpower Planning', icon: Briefcase, section: 'Core Workspace' },
     { key: 'onboarding', href: '/onboarding', label: 'Onboarding Hub', icon: PartyPopper, section: 'Talent Management' },
     { key: 'employees', href: '/employees', label: 'Employee Directory', icon: UserCheck, section: 'Talent Management' },
+    { key: 'dept_hiring', href: '/department-hiring', label: 'Department Hiring Status', icon: Briefcase, section: 'Talent Management' },
+    { key: 'section_allocation', href: '/section-allocation', label: 'Section Allocation', icon: UserCheck, section: 'Talent Management' },
     { key: 'exit', href: '/employee-exit', label: 'Exit & FnF Desk', icon: DoorOpen, section: 'Talent Management' },
     { key: 'form', href: '/candidate-entry', label: 'Applicant Registration', icon: ClipboardList, section: 'Public Portal', target: '_blank' },
     { key: 'broadcast', href: '/broadcast-center', label: 'Broadcast Center', icon: Megaphone, section: 'Administration' },

@@ -11,6 +11,7 @@ const onboardingController = require('../controllers/onboardingController');
 const exitController = require('../controllers/exitController');
 const settingsController = require('../controllers/settingsController');
 const broadcastController = require('../controllers/broadcastController');
+const deptHiringController = require('../controllers/deptHiringController');
 
 // ── Auth Routes ──────────────────────────────────────────────
 router.post('/auth/login', authController.login);
@@ -121,6 +122,13 @@ router.get('/broadcasts', broadcastController.getBroadcasts);
 router.post('/broadcasts', broadcastController.createBroadcast);
 router.delete('/broadcasts/:id', authenticate, authorize('Admin', 'Super Admin'), broadcastController.deleteBroadcast);
 
+// ── Dept Hiring & Section Allocation Routes ───────────────
+router.get('/dept-hiring/targets', deptHiringController.getHiringTargets);
+router.post('/dept-hiring/targets', deptHiringController.saveHiringTarget);
+router.get('/section-allocations', deptHiringController.getSectionAllocations);
+router.post('/section-allocations', deptHiringController.saveSectionAllocation);
+router.post('/section-allocations/bulk', deptHiringController.bulkSaveSectionAllocation);
+
 // ── Legacy Google Apps Script Action Dispatcher Endpoint ─────
 // Dispatches legacy `{ action: 'verifyUser', ... }` requests to appropriate controller actions
 router.get('/legacy', async (req, res) => {
@@ -188,7 +196,12 @@ router.post('/legacy', async (req, res) => {
     createExit: exitController.createExit,
     getExitItems: exitController.getExitItems,
     updateExitItem: exitController.updateExitItem,
-    completeExit: exitController.completeExit
+    completeExit: exitController.completeExit,
+    getHiringTargets: deptHiringController.getHiringTargets,
+    saveHiringTarget: deptHiringController.saveHiringTarget,
+    getSectionAllocations: deptHiringController.getSectionAllocations,
+    saveSectionAllocation: deptHiringController.saveSectionAllocation,
+    bulkSaveSectionAllocation: deptHiringController.bulkSaveSectionAllocation
   };
 
   if (dispatchMap[action]) {

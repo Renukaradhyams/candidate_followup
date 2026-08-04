@@ -454,18 +454,42 @@ async function autoInitializeDatabase(pool) {
       } catch(e) {}
     }
 
-    // Seed default interview questions if empty
-    const [qRows] = await connection.query(`SELECT COUNT(*) as cnt FROM interview_questions`);
-    if (qRows[0].cnt === 0) {
-      await connection.query(
-        `INSERT INTO interview_questions (round, designation, question, max_score) VALUES
-         ('HR', 'All', 'Communication & Professional Demeanor', 15),
-         ('HR', 'All', 'Relevant Work Experience & Technical Skills', 15),
-         ('HR', 'All', 'Job Stability & Career Growth Intent', 15),
-         ('HR', 'All', 'Cultural Fit & Team Alignment', 15),
-         ('Round 2', 'All', 'Problem Solving & Domain Knowledge', 15),
-         ('Round 2', 'All', 'Leadership & Work Ownership', 15)`
-      );
+    // ------------------
+    // Module 1 & 2 Tables Initialization (Non-Breaking)
+    // ------------------
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS department_hiring_targets (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          department VARCHAR(100) NOT NULL,
+          section VARCHAR(100) NOT NULL,
+          designation VARCHAR(100) NOT NULL,
+          required_openings INT DEFAULT 10,
+          hiring_target INT DEFAULT 10,
+          remarks TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY dept_sec_desig (department, section, designation)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS section_allocations (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          employee_id VARCHAR(100) NOT NULL UNIQUE,
+          app_no VARCHAR(100),
+          employee_name VARCHAR(200),
+          department VARCHAR(100),
+          section VARCHAR(100),
+          assigned_by VARCHAR(100),
+          notes TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+      logDebug(`[Auto DB Initializer] Verified department_hiring_targets and section_allocations tables`);
+    } catch (e) {
+      logDebug(`[Auto DB Initializer Warning for new modules]:`, e.message);
     }
 
     const [finalTables] = await connection.query(`SHOW TABLES`);

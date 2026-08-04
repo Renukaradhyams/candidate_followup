@@ -14,6 +14,8 @@ import Employees from './pages/Employees';
 import Openings from './pages/Openings';
 import Settings from './pages/Settings';
 import BroadcastCenter from './pages/BroadcastCenter';
+import DepartmentHiring from './pages/DepartmentHiring';
+import SectionAllocation from './pages/SectionAllocation';
 import QuickActionCenter from './components/ui/QuickActionCenter';
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
         <Route path="/offer-process" element={<OfferProcess />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/employees" element={<Employees />} />
+        <Route path="/department-hiring" element={<DepartmentHiring />} />
+        <Route path="/section-allocation" element={<SectionAllocation />} />
         <Route path="/employee-exit" element={<EmployeeExit />} />
         <Route path="/openings" element={<Openings />} />
         <Route path="/broadcast-center" element={<BroadcastCenter />} />

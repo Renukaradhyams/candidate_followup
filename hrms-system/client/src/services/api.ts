@@ -313,6 +313,13 @@ export const API = {
   async createBroadcast(payload: any) { return apiFetch('/broadcasts', { method: 'POST', body: JSON.stringify(payload) }); },
   async deleteBroadcast(id: string | number) { return apiFetch(`/broadcasts/${id}`, { method: 'DELETE' }); },
 
+  // Department Hiring & Section Allocation
+  async getHiringTargets() { return apiFetch('/dept-hiring/targets'); },
+  async saveHiringTarget(payload: any) { return apiFetch('/dept-hiring/targets', { method: 'POST', body: JSON.stringify(payload) }); },
+  async getSectionAllocations() { return apiFetch('/section-allocations'); },
+  async saveSectionAllocation(payload: any) { return apiFetch('/section-allocations', { method: 'POST', body: JSON.stringify(payload) }); },
+  async bulkSaveSectionAllocation(payload: any) { return apiFetch('/section-allocations/bulk', { method: 'POST', body: JSON.stringify(payload) }); },
+
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {
     if (!url) return null;
