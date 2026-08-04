@@ -73,7 +73,13 @@ class NotificationEngine {
     const apiBase = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : undefined;
     this.socket = io(apiBase, {
       autoConnect: true,
-      transports: ['websocket', 'polling']
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 5,
+      timeout: 10000
+    });
+
+    this.socket.on('connect_error', () => {
+      // Quietly handle connection errors on hosting environments where WebSockets are unavailable
     });
 
     this.socket.on('connect', () => {

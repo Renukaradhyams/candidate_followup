@@ -44,19 +44,18 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   useEffect(() => {
     // Dynamically fetch page visibility from the database
     API.getPageSettings().then(res => {
-      if (res && res.settings) {
-        // filter the ones where role matches and allowed is true
-        const dynamicAllowed = Object.entries(res.settings)
+      const settingsObj = (res && res.settings) ? res.settings : (res || {});
+      if (settingsObj && Object.keys(settingsObj).length > 0) {
+        const dynamicAllowed = Object.entries(settingsObj)
           .filter(([key, isAllowed]) => isAllowed === true && key.startsWith(`${role}_`))
           .map(([key]) => key.replace(`${role}_`, ''));
         
         if (dynamicAllowed.length > 0) {
-          // If we got settings from DB, override the hardcoded ones
           setAllowed(dynamicAllowed);
         }
       }
-    }).catch(err => {
-      console.error('Failed to fetch page visibility', err);
+    }).catch(() => {
+      // Quietly fallback to default role permissions
     });
   }, [role]);
 

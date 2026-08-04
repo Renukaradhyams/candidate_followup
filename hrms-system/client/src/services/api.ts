@@ -301,7 +301,13 @@ export const API = {
   async getUsers() { return apiFetch('/settings/users'); },
   async addUser(p: any) { return apiFetch('/settings/users/add', { method: 'POST', body: JSON.stringify(p) }); },
   async updateUser(p: any) { return apiFetch('/settings/users/update', { method: 'POST', body: JSON.stringify(p) }); },
-  async getPageSettings() { return apiFetch('/settings/page-visibility'); },
+  async getPageSettings() { 
+    try {
+      return await apiFetch('/settings/page-visibility'); 
+    } catch (e) {
+      return {};
+    }
+  },
   async savePageSettings(settings: any) { return apiFetch('/settings/page-visibility', { method: 'POST', body: JSON.stringify({ settings }) }); },
   async getDesignations() { return apiFetch('/settings/designations'); },
   async getPublicDesignations() { return API.call('getPublicDesignations'); },
