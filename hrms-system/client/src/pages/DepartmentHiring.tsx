@@ -174,24 +174,33 @@ export default function DepartmentHiringPage() {
     setExpandedDepts(initialExpanded);
   }, []);
 
-  // Department Section Mapping (Combining BSC TEXTILES static defaults and Database sections)
+  // Department Section Mapping (Derived 100% dynamically from database records)
   const activeDeptSectionsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
-    BSC_DEPARTMENTS.forEach(d => {
-      map[d] = [...(BSC_DEPARTMENT_SECTIONS[d] || [])];
-    });
 
-    dbSections.forEach(s => {
-      if (s.department && s.section_name) {
-        if (!map[s.department]) map[s.department] = [];
-        if (!map[s.department].includes(s.section_name)) {
-          map[s.department].push(s.section_name);
+    if (dbSections && dbSections.length > 0) {
+      dbSections.forEach(s => {
+        if (s.department && s.section_name && s.active !== false) {
+          if (!map[s.department]) map[s.department] = [];
+          if (!map[s.department].includes(s.section_name)) {
+            map[s.department].push(s.section_name);
+          }
         }
-      }
-    });
+      });
+    } else {
+      // Fallback only if database table is empty
+      BSC_DEPARTMENTS.forEach(d => {
+        map[d] = [...(BSC_DEPARTMENT_SECTIONS[d] || [])];
+      });
+    }
 
     return map;
   }, [dbSections]);
+
+  const activeDepartmentsList = useMemo(() => {
+    const keys = Object.keys(activeDeptSectionsMap);
+    return keys.length > 0 ? keys : BSC_DEPARTMENTS;
+  }, [activeDeptSectionsMap]);
 
   // Calculate Filled Sales Executives count per Department & Section
   const filledSalesExecCountMap = useMemo(() => {
@@ -584,7 +593,7 @@ export default function DepartmentHiringPage() {
                   className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Departments</option>
-                  {BSC_DEPARTMENTS.map(d => (
+                  {activeDepartmentsList.map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>

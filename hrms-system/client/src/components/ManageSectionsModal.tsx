@@ -26,6 +26,12 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
 
+  const departmentOptions = useMemo(() => {
+    const set = new Set<string>(BSC_DEPARTMENTS);
+    sections.forEach(s => { if (s.department) set.add(s.department); });
+    return Array.from(set);
+  }, [sections]);
+
   const loadSections = async () => {
     try {
       setLoading(true);
@@ -159,7 +165,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
                 onChange={(e) => setNewDept(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none"
               >
-                {BSC_DEPARTMENTS.map(d => (
+                {departmentOptions.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -214,7 +220,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
                 className="px-2.5 py-1 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
               >
                 <option value="All">All Departments</option>
-                {BSC_DEPARTMENTS.map(d => (
+                {departmentOptions.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -245,7 +251,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
                               onChange={(e) => setEditDept(e.target.value)}
                               className="px-2 py-1 rounded-lg border border-[#e2dfd7] bg-white text-xs font-bold"
                             >
-                              {BSC_DEPARTMENTS.map(d => (
+                              {departmentOptions.map(d => (
                                 <option key={d} value={d}>{d}</option>
                               ))}
                             </select>
