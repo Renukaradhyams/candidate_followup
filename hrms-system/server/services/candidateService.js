@@ -548,23 +548,33 @@ class CandidateService {
         offerRows = oRows || [];
       } catch (e) {}
 
-      const offerAppNos = new Set(offerRows.map(o => o.app_no).filter(Boolean));
+      let selectedCandRows = [];
+      try {
+        const [scRows] = await pool.query(`SELECT app_no, candidate_id FROM selected_candidates`);
+        selectedCandRows = scRows || [];
+      } catch (e) {}
 
-      // 2. Shortlisted = Candidates in Offer Desk OR with status in shortlisted/interviewed/selected/joined stages
+      const offerAppNos = new Set(offerRows.map(o => o.app_no).filter(Boolean));
+      const selectedAppNos = new Set(selectedCandRows.map(sc => sc.app_no).filter(Boolean));
+
+      // 2. Shortlisted = Candidates in Offer Desk OR selected_candidates OR in shortlisted/interviewed/selected/joined stages
       const shortlisted = filteredRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
         const isInOfferDesk = r.app_no && offerAppNos.has(r.app_no);
+        const isInSelected = r.app_no && selectedAppNos.has(r.app_no);
         const isShortlistedStatus = [
           'shortlisted', '1st call done', '2nd call done', 'interview scheduled', 
           'interviewed', 'selected', 'offer accepted', 'joined', 'hired'
         ].includes(s);
-        return isInOfferDesk || isShortlistedStatus;
+        return isInOfferDesk || isInSelected || isShortlistedStatus;
       }).length;
 
-      // 3. Selected Pool = Current Selected Candidates (status = Selected)
+      // 3. Selected Pool = Candidates marked Selected OR present in selection_offers OR present in selected_candidates
       const selected = filteredRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
-        return s === 'selected';
+        const isInOfferDesk = r.app_no && offerAppNos.has(r.app_no);
+        const isInSelected = r.app_no && selectedAppNos.has(r.app_no);
+        return s === 'selected' || s === 'shortlisted' || isInOfferDesk || isInSelected;
       }).length;
 
       // 4. Joined Staff = Employees in Employee Directory (status = Joined or Hired)
@@ -577,14 +587,15 @@ class CandidateService {
         return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
       }).length;
 
-      // 5. Acceptance Rate = (Joined Staff ÷ Shortlisted) * 100 (0% if Shortlisted is 0)
+      // 5. Acceptance Rate = (Joined Staff / Shortlisted) * 100 (0% if Shortlisted is 0)
       const acceptanceRate = shortlisted > 0 ? Math.round((joined / shortlisted) * 100) : 0;
 
-      // 6. Awaiting Joining = Candidates inside Offer Desk whose status is
-      // Pending Acceptance, Accepted, Offer Sent, Awaiting Joining but NOT Joined
+      // 6. Awaiting Joining = Candidates inside Offer Desk whose status is Pending Accept, Pending, Accepted, Offer Sent, etc. (not Joined or Rejected)
       const awaitingJoining = offerRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
-        return ['pending', 'pending acceptance', 'accepted', 'offer sent', 'awaiting joining'].includes(s);
+        if (!s) return true;
+        const isNotJoinedOrRejected = !['joined', 'hired', 'rejected', 'declined', 'withdrawn', 'cancelled'].includes(s);
+        return isNotJoinedOrRejected;
       }).length;
 
       // 7. Interviews Today = Show interviews scheduled for today only
