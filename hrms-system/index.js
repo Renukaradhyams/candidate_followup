@@ -248,6 +248,23 @@ app.use('/api', legacyRoutes);
 
 // ── Frontend SPA ──────────────────────────────────────────────────────────────
 const distDir = path.join(APP_ROOT, 'dist');
+// Favicon & Icon static route handler (prevents 503 / 404 errors on live server)
+app.get(['/favicon.ico', '/favicon.png', '/logo.png'], (req, res) => {
+  const iconName = path.basename(req.path);
+  const possiblePaths = [
+    path.join(distDir, iconName),
+    path.join(APP_ROOT, 'client', 'public', iconName),
+    path.join(APP_ROOT, 'client', 'public', 'favicon.ico'),
+    path.join(APP_ROOT, 'client', 'public', 'logo.png')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+      return res.sendFile(p);
+    }
+  }
+  return res.status(204).end();
+});
+
 if (fs.existsSync(distDir)) {
   console.log(`[Boot] Serving frontend from: ${distDir}`);
   app.use(express.static(distDir));
@@ -272,7 +289,7 @@ if (fs.existsSync(distDir)) {
 
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets') ||
-        req.path.endsWith('.css') || req.path.endsWith('.js') ||
+        req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.endsWith('.ico') || req.path.endsWith('.png') || req.path.endsWith('.svg') ||
         req.path === '/health' || req.path === '/db-status') return next();
     
     const fallback = path.join(distDir, 'index.html');
