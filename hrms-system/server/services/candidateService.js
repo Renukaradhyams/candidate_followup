@@ -61,9 +61,12 @@ class CandidateService {
     } catch (e) {}
 
     let query = `
-      SELECT c.*, so.status as offer_status 
+      SELECT c.*, 
+             so.status as offer_status,
+             emp.id as employee_id
       FROM candidates c 
       LEFT JOIN selection_offers so ON c.app_no = so.app_no 
+      LEFT JOIN employees emp ON (c.app_no = emp.app_no OR (c.phone IS NOT NULL AND c.phone != '' AND c.phone = emp.phone))
       WHERE 1=1
     `;
     const params = [];
@@ -136,7 +139,17 @@ class CandidateService {
 
       const createdDate = new Date(r.created_at);
       const daysIn = Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86400000));
-      const computedStatus = (r.offer_status && r.offer_status.toLowerCase() === 'joined') ? 'Joined' : r.status;
+      
+      const isEmp = Boolean(r.employee_id);
+      const osLower = (r.offer_status || '').toLowerCase().trim();
+      const csLower = (r.status || '').toLowerCase().trim();
+
+      let computedStatus = r.status;
+      if (isEmp || osLower === 'joined' || osLower === 'accepted' || csLower === 'joined' || csLower === 'hired' || csLower === 'already selected') {
+        computedStatus = 'Already Selected';
+      } else if (csLower === 'selected') {
+        computedStatus = 'Already Selected';
+      }
 
       return {
         id: r.id,

@@ -146,7 +146,12 @@ export default function CandidatesPage() {
     }
 
     if (activeStatus !== 'all') {
-      list = list.filter(c => c.status === activeStatus);
+      list = list.filter(c => {
+        if (activeStatus === 'Selected') {
+          return c.status === 'Selected' || c.status === 'Already Selected' || c.status === 'Joined';
+        }
+        return c.status === activeStatus;
+      });
     }
     if (desigFilter) {
       list = list.filter(c => c.desig === desigFilter);
@@ -603,33 +608,40 @@ export default function CandidatesPage() {
                         <td className="py-3.5 px-4 text-[#555555] font-medium">{c.source}</td>
                         <td className="py-3.5 px-4 text-[#666666] whitespace-nowrap font-medium">{c.date}</td>
                         <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={c.status || 'New'}
-                            onChange={(e) => handleStatusSelect(c, e.target.value)}
-                            className={`text-[11px] font-bold rounded-lg border px-2.5 py-1.5 cursor-pointer outline-none transition-all shadow-xs focus:ring-2 ${
-                              c.status === 'New' ? 'bg-slate-100 text-slate-700 border-slate-200 focus:ring-slate-300' :
-                              c.status === 'Shortlisted' ? 'bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-300' :
-                              c.status === '1st Call' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-300' :
-                              c.status === 'Interview Scheduled' ? 'bg-violet-50 text-violet-700 border-violet-200 focus:ring-violet-300' :
-                              c.status === 'Interviewed' || c.status === 'Interview Completed' ? 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-300' :
-                              c.status === 'Selected' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 focus:ring-emerald-300' :
-                              c.status === 'Offer Sent' ? 'bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-300' :
-                              c.status === 'Joined' || c.status === 'Offer Accepted' ? 'bg-teal-50 text-teal-700 border-teal-200 focus:ring-teal-300' :
-                              c.status === 'Hold' ? 'bg-orange-50 text-orange-700 border-orange-200 focus:ring-orange-300' :
-                              c.status === 'Rejected' || c.status === 'Offer Rejected' ? 'bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-300' :
-                              'bg-slate-100 text-slate-700 border-slate-200 focus:ring-slate-300'
-                            }`}
-                          >
-                            <option value="New">🔵 New</option>
-                            <option value="Shortlisted">📋 Shortlisted</option>
-                            <option value="1st Call">📞 1st Call Logged</option>
-                            <option value="Interview Scheduled">📅 Interview Scheduled</option>
-                            <option value="Interviewed">🎯 Interview Completed</option>
-                            <option value="Selected">✅ Selected</option>
-                            <option value="Offer Sent">📄 Offer Sent</option>
-                            <option value="Hold">⏸ On Hold</option>
-                            <option value="Rejected">❌ Rejected</option>
-                          </select>
+                          {(c.status === 'Already Selected' || c.status === 'Joined') ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs shadow-2xs">
+                              🎉 Already Selected
+                            </span>
+                          ) : (
+                            <select
+                              value={c.status || 'New'}
+                              onChange={(e) => handleStatusSelect(c, e.target.value)}
+                              className={`text-[11px] font-bold rounded-lg border px-2.5 py-1.5 cursor-pointer outline-none transition-all shadow-xs focus:ring-2 ${
+                                c.status === 'New' ? 'bg-slate-100 text-slate-700 border-slate-200 focus:ring-slate-300' :
+                                c.status === 'Shortlisted' ? 'bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-300' :
+                                c.status === '1st Call' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-300' :
+                                c.status === 'Interview Scheduled' ? 'bg-violet-50 text-violet-700 border-violet-200 focus:ring-violet-300' :
+                                c.status === 'Interviewed' || c.status === 'Interview Completed' ? 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-300' :
+                                c.status === 'Selected' || c.status === 'Already Selected' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 focus:ring-emerald-300' :
+                                c.status === 'Offer Sent' ? 'bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-300' :
+                                c.status === 'Joined' || c.status === 'Offer Accepted' ? 'bg-teal-50 text-teal-700 border-teal-200 focus:ring-teal-300' :
+                                c.status === 'Hold' ? 'bg-orange-50 text-orange-700 border-orange-200 focus:ring-orange-300' :
+                                c.status === 'Rejected' || c.status === 'Offer Rejected' ? 'bg-rose-50 text-rose-700 border-rose-200 focus:ring-rose-300' :
+                                'bg-slate-100 text-slate-700 border-slate-200 focus:ring-slate-300'
+                              }`}
+                            >
+                              <option value="New">🔵 New</option>
+                              <option value="Shortlisted">📋 Shortlisted</option>
+                              <option value="1st Call">📞 1st Call Logged</option>
+                              <option value="Interview Scheduled">📅 Interview Scheduled</option>
+                              <option value="Interviewed">🎯 Interview Completed</option>
+                              <option value="Selected">✅ Selected</option>
+                              <option value="Already Selected">🎉 Already Selected</option>
+                              <option value="Offer Sent">📄 Offer Sent</option>
+                              <option value="Hold">⏸ On Hold</option>
+                              <option value="Rejected">❌ Rejected</option>
+                            </select>
+                          )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">

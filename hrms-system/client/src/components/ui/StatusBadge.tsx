@@ -25,7 +25,7 @@ export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   } else if (norm.includes('scheduled') || norm.includes('interview')) {
     badgeClass = 'b-int';
     Icon = Calendar;
-  } else if (norm === 'selected' || norm === 'hired') {
+  } else if (norm.includes('already selected') || norm === 'selected' || norm === 'hired') {
     badgeClass = 'b-sel';
     Icon = CheckCircle2;
   } else if (norm.includes('offer') || norm === 'accepted') {
