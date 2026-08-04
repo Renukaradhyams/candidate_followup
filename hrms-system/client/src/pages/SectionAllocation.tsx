@@ -140,12 +140,14 @@ export default function SectionAllocationPage() {
     return keys.length > 0 ? keys : BSC_DEPARTMENTS;
   }, [activeDeptSectionsMap]);
 
-  // Combined employee rows with allocated section
+  // Combined employee rows with allocated section & candidate remarks
   const formattedRows = useMemo(() => {
     return employees.map(emp => {
       const empId = String(emp.id || emp.appNo || emp.employeeCode || emp.app_no);
       const dept = emp.department || emp.dept || 'Mens';
       const allocatedSection = allocations[empId] || emp.section || '';
+
+      const remarksVal = emp.remarks || emp.shortlistRemarks || emp.call1Remarks || emp.call_remarks || emp.confirm_remarks || emp.offer_remarks || emp.notes || emp.remarks_history || '—';
 
       return {
         ...emp,
@@ -155,6 +157,7 @@ export default function SectionAllocationPage() {
         desig: emp.desig || emp.designation || 'Sales Executive',
         department: dept,
         section: allocatedSection,
+        remarks: remarksVal,
         doj: emp.doj || emp.actualDoj || emp.offeredDoj || emp.date || '01-Jan-2026',
         salary: emp.salary || emp.offeredSalary || '₹25,000',
         status: emp.status || 'Active Staff',
@@ -166,15 +169,36 @@ export default function SectionAllocationPage() {
     });
   }, [employees, allocations]);
 
-  // Section Filter options dependent on selected Department
+  // Dynamic filter options derived from actual employee & candidate data
+  const departmentFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    formattedRows.forEach(e => {
+      if (e.department && e.department.trim()) set.add(e.department.trim());
+    });
+    activeDepartmentsList.forEach(d => set.add(d));
+    return Array.from(set).sort();
+  }, [formattedRows, activeDepartmentsList]);
+
+  const designationFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    formattedRows.forEach(e => {
+      if (e.desig && e.desig.trim()) set.add(e.desig.trim());
+    });
+    return Array.from(set).sort();
+  }, [formattedRows]);
+
   const sectionFilterOptions = useMemo(() => {
-    if (selectedDept === 'All') {
-      const set = new Set<string>();
+    const set = new Set<string>();
+    formattedRows.forEach(e => {
+      if (e.section && e.section.trim()) set.add(e.section.trim());
+    });
+    if (selectedDept !== 'All') {
+      (activeDeptSectionsMap[selectedDept] || []).forEach(s => set.add(s));
+    } else {
       Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => set.add(s)));
-      return Array.from(set);
     }
-    return activeDeptSectionsMap[selectedDept] || [];
-  }, [selectedDept, activeDeptSectionsMap]);
+    return Array.from(set).sort();
+  }, [formattedRows, selectedDept, activeDeptSectionsMap]);
 
   // Filtered Employee list
   const filteredEmployees = useMemo(() => {
@@ -198,7 +222,8 @@ export default function SectionAllocationPage() {
                       emp.phone.includes(q) ||
                       emp.desig.toLowerCase().includes(q) ||
                       emp.department.toLowerCase().includes(q) ||
-                      emp.section.toLowerCase().includes(q);
+                      emp.section.toLowerCase().includes(q) ||
+                      (emp.remarks && emp.remarks.toLowerCase().includes(q));
         if (!match) return false;
       }
       return true;
@@ -430,7 +455,7 @@ export default function SectionAllocationPage() {
                   className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Departments</option>
-                  {activeDepartmentsList.map(d => (
+                  {departmentFilterOptions.map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -460,11 +485,9 @@ export default function SectionAllocationPage() {
                   className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Designations</option>
-                  <option value="Floor Manager">Floor Manager</option>
-                  <option value="Section Supervisor">Section Supervisor</option>
-                  <option value="Senior Sales Staff">Senior Sales Staff</option>
-                  <option value="Junior Sales Staff">Junior Sales Staff</option>
-                  <option value="Billing Cashier">Billing Cashier</option>
+                  {designationFilterOptions.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
               </div>
 
@@ -514,14 +537,15 @@ export default function SectionAllocationPage() {
                       </th>
                     )}
                     <th className="py-3.5 px-4">Employee ID</th>
-                    <th className="py-3.5 px-4">App No</th>
-                    <th className="py-3.5 px-4">Employee Name</th>
-                    <th className="py-3.5 px-4">Designation</th>
-                    <th className="py-3.5 px-4">Department</th>
-                    <th className="py-3.5 px-4 min-w-[200px]">Assigned Section</th>
-                    <th className="py-3.5 px-4">Date of Joining</th>
-                    <th className="py-3.5 px-4">Offered Salary</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 font-extrabold">App No</th>
+                    <th className="py-3.5 px-4 font-extrabold">Employee Name</th>
+                    <th className="py-3.5 px-4 font-extrabold">Designation</th>
+                    <th className="py-3.5 px-4 font-extrabold">Department</th>
+                    <th className="py-3.5 px-4 min-w-[180px] font-extrabold">Assigned Section</th>
+                    <th className="py-3.5 px-4 min-w-[200px] font-extrabold">Shortlist Remarks</th>
+                    <th className="py-3.5 px-4 font-extrabold">Date of Joining</th>
+                    <th className="py-3.5 px-4 font-extrabold">Offered Salary</th>
+                    <th className="py-3.5 px-4 text-center font-extrabold">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
@@ -589,6 +613,17 @@ export default function SectionAllocationPage() {
                               </div>
                             ) : (
                               <span className="font-bold text-[#C9952A]">{emp.section || 'Unallocated'}</span>
+                            )}
+                          </td>
+
+                          {/* Shortlist & Candidate Remarks Column */}
+                          <td className="py-3.5 px-4">
+                            {emp.remarks && emp.remarks !== '—' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/70 font-semibold text-[11px] max-w-[220px] truncate" title={emp.remarks}>
+                                💬 {emp.remarks}
+                              </span>
+                            ) : (
+                              <span className="text-[#888888] font-mono text-[11px]">—</span>
                             )}
                           </td>
 
@@ -671,15 +706,30 @@ export default function SectionAllocationPage() {
 
             <div className="space-y-4 text-xs font-semibold text-[#1E2D4E]">
               {bulkModal.action !== 'remove' ? (
-                <div>
-                  <label className="block text-[11px] font-black uppercase mb-1">Target Section Name</label>
-                  <input
-                    type="text"
-                    value={bulkModal.section}
-                    onChange={(e) => setBulkModal(prev => ({ ...prev, section: e.target.value }))}
-                    placeholder="Enter section name (e.g. Ethnic Wear, Cotton...)"
-                    className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-xs"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase mb-1">Select Available Section</label>
+                    <select
+                      value={bulkModal.section}
+                      onChange={(e) => setBulkModal(prev => ({ ...prev, section: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-xs shadow-xs"
+                    >
+                      <option value="">-- Choose Section Option --</option>
+                      {sectionFilterOptions.map(sec => (
+                        <option key={sec} value={sec}>{sec}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase mb-1">Or Type Custom Section Name</label>
+                    <input
+                      type="text"
+                      value={bulkModal.section}
+                      onChange={(e) => setBulkModal(prev => ({ ...prev, section: e.target.value }))}
+                      placeholder="Enter custom section name (e.g. Ethnic Wear, Cotton...)"
+                      className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-xs shadow-xs"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
