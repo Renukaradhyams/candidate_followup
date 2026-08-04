@@ -4,13 +4,30 @@ const { logAction } = require('../utils/logger');
 
 const getOffers = async (req, res) => {
   try {
+    // Bidirectional auto-synchronization between selection_offers and candidates for Joined status
+    try {
+      await db.query(`
+        UPDATE selection_offers so
+        JOIN candidates c ON so.app_no = c.app_no
+        SET so.status = 'Joined'
+        WHERE LOWER(TRIM(c.status)) = 'joined' AND LOWER(TRIM(so.status)) != 'joined'
+      `);
+      await db.query(`
+        UPDATE candidates c
+        JOIN selection_offers so ON c.app_no = so.app_no
+        SET c.status = 'Joined'
+        WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+      `);
+    } catch (e) {}
+
     const [rows] = await db.query(`
       SELECT 
         so.*,
         he.hr_score_json,
         he.assigned_score_json,
         c.salary,
-        c.department as cand_department
+        c.department as cand_department,
+        c.status as cand_status
       FROM selection_offers so
       LEFT JOIN hr_evaluations he ON so.app_no = he.app_no
       LEFT JOIN candidates c ON so.app_no = c.app_no
@@ -27,9 +44,10 @@ const getOffers = async (req, res) => {
       const colorIndex = (r.name.charCodeAt(0) + (r.name.charCodeAt(1) || 0)) % colors.length;
 
       const createdDate = new Date(r.created_at || Date.now());
-      const isJoinedStatus = (r.status || '').toLowerCase().trim() === 'joined';
+      const isJoined = (r.status || '').toLowerCase().trim() === 'joined' || (r.cand_status || '').toLowerCase().trim() === 'joined';
+      const status = isJoined ? 'Joined' : (r.status || 'Pending Accept');
       const joinedDateObj = r.actual_doj ? new Date(r.actual_doj) : (r.updated_at ? new Date(r.updated_at) : createdDate);
-      const rawDate = isJoinedStatus
+      const rawDate = isJoined
         ? (isNaN(joinedDateObj.getTime()) ? createdDate.getTime() : joinedDateObj.getTime())
         : (isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime());
 
@@ -48,7 +66,7 @@ const getOffers = async (req, res) => {
         call2Remarks: r.call2_remarks || '',
         confirm: fmt(r.confirm_date),
         confirmRemarks: r.confirm_remarks || '',
-        status: r.status || '',
+        status,
         salary: r.salary || '',
         remarks: r.remarks || '',
         department: r.cand_department || r.department || '',

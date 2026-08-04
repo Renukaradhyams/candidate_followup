@@ -104,62 +104,53 @@ export default function EmployeesPage() {
   useEffect(() => {
     let list = [...employees];
 
-    const getItemDate = (item: any): Date | null => {
-      if (item.actualDoj) {
-        const d = new Date(item.actualDoj);
-        if (!isNaN(d.getTime())) return d;
+    const getItemDateStr = (item: any): string => {
+      let raw = item.actualDoj || item.offeredDoj || '';
+      if (typeof raw === 'string' && raw.length >= 10 && raw.includes('-')) {
+        return raw.slice(0, 10);
       }
-      if (item.rawDate) {
-        const d = new Date(item.rawDate);
-        if (!isNaN(d.getTime())) return d;
+      const refMs = item.rawDate || (item.createdAt ? new Date(item.createdAt).getTime() : 0);
+      if (refMs) {
+        const d = new Date(refMs);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
       }
-      if (item.createdAt) {
-        const d = new Date(item.createdAt);
-        if (!isNaN(d.getTime())) return d;
+      return '';
+    };
+
+    const getItemTimestamp = (item: any): number => {
+      const dateStr = getItemDateStr(item);
+      if (dateStr) {
+        const parts = dateStr.split('-').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
       }
-      if (item.date) {
-        const d = new Date(item.date);
-        if (!isNaN(d.getTime())) return d;
-      }
-      if (item.offeredDoj) {
-        const d = new Date(item.offeredDoj);
-        if (!isNaN(d.getTime())) return d;
-      }
-      return null;
+      return 0;
     };
 
     if (activeRange === 'today') {
       const now = new Date();
-      list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-      });
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      list = list.filter(e => getItemDateStr(e) === todayStr);
     } else if (activeRange === 'yesterday') {
       const yest = new Date();
       yest.setDate(yest.getDate() - 1);
-      list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getFullYear() === yest.getFullYear() && d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate();
-      });
+      const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+      list = list.filter(e => getItemDateStr(e) === yestStr);
     } else if (activeRange === 'week') {
       const weekAgo = Date.now() - 7 * 86400000;
-      list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getTime() >= weekAgo;
-      });
+      list = list.filter(e => getItemTimestamp(e) >= weekAgo);
     } else if (activeRange === 'month') {
       const monthAgo = Date.now() - 30 * 86400000;
-      list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getTime() >= monthAgo;
-      });
+      list = list.filter(e => getItemTimestamp(e) >= monthAgo);
     } else if (activeRange === 'last_month') {
       const now = new Date();
       const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0).getTime();
       const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
       list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getTime() >= firstDay && d.getTime() <= lastDay;
+        const t = getItemTimestamp(e);
+        return t >= firstDay && t <= lastDay;
       });
     } else if (activeRange === 'custom' && fromDate) {
       const fParts = fromDate.split('-').map(Number);
@@ -170,8 +161,8 @@ export default function EmployeesPage() {
         end = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
       }
       list = list.filter(e => {
-        const d = getItemDate(e);
-        return d && d.getTime() >= start && d.getTime() <= end;
+        const t = getItemTimestamp(e);
+        return t >= start && t <= end;
       });
     }
 
