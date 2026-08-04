@@ -7,6 +7,7 @@ import {
 interface StatusBadgeProps {
   status: string;
   size?: 'sm' | 'md';
+  color?: string;
 }
 
 export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {

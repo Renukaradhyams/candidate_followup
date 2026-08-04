@@ -35,7 +35,20 @@ export default function DashboardPage() {
   const [toDate, setToDate] = useState('');
 
   // KPIs
-  const [kpis, setKpis] = useState({
+  const [kpis, setKpis] = useState<{
+    total: number;
+    shortlisted: number;
+    selected: number;
+    joined: number;
+    acceptanceRate: number;
+    avgDays: number;
+    onboarding: number;
+    awaitingJoining: number;
+    interviewsToday: number;
+    rejected: number;
+    hold: number;
+    dailyBreakdown: any[];
+  }>({
     total: 0,
     shortlisted: 0,
     selected: 0,
@@ -43,10 +56,11 @@ export default function DashboardPage() {
     acceptanceRate: 0,
     avgDays: 0,
     onboarding: 0,
+    awaitingJoining: 0,
     interviewsToday: 0,
     rejected: 0,
     hold: 0,
-    dailyBreakdown: [] as any[]
+    dailyBreakdown: []
   });
 
   const [pendingActions, setPendingActions] = useState<{ text: string; priority: string }[]>([]);
