@@ -320,6 +320,8 @@ class CandidateController {
           q3: r.q3 || '',
           q4: r.q4 || '',
           remarks: r.remarks || r.offer_remarks || '',
+          createdAt: r.created_at || null,
+          rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime(),
           date: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
         };
       });

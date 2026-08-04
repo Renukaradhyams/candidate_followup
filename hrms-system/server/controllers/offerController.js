@@ -26,6 +26,8 @@ const getOffers = async (req, res) => {
       const initials = r.name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
       const colorIndex = (r.name.charCodeAt(0) + (r.name.charCodeAt(1) || 0)) % colors.length;
 
+      const createdDate = new Date(r.created_at || Date.now());
+
       return {
         appNo: r.app_no,
         name: r.name,
@@ -46,7 +48,10 @@ const getOffers = async (req, res) => {
         remarks: r.remarks || '',
         department: r.cand_department || r.department || '',
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
-        assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null
+        assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null,
+        createdAt: r.created_at || null,
+        rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime(),
+        date: fmt(r.created_at)
       };
     });
 

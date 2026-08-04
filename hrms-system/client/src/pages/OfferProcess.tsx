@@ -145,46 +145,74 @@ export default function OfferProcessPage() {
   useEffect(() => {
     let list = [...(offers || [])];
 
+    const getItemDate = (item: any): Date | null => {
+      if (item.rawDate) {
+        const d = new Date(item.rawDate);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (item.createdAt) {
+        const d = new Date(item.createdAt);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (item.date) {
+        const d = new Date(item.date);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (item.actualDoj) {
+        const d = new Date(item.actualDoj);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (item.estDoj) {
+        const d = new Date(item.estDoj);
+        if (!isNaN(d.getTime())) return d;
+      }
+      return null;
+    };
+
     if (activeRange === 'today') {
-      const today = new Date().toDateString();
+      const now = new Date();
       list = list.filter(o => {
-        const d = o.rawDate ? new Date(o.rawDate) : (o.date ? new Date(o.date) : null);
-        return d && d.toDateString() === today;
+        const d = getItemDate(o);
+        return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
       });
     } else if (activeRange === 'yesterday') {
       const yest = new Date();
       yest.setDate(yest.getDate() - 1);
-      const yestStr = yest.toDateString();
       list = list.filter(o => {
-        const d = o.rawDate ? new Date(o.rawDate) : (o.date ? new Date(o.date) : null);
-        return d && d.toDateString() === yestStr;
+        const d = getItemDate(o);
+        return d && d.getFullYear() === yest.getFullYear() && d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate();
       });
     } else if (activeRange === 'week') {
       const weekAgo = Date.now() - 7 * 86400000;
       list = list.filter(o => {
-        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
-        return t >= weekAgo;
+        const d = getItemDate(o);
+        return d && d.getTime() >= weekAgo;
       });
     } else if (activeRange === 'month') {
       const monthAgo = Date.now() - 30 * 86400000;
       list = list.filter(o => {
-        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
-        return t >= monthAgo;
+        const d = getItemDate(o);
+        return d && d.getTime() >= monthAgo;
       });
     } else if (activeRange === 'last_month') {
       const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0).getTime();
       const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
       list = list.filter(o => {
-        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
-        return t >= firstDay && t <= lastDay;
+        const d = getItemDate(o);
+        return d && d.getTime() >= firstDay && d.getTime() <= lastDay;
       });
     } else if (activeRange === 'custom' && fromDate) {
-      const start = new Date(fromDate).getTime();
-      const end = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : start + 86400000 - 1;
+      const fParts = fromDate.split('-').map(Number);
+      const start = new Date(fParts[0], fParts[1] - 1, fParts[2], 0, 0, 0).getTime();
+      let end = start + 86400000 - 1;
+      if (toDate) {
+        const tParts = toDate.split('-').map(Number);
+        end = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
+      }
       list = list.filter(o => {
-        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
-        return t >= start && t <= end;
+        const d = getItemDate(o);
+        return d && d.getTime() >= start && d.getTime() <= end;
       });
     }
 
