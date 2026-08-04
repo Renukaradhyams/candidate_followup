@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../services/api';
 import { showToast } from './Toast';
-import { BSC_DEPARTMENTS } from '../utils/bscDepartments';
+import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
 import { Layers, Plus, Edit3, Trash2, X, Save, Check } from 'lucide-react';
 
 interface ManageSectionsModalProps {
@@ -13,6 +13,7 @@ interface ManageSectionsModalProps {
 export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated }: ManageSectionsModalProps) {
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [filterDept, setFilterDept] = useState('All');
 
   // New Section Form
@@ -27,9 +28,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
   const [editDesc, setEditDesc] = useState('');
 
   const departmentOptions = useMemo(() => {
-    const set = new Set<string>(BSC_DEPARTMENTS);
-    sections.forEach(s => { if (s.department) set.add(s.department); });
-    return Array.from(set);
+    return getUniqueDepartments(sections.map(s => s.department));
   }, [sections]);
 
   const loadSections = async () => {

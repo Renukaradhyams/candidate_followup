@@ -13,7 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 
 import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
-import { BSC_DEPARTMENTS } from '../utils/bscDepartments';
+import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
 
 export default function EmployeesPage() {
   const navigate = useNavigate();
@@ -304,9 +304,7 @@ export default function EmployeesPage() {
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
   const uniqueDepts = useMemo(() => {
-    const fromEmp = employees.map(e => e.department).filter(Boolean);
-    const set = new Set([...BSC_DEPARTMENTS, ...fromEmp]);
-    return Array.from(set).sort();
+    return getUniqueDepartments(employees.map(e => e.department));
   }, [employees]);
 
   return (
