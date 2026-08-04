@@ -103,6 +103,42 @@ export default function DashboardPage() {
     loadData();
   }, [navigate, loadData]);
 
+  const femaleStats = useMemo(() => {
+    if ((kpis as any).femaleRegistered !== undefined && (kpis as any).femaleRegistered !== null) {
+      return { registered: (kpis as any).femaleRegistered, joined: (kpis as any).femaleJoined || 0 };
+    }
+    const reg = (candidates || []).filter(c => {
+      const g = (c.gender || '').toLowerCase().trim();
+      return g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+    }).length;
+    const jnd = (candidates || []).filter(c => {
+      const s = (c.status || '').toLowerCase().trim();
+      const isJoined = s === 'joined' || s === 'hired';
+      const g = (c.gender || '').toLowerCase().trim();
+      const isFemale = g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+      return isJoined && isFemale;
+    }).length;
+    return { registered: reg, joined: jnd };
+  }, [kpis, candidates]);
+
+  const maleStats = useMemo(() => {
+    if ((kpis as any).maleRegistered !== undefined && (kpis as any).maleRegistered !== null) {
+      return { registered: (kpis as any).maleRegistered, joined: (kpis as any).maleJoined || 0 };
+    }
+    const reg = (candidates || []).filter(c => {
+      const g = (c.gender || '').toLowerCase().trim();
+      return g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+    }).length;
+    const jnd = (candidates || []).filter(c => {
+      const s = (c.status || '').toLowerCase().trim();
+      const isJoined = s === 'joined' || s === 'hired';
+      const g = (c.gender || '').toLowerCase().trim();
+      const isMale = g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+      return isJoined && isMale;
+    }).length;
+    return { registered: reg, joined: jnd };
+  }, [kpis, candidates]);
+
   // Date Filtering logic for candidates table
   useEffect(() => {
     let list = [...candidates];
@@ -340,20 +376,20 @@ export default function DashboardPage() {
               color="amber"
             />
             <MetricCard
-              title="Awaiting Joining"
-              value={kpis.awaitingJoining ?? kpis.onboarding}
-              subtext="Offer Desk pending acceptance"
-              icon={UserPlus}
-              color="emerald"
-              onClick={() => navigate('/offer-process?filter=pending')}
+              title="Girls Candidates"
+              value={`${femaleStats.registered} Reg`}
+              subtext={`Registered: ${femaleStats.registered} • Joined: ${femaleStats.joined}`}
+              icon={Users}
+              color="rose"
+              onClick={() => navigate('/candidates')}
             />
             <MetricCard
-              title="Interviews Today"
-              value={kpis.interviewsToday}
-              subtext="Today's scheduled interviews"
-              icon={CalendarCheck}
-              color="rose"
-              onClick={() => navigate('/interview-panel?filter=today')}
+              title="Mens Candidates"
+              value={`${maleStats.registered} Reg`}
+              subtext={`Registered: ${maleStats.registered} • Joined: ${maleStats.joined}`}
+              icon={Users}
+              color="teal"
+              onClick={() => navigate('/candidates')}
             />
           </div>
 

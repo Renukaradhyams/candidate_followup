@@ -618,6 +618,39 @@ class CandidateService {
       const pendingReview = filteredRows.filter(r => (r.status || '').toLowerCase().trim() === 'new').length;
       const todayCandidates = candRows.filter(r => r.created_at && new Date(r.created_at).toDateString() === todayStr).length;
 
+      // Gender Breakdown: Girls / Female and Mens / Male
+      const femaleRegistered = filteredRows.filter(r => {
+        const g = (r.gender || '').toLowerCase().trim();
+        return g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+      }).length;
+
+      const femaleJoined = candRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        const os = (r.offer_status || '').toLowerCase().trim();
+        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        if (!isJoined) return false;
+        const g = (r.gender || '').toLowerCase().trim();
+        const isFemale = g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+        if (!isFemale) return false;
+        return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
+      }).length;
+
+      const maleRegistered = filteredRows.filter(r => {
+        const g = (r.gender || '').toLowerCase().trim();
+        return g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+      }).length;
+
+      const maleJoined = candRows.filter(r => {
+        const s = (r.status || '').toLowerCase().trim();
+        const os = (r.offer_status || '').toLowerCase().trim();
+        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        if (!isJoined) return false;
+        const g = (r.gender || '').toLowerCase().trim();
+        const isMale = g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+        if (!isMale) return false;
+        return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
+      }).length;
+
       // Date-wise breakdown map
       const dailyMap = {};
       candRows.forEach(r => {
@@ -688,6 +721,10 @@ class CandidateService {
         interviewsToday,
         newCandidates: pendingReview,
         hold,
+        femaleRegistered,
+        femaleJoined,
+        maleRegistered,
+        maleJoined,
         dailyBreakdown
       };
     } catch (err) {
@@ -717,7 +754,11 @@ class CandidateService {
         onboarding: 0,
         interviewsToday: 0,
         newCandidates: 0,
-        hold: 0
+        hold: 0,
+        femaleRegistered: 0,
+        femaleJoined: 0,
+        maleRegistered: 0,
+        maleJoined: 0
       };
     }
   }
