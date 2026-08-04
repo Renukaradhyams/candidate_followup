@@ -328,7 +328,7 @@ export default function DashboardPage() {
             <MetricCard
               title="Acceptance Rate"
               value={`${kpis.acceptanceRate}%`}
-              subtext="Joined ÷ Shortlisted × 100"
+              subtext="Shortlisted ÷ Registered Candidates × 100"
               icon={Percent}
               color="indigo"
             />

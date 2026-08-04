@@ -587,8 +587,8 @@ class CandidateService {
         return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
       }).length;
 
-      // 5. Acceptance Rate = (Joined Staff / Shortlisted) * 100 (0% if Shortlisted is 0)
-      const acceptanceRate = shortlisted > 0 ? Math.round((joined / shortlisted) * 100) : 0;
+      // 5. Acceptance Rate = (Shortlisted / Total Registered Candidates) * 100
+      const acceptanceRate = total > 0 ? Math.round((shortlisted / total) * 100) : 0;
 
       // 6. Awaiting Joining = Candidates inside Offer Desk whose status is Pending Accept, Pending, Accepted, Offer Sent, etc. (not Joined or Rejected)
       const awaitingJoining = offerRows.filter(r => {
