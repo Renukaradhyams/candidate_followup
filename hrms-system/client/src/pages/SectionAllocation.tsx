@@ -7,7 +7,7 @@ import { API, Auth, UserSession } from '../services/api';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import ManageSectionsModal from '../components/ManageSectionsModal';
-import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS, getSectionsForDepartment } from '../utils/bscDepartments';
+import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS, getSectionsForDepartment, getUniqueDepartments, normalizeDepartmentName } from '../utils/bscDepartments';
 import { 
   Layers, 
   Users, 
@@ -119,9 +119,10 @@ export default function SectionAllocationPage() {
     if (dbSections && dbSections.length > 0) {
       dbSections.forEach(s => {
         if (s.department && s.section_name && s.active !== false) {
-          if (!map[s.department]) map[s.department] = [];
-          if (!map[s.department].includes(s.section_name)) {
-            map[s.department].push(s.section_name);
+          const normDept = normalizeDepartmentName(s.department);
+          if (!map[normDept]) map[normDept] = [];
+          if (!map[normDept].includes(s.section_name)) {
+            map[normDept].push(s.section_name);
           }
         }
       });
@@ -159,7 +160,7 @@ export default function SectionAllocationPage() {
         section: allocatedSection,
         remarks: remarksVal,
         doj: emp.doj || emp.actualDoj || emp.offeredDoj || emp.date || '01-Jan-2026',
-        salary: emp.salary || emp.offeredSalary || '₹25,000',
+        salary: emp.salary || emp.offeredSalary || '₹125,000',
         status: emp.status || 'Active Staff',
         branch: emp.branch || 'Main Mall - MG Road',
         phone: emp.phone || emp.mobile || '+91 9876543210',
@@ -171,12 +172,8 @@ export default function SectionAllocationPage() {
 
   // Dynamic filter options derived from actual employee & candidate data
   const departmentFilterOptions = useMemo(() => {
-    const set = new Set<string>();
-    formattedRows.forEach(e => {
-      if (e.department && e.department.trim()) set.add(e.department.trim());
-    });
-    activeDepartmentsList.forEach(d => set.add(d));
-    return Array.from(set).sort();
+    const fromRows = formattedRows.map(e => e.department);
+    return getUniqueDepartments([...activeDepartmentsList, ...fromRows]);
   }, [formattedRows, activeDepartmentsList]);
 
   const designationFilterOptions = useMemo(() => {
@@ -193,7 +190,9 @@ export default function SectionAllocationPage() {
       if (e.section && e.section.trim()) set.add(e.section.trim());
     });
     if (selectedDept !== 'All') {
-      (activeDeptSectionsMap[selectedDept] || []).forEach(s => set.add(s));
+      const canonicalKey = Object.keys(activeDeptSectionsMap).find(k => k.toLowerCase() === selectedDept.toLowerCase());
+      const secList = canonicalKey ? activeDeptSectionsMap[canonicalKey] : (activeDeptSectionsMap[selectedDept] || []);
+      (secList || []).forEach(s => set.add(s));
     } else {
       Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => set.add(s)));
     }
@@ -203,10 +202,10 @@ export default function SectionAllocationPage() {
   // Filtered Employee list
   const filteredEmployees = useMemo(() => {
     return formattedRows.filter(emp => {
-      if (selectedDept !== 'All' && emp.department !== selectedDept) return false;
-      if (selectedSection !== 'All' && emp.section !== selectedSection) return false;
-      if (selectedDesig !== 'All' && emp.desig !== selectedDesig) return false;
-      if (selectedBranch !== 'All' && emp.branch !== selectedBranch) return false;
+      if (selectedDept !== 'All' && (emp.department || '').toLowerCase().trim() !== selectedDept.toLowerCase().trim()) return false;
+      if (selectedSection !== 'All' && (emp.section || '').toLowerCase().trim() !== selectedSection.toLowerCase().trim()) return false;
+      if (selectedDesig !== 'All' && (emp.desig || '').toLowerCase().trim() !== selectedDesig.toLowerCase().trim()) return false;
+      if (selectedBranch !== 'All' && (emp.branch || '').toLowerCase().trim() !== selectedBranch.toLowerCase().trim()) return false;
 
       if (joiningDateFilter) {
         const fDate = new Date(joiningDateFilter).toDateString();
