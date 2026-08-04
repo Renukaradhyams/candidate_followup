@@ -320,6 +320,12 @@ export const API = {
   async saveSectionAllocation(payload: any) { return apiFetch('/section-allocations', { method: 'POST', body: JSON.stringify(payload) }); },
   async bulkSaveSectionAllocation(payload: any) { return apiFetch('/section-allocations/bulk', { method: 'POST', body: JSON.stringify(payload) }); },
 
+  // Department Sections CRUD
+  async getDepartmentSections() { return apiFetch('/dept-hiring/sections'); },
+  async addDepartmentSection(payload: any) { return apiFetch('/dept-hiring/sections/add', { method: 'POST', body: JSON.stringify(payload) }); },
+  async editDepartmentSection(payload: any) { return apiFetch('/dept-hiring/sections/edit', { method: 'POST', body: JSON.stringify(payload) }); },
+  async deleteDepartmentSection(id: number | string) { return apiFetch('/dept-hiring/sections/delete', { method: 'POST', body: JSON.stringify({ id }) }); },
+
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {
     if (!url) return null;

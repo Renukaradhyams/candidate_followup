@@ -487,7 +487,42 @@ async function autoInitializeDatabase(pool) {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
       `);
-      logDebug(`[Auto DB Initializer] Verified department_hiring_targets and section_allocations tables`);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS department_sections (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          department VARCHAR(100) NOT NULL,
+          section_name VARCHAR(100) NOT NULL,
+          description VARCHAR(255),
+          active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY dept_sec (department, section_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      const [secRows] = await connection.query(`SELECT COUNT(*) as cnt FROM department_sections`);
+      if (secRows[0].cnt === 0) {
+        const initialSections = [
+          ['Mens', 'Ethnic Wear'], ['Mens', 'Brands'], ['Mens', 'Mid'], ['Mens', 'Economic'], ['Mens', 'Undergarments'], ['Mens', 'Watch & Accessories'], ['Mens', 'Suiting & Shirting'], ['Mens', 'Luggage'],
+          ['Ladies', 'Ethnic Wear'], ['Ladies', 'Mix & Match'], ['Ladies', 'Western'], ['Ladies', 'Undergarments & Nightwear'], ['Ladies', 'Jewellery Set'], ['Ladies', 'Bridal Wear'], ['Ladies', 'Accessories'], ['Ladies', 'Dress Material'], ['Ladies', 'Blouses'],
+          ['Kids', 'Boys'], ['Kids', 'Girls'], ['Kids', 'Newborn'], ['Kids', 'Infants'], ['Kids', 'Boys Accessories'], ['Kids', 'Undergarments'],
+          ['First Floor Saree', 'Silk'], ['First Floor Saree', 'Art & Mix'], ['First Floor Saree', 'Designer'], ['First Floor Saree', 'Cotton'],
+          ['Ground Floor Saree', 'Synthetic'], ['Ground Floor Saree', 'Cotton'], ['Ground Floor Saree', 'Silk'], ['Ground Floor Saree', 'Art & Raw'], ['Ground Floor Saree', 'Fancy'], ['Ground Floor Saree', 'Others / Remaining'],
+          ['Home Furnishing', 'Full Home Furnishing'],
+          ['Others', 'General']
+        ];
+
+        for (const [dept, sec] of initialSections) {
+          await connection.query(
+            `INSERT IGNORE INTO department_sections (department, section_name) VALUES (?, ?)`,
+            [dept, sec]
+          );
+        }
+        logDebug(`[Auto DB Initializer] Seeded initial BSC Textiles department sections`);
+      }
+
+      logDebug(`[Auto DB Initializer] Verified department_hiring_targets, section_allocations and department_sections tables`);
     } catch (e) {
       logDebug(`[Auto DB Initializer Warning for new modules]:`, e.message);
     }

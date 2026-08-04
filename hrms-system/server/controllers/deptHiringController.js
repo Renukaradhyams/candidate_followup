@@ -147,6 +147,84 @@ class DeptHiringController {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
+
+  // GET /api/dept-hiring/sections
+  async getDepartmentSections(req, res) {
+    try {
+      let sections = [];
+      try {
+        const [rows] = await pool.query('SELECT * FROM department_sections WHERE active = TRUE ORDER BY department, section_name');
+        sections = rows || [];
+      } catch (e) {
+        sections = [];
+      }
+      return res.json({ success: true, sections });
+    } catch (err) {
+      console.error('[getDepartmentSections Error]', err);
+      return res.json({ success: false, sections: [] });
+    }
+  }
+
+  // POST /api/dept-hiring/sections/add
+  async addDepartmentSection(req, res) {
+    try {
+      const { department, sectionName, description } = req.body;
+      if (!department || !sectionName) {
+        return res.status(400).json({ success: false, error: 'Department and section name are required' });
+      }
+
+      await pool.query(`
+        INSERT INTO department_sections (department, section_name, description, active)
+        VALUES (?, ?, ?, TRUE)
+        ON DUPLICATE KEY UPDATE
+          description = VALUES(description),
+          active = TRUE,
+          updated_at = CURRENT_TIMESTAMP
+      `, [department.trim(), sectionName.trim(), description || '']);
+
+      return res.json({ success: true, message: 'Section added successfully' });
+    } catch (err) {
+      console.error('[addDepartmentSection Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // POST /api/dept-hiring/sections/edit
+  async editDepartmentSection(req, res) {
+    try {
+      const { id, department, sectionName, description } = req.body;
+      if (!id || !department || !sectionName) {
+        return res.status(400).json({ success: false, error: 'ID, department and section name are required' });
+      }
+
+      await pool.query(`
+        UPDATE department_sections
+        SET department = ?, section_name = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [department.trim(), sectionName.trim(), description || '', id]);
+
+      return res.json({ success: true, message: 'Section updated successfully' });
+    } catch (err) {
+      console.error('[editDepartmentSection Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // POST /api/dept-hiring/sections/delete
+  async deleteDepartmentSection(req, res) {
+    try {
+      const { id } = req.body;
+      if (!id) {
+        return res.status(400).json({ success: false, error: 'Section ID is required' });
+      }
+
+      await pool.query(`UPDATE department_sections SET active = FALSE WHERE id = ?`, [id]);
+      return res.json({ success: true, message: 'Section deleted successfully' });
+    } catch (err) {
+      console.error('[deleteDepartmentSection Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
 }
 
 module.exports = new DeptHiringController();

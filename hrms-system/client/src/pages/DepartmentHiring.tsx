@@ -6,6 +6,7 @@ import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
+import ManageSectionsModal from '../components/ManageSectionsModal';
 import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS, getSectionsForDepartment } from '../utils/bscDepartments';
 import { 
   Building2, 
@@ -24,7 +25,8 @@ import {
   Calendar,
   Layers,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -48,6 +50,8 @@ export default function DepartmentHiringPage() {
   const [loading, setLoading] = useState(true);
   const [targets, setTargets] = useState<Record<string, { required: number; target: number; remarks: string }>>({});
   const [employees, setEmployees] = useState<any[]>([]);
+  const [dbSections, setDbSections] = useState<any[]>([]);
+  const [manageSectionsOpen, setManageSectionsOpen] = useState(false);
 
   // Filter States
   const [selectedDept, setSelectedDept] = useState('All');
@@ -83,9 +87,10 @@ export default function DepartmentHiringPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [tRes, eRes] = await Promise.all([
+      const [tRes, eRes, sRes] = await Promise.all([
         API.getHiringTargets(),
-        API.getEmployees()
+        API.getEmployees(),
+        API.getDepartmentSections()
       ]);
 
       if (tRes && tRes.targets) {
@@ -106,6 +111,10 @@ export default function DepartmentHiringPage() {
       } else if (eRes && eRes.employees) {
         setEmployees(eRes.employees);
       }
+
+      if (sRes && sRes.sections) {
+        setDbSections(sRes.sections);
+      }
     } catch (err: any) {
       console.warn('Load Department Hiring data warning:', err.message);
     } finally {
@@ -121,6 +130,25 @@ export default function DepartmentHiringPage() {
     setSession(Auth.get());
     loadData();
   }, [navigate, loadData]);
+
+  // Combined DB & default sections map
+  const activeDeptSectionsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    BSC_DEPARTMENTS.forEach(d => {
+      map[d] = [...(BSC_DEPARTMENT_SECTIONS[d] || [])];
+    });
+
+    dbSections.forEach(s => {
+      if (s.department && s.section_name) {
+        if (!map[s.department]) map[s.department] = [];
+        if (!map[s.department].includes(s.section_name)) {
+          map[s.department].push(s.section_name);
+        }
+      }
+    });
+
+    return map;
+  }, [dbSections]);
 
   // Generate complete table data across BSC TEXTILES departments and sections
   const fullTableData = useMemo(() => {
@@ -140,25 +168,22 @@ export default function DepartmentHiringPage() {
       updatedAt: string;
     }> = [];
 
-    // Map existing joined employees to (dept + section + designation)
     const countMap: Record<string, number> = {};
     employees.forEach(emp => {
       const dept = emp.department || 'Mens';
-      const sec = emp.section || getSectionsForDepartment(dept)[0] || 'General';
+      const sec = emp.section || (activeDeptSectionsMap[dept] ? activeDeptSectionsMap[dept][0] : 'General');
       const desig = emp.desig || emp.designation || 'Sales Staff';
 
       const exactKey = `${dept}||${sec}||${desig}`;
       countMap[exactKey] = (countMap[exactKey] || 0) + 1;
 
-      // also count by dept + designation fallback
       const fallbackKey = `${dept}||${desig}`;
       countMap[fallbackKey] = (countMap[fallbackKey] || 0) + 1;
     });
 
-    BSC_DEPARTMENTS.forEach(dept => {
-      const sections = BSC_DEPARTMENT_SECTIONS[dept] || ['General'];
+    Object.keys(activeDeptSectionsMap).forEach(dept => {
+      const sections = activeDeptSectionsMap[dept] || ['General'];
       sections.forEach(sec => {
-        // pick designations
         const desigs = defaultDesignations.slice(0, 3);
         desigs.forEach(desig => {
           const rowKey = `${dept}||${sec}||${desig}`;
@@ -193,17 +218,17 @@ export default function DepartmentHiringPage() {
     });
 
     return rows;
-  }, [targets, employees]);
+  }, [targets, employees, activeDeptSectionsMap]);
 
   // Section options dependent on selected Department
   const sectionOptions = useMemo(() => {
     if (selectedDept === 'All') {
       const allSecs = new Set<string>();
-      Object.values(BSC_DEPARTMENT_SECTIONS).forEach(list => list.forEach(s => allSecs.add(s)));
+      Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => allSecs.add(s)));
       return Array.from(allSecs);
     }
-    return getSectionsForDepartment(selectedDept);
-  }, [selectedDept]);
+    return activeDeptSectionsMap[selectedDept] || [];
+  }, [selectedDept, activeDeptSectionsMap]);
 
   // Filtered Rows
   const filteredRows = useMemo(() => {
@@ -319,7 +344,16 @@ export default function DepartmentHiringPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {isHR && (
+                <button
+                  onClick={() => setManageSectionsOpen(true)}
+                  className="btn-primary text-xs flex items-center gap-1.5 shadow-xs"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Manage Sections</span>
+                </button>
+              )}
               <button
                 onClick={() => navigate('/openings')}
                 className="btn-secondary text-xs flex items-center gap-1.5 shadow-xs"
@@ -713,6 +747,12 @@ export default function DepartmentHiringPage() {
           </div>
         </div>
       )}
+      {/* Manage Sections Modal */}
+      <ManageSectionsModal
+        isOpen={manageSectionsOpen}
+        onClose={() => setManageSectionsOpen(false)}
+        onSectionsUpdated={loadData}
+      />
     </div>
   );
 }

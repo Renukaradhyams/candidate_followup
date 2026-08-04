@@ -129,6 +129,11 @@ router.get('/section-allocations', deptHiringController.getSectionAllocations);
 router.post('/section-allocations', deptHiringController.saveSectionAllocation);
 router.post('/section-allocations/bulk', deptHiringController.bulkSaveSectionAllocation);
 
+router.get('/dept-hiring/sections', deptHiringController.getDepartmentSections);
+router.post('/dept-hiring/sections/add', deptHiringController.addDepartmentSection);
+router.post('/dept-hiring/sections/edit', deptHiringController.editDepartmentSection);
+router.post('/dept-hiring/sections/delete', deptHiringController.deleteDepartmentSection);
+
 // ── Legacy Google Apps Script Action Dispatcher Endpoint ─────
 // Dispatches legacy `{ action: 'verifyUser', ... }` requests to appropriate controller actions
 router.get('/legacy', async (req, res) => {
@@ -201,7 +206,11 @@ router.post('/legacy', async (req, res) => {
     saveHiringTarget: deptHiringController.saveHiringTarget,
     getSectionAllocations: deptHiringController.getSectionAllocations,
     saveSectionAllocation: deptHiringController.saveSectionAllocation,
-    bulkSaveSectionAllocation: deptHiringController.bulkSaveSectionAllocation
+    bulkSaveSectionAllocation: deptHiringController.bulkSaveSectionAllocation,
+    getDepartmentSections: deptHiringController.getDepartmentSections,
+    addDepartmentSection: deptHiringController.addDepartmentSection,
+    editDepartmentSection: deptHiringController.editDepartmentSection,
+    deleteDepartmentSection: deptHiringController.deleteDepartmentSection
   };
 
   if (dispatchMap[action]) {

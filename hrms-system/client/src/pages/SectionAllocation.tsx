@@ -6,6 +6,7 @@ import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
+import ManageSectionsModal from '../components/ManageSectionsModal';
 import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS, getSectionsForDepartment } from '../utils/bscDepartments';
 import { 
   Layers, 
@@ -30,7 +31,8 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 
 export default function SectionAllocationPage() {
@@ -41,6 +43,8 @@ export default function SectionAllocationPage() {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [dbSections, setDbSections] = useState<any[]>([]);
+  const [manageSectionsOpen, setManageSectionsOpen] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,9 +71,10 @@ export default function SectionAllocationPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [eRes, aRes] = await Promise.all([
+      const [eRes, aRes, sRes] = await Promise.all([
         API.getEmployees(),
-        API.getSectionAllocations()
+        API.getSectionAllocations(),
+        API.getDepartmentSections()
       ]);
 
       let empList: any[] = [];
@@ -87,6 +92,10 @@ export default function SectionAllocationPage() {
         });
         setAllocations(allocMap);
       }
+
+      if (sRes && sRes.sections) {
+        setDbSections(sRes.sections);
+      }
     } catch (err: any) {
       console.warn('Load Section Allocation error:', err.message);
     } finally {
@@ -102,6 +111,25 @@ export default function SectionAllocationPage() {
     setSession(Auth.get());
     loadData();
   }, [navigate, loadData]);
+
+  // Combined DB & default sections map
+  const activeDeptSectionsMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    BSC_DEPARTMENTS.forEach(d => {
+      map[d] = [...(BSC_DEPARTMENT_SECTIONS[d] || [])];
+    });
+
+    dbSections.forEach(s => {
+      if (s.department && s.section_name) {
+        if (!map[s.department]) map[s.department] = [];
+        if (!map[s.department].includes(s.section_name)) {
+          map[s.department].push(s.section_name);
+        }
+      }
+    });
+
+    return map;
+  }, [dbSections]);
 
   // Combined employee rows with allocated section
   const formattedRows = useMemo(() => {
@@ -133,11 +161,11 @@ export default function SectionAllocationPage() {
   const sectionFilterOptions = useMemo(() => {
     if (selectedDept === 'All') {
       const set = new Set<string>();
-      Object.values(BSC_DEPARTMENT_SECTIONS).forEach(list => list.forEach(s => set.add(s)));
+      Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => set.add(s)));
       return Array.from(set);
     }
-    return getSectionsForDepartment(selectedDept);
-  }, [selectedDept]);
+    return activeDeptSectionsMap[selectedDept] || [];
+  }, [selectedDept, activeDeptSectionsMap]);
 
   // Filtered Employee list
   const filteredEmployees = useMemo(() => {
@@ -295,13 +323,24 @@ export default function SectionAllocationPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => navigate('/employees')}
-              className="btn-secondary text-xs flex items-center gap-1.5 shadow-xs"
-            >
-              <span>Employee Directory</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {isHR && (
+                <button
+                  onClick={() => setManageSectionsOpen(true)}
+                  className="btn-primary text-xs flex items-center gap-1.5 shadow-xs"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Manage Sections</span>
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/employees')}
+                className="btn-secondary text-xs flex items-center gap-1.5 shadow-xs"
+              >
+                <span>Employee Directory</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Top Summary Dashboard Cards */}
@@ -479,7 +518,7 @@ export default function SectionAllocationPage() {
                   {filteredEmployees.length > 0 ? (
                     filteredEmployees.map((emp) => {
                       const isSelected = selectedEmpIds.includes(emp.empId);
-                      const deptSections = getSectionsForDepartment(emp.department);
+                      const deptSections = activeDeptSectionsMap[emp.department] || getSectionsForDepartment(emp.department);
 
                       return (
                         <tr key={emp.empId} className={`hover:bg-black/5 transition-colors font-medium ${isSelected ? 'bg-[#C9952A]/10' : ''}`}>
@@ -785,6 +824,12 @@ export default function SectionAllocationPage() {
           </div>
         </div>
       )}
+      {/* Manage Sections Modal */}
+      <ManageSectionsModal
+        isOpen={manageSectionsOpen}
+        onClose={() => setManageSectionsOpen(false)}
+        onSectionsUpdated={loadData}
+      />
     </div>
   );
 }
