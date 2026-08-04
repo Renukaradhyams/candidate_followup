@@ -26,6 +26,11 @@ export default function OfferProcessPage() {
   const [saving, setSaving] = useState(false);
   const [designations, setDesignations] = useState<string[]>([]);
 
+  // Recruitment Analytics & Pipeline Date Range Filter State
+  const [activeRange, setActiveRange] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom'>('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   // Edit Modal State
   const [detailOffer, setDetailOffer] = useState<any | null>(null);
   const [noticePd, setNoticePd] = useState('');
@@ -139,6 +144,50 @@ export default function OfferProcessPage() {
 
   useEffect(() => {
     let list = [...(offers || [])];
+
+    if (activeRange === 'today') {
+      const today = new Date().toDateString();
+      list = list.filter(o => {
+        const d = o.rawDate ? new Date(o.rawDate) : (o.date ? new Date(o.date) : null);
+        return d && d.toDateString() === today;
+      });
+    } else if (activeRange === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(yest.getDate() - 1);
+      const yestStr = yest.toDateString();
+      list = list.filter(o => {
+        const d = o.rawDate ? new Date(o.rawDate) : (o.date ? new Date(o.date) : null);
+        return d && d.toDateString() === yestStr;
+      });
+    } else if (activeRange === 'week') {
+      const weekAgo = Date.now() - 7 * 86400000;
+      list = list.filter(o => {
+        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
+        return t >= weekAgo;
+      });
+    } else if (activeRange === 'month') {
+      const monthAgo = Date.now() - 30 * 86400000;
+      list = list.filter(o => {
+        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
+        return t >= monthAgo;
+      });
+    } else if (activeRange === 'last_month') {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+      list = list.filter(o => {
+        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
+        return t >= firstDay && t <= lastDay;
+      });
+    } else if (activeRange === 'custom' && fromDate) {
+      const start = new Date(fromDate).getTime();
+      const end = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : start + 86400000 - 1;
+      list = list.filter(o => {
+        const t = o.rawDate || (o.date ? new Date(o.date).getTime() : 0);
+        return t >= start && t <= end;
+      });
+    }
+
     if (activeFilter === 'Pending Accept') list = list.filter(o => o.status === 'Pending Accept');
     if (activeFilter === 'Accepted') list = list.filter(o => o.status === 'Accepted');
     if (activeFilter === 'Declined') list = list.filter(o => o.status === 'Declined' || o.status === 'Offer Rejected');
@@ -153,10 +202,10 @@ export default function OfferProcessPage() {
       );
     }
     setFiltered(list);
-  }, [offers, activeFilter, searchQuery]);
+  }, [offers, activeFilter, searchQuery, activeRange, fromDate, toDate]);
 
   const stats = useMemo(() => {
-    const list = offers || [];
+    const list = filtered || [];
     const pending = list.filter(o => o.status === 'Pending Accept').length;
     const accepted = list.filter(o => o.status === 'Accepted').length;
     const rejected = list.filter(o => o.status === 'Declined' || o.status === 'Offer Rejected').length;
@@ -164,7 +213,7 @@ export default function OfferProcessPage() {
     const totalPkgSum = list.reduce((acc, curr) => acc + parseSalaryAndIncentive(curr.salary).total, 0);
     const avgSalary = list.length ? totalPkgSum / list.length : 0;
     return { pending, accepted, rejected, joined, avgSalary };
-  }, [offers]);
+  }, [filtered]);
 
   const handleSaveDetails = async () => {
     if (!detailOffer || saving) return;
@@ -320,6 +369,75 @@ export default function OfferProcessPage() {
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Offer Management Desk</h1>
               <p className="text-slate-500 text-xs sm:text-sm font-medium mt-1">Configure candidate compensation packages, track acceptances, and finalize onboarding.</p>
+            </div>
+          </div>
+
+          {/* Recruitment Analytics & Pipeline Banner */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-3.5">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base tracking-tight flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-[#C9952A]" />
+                  <span>Recruitment Analytics &amp; Pipeline</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  Real-time candidate metrics, funnel conversion &amp; team performance.
+                </p>
+              </div>
+
+              {/* Date Filter Quick Range Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                {[
+                  { key: 'all', label: 'All Time' },
+                  { key: 'today', label: 'Today' },
+                  { key: 'yesterday', label: 'Yesterday' },
+                  { key: 'week', label: 'Week' },
+                  { key: 'month', label: 'Month' },
+                  { key: 'last_month', label: 'Last Month' }
+                ].map(range => (
+                  <button
+                    key={range.key}
+                    onClick={() => { setActiveRange(range.key as any); setFromDate(''); setToDate(''); }}
+                    className={`px-3 py-1.5 rounded-xl transition-all ${
+                      activeRange === range.key
+                        ? 'bg-[#1E2D4E] text-white font-extrabold shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-white'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Date Range Picker */}
+            <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-900">
+              <span className="text-slate-500 uppercase text-[10.5px] font-black">Custom Range:</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => { setFromDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white font-semibold outline-none text-xs"
+                  placeholder="dd-mm-yyyy"
+                />
+                <span className="text-slate-500 font-extrabold">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => { setToDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white font-semibold outline-none text-xs"
+                  placeholder="dd-mm-yyyy"
+                />
+              </div>
+              {(fromDate || toDate || activeRange !== 'all') && (
+                <button
+                  onClick={() => { setActiveRange('all'); setFromDate(''); setToDate(''); }}
+                  className="text-rose-600 hover:underline text-[11px] font-extrabold ml-auto"
+                >
+                  Reset Date Filter
+                </button>
+              )}
             </div>
           </div>
 

@@ -9,7 +9,7 @@ import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { 
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck, DollarSign
+  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck, DollarSign, TrendingUp
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -49,6 +49,11 @@ export default function CandidatesPage() {
   const [selRejData, setSelRejData] = useState<any[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Recruitment Analytics & Pipeline Date Range Filter State
+  const [activeRange, setActiveRange] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom'>('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const loadCandidates = useCallback(async () => {
     try {
       const d = await API.getCandidates({ limit: 500 });
@@ -77,6 +82,49 @@ export default function CandidatesPage() {
   useEffect(() => {
     let list = [...candidates];
 
+    if (activeRange === 'today') {
+      const today = new Date().toDateString();
+      list = list.filter(c => {
+        const d = c.rawDate ? new Date(c.rawDate) : (c.date ? new Date(c.date) : null);
+        return d && d.toDateString() === today;
+      });
+    } else if (activeRange === 'yesterday') {
+      const yest = new Date();
+      yest.setDate(yest.getDate() - 1);
+      const yestStr = yest.toDateString();
+      list = list.filter(c => {
+        const d = c.rawDate ? new Date(c.rawDate) : (c.date ? new Date(c.date) : null);
+        return d && d.toDateString() === yestStr;
+      });
+    } else if (activeRange === 'week') {
+      const weekAgo = Date.now() - 7 * 86400000;
+      list = list.filter(c => {
+        const t = c.rawDate || (c.date ? new Date(c.date).getTime() : 0);
+        return t >= weekAgo;
+      });
+    } else if (activeRange === 'month') {
+      const monthAgo = Date.now() - 30 * 86400000;
+      list = list.filter(c => {
+        const t = c.rawDate || (c.date ? new Date(c.date).getTime() : 0);
+        return t >= monthAgo;
+      });
+    } else if (activeRange === 'last_month') {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+      list = list.filter(c => {
+        const t = c.rawDate || (c.date ? new Date(c.date).getTime() : 0);
+        return t >= firstDay && t <= lastDay;
+      });
+    } else if (activeRange === 'custom' && fromDate) {
+      const start = new Date(fromDate).getTime();
+      const end = toDate ? new Date(toDate).setHours(23, 59, 59, 999) : start + 86400000 - 1;
+      list = list.filter(c => {
+        const t = c.rawDate || (c.date ? new Date(c.date).getTime() : 0);
+        return t >= start && t <= end;
+      });
+    }
+
     if (activeStatus !== 'all') {
       list = list.filter(c => c.status === activeStatus);
     }
@@ -98,7 +146,7 @@ export default function CandidatesPage() {
     list.sort((a, b) => sortDir === 'asc' ? (a.rawDate || 0) - (b.rawDate || 0) : (b.rawDate || 0) - (a.rawDate || 0));
 
     setFiltered(list);
-  }, [candidates, activeStatus, desigFilter, sourceFilter, searchQuery, sortDir]);
+  }, [candidates, activeStatus, desigFilter, sourceFilter, searchQuery, sortDir, activeRange, fromDate, toDate]);
 
   const maskPhone = (ph: string) => {
     const p = String(ph || '').replace(/\D/g, '');
@@ -343,6 +391,74 @@ export default function CandidatesPage() {
         />
 
         <main className="p-4 lg:p-6 space-y-5 flex-1 overflow-y-auto">
+          {/* Recruitment Analytics & Pipeline Banner */}
+          <div className="card-glass p-5 space-y-4 border-2 border-[#1E2D4E]/10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#e2dfd7] pb-3.5">
+              <div>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-[#C9952A]" />
+                  <span>Recruitment Analytics &amp; Pipeline</span>
+                </h3>
+                <p className="text-xs text-[#777777] font-medium mt-0.5">
+                  Real-time candidate metrics, funnel conversion &amp; team performance.
+                </p>
+              </div>
+
+              {/* Date Filter Quick Range Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                {[
+                  { key: 'all', label: 'All Time' },
+                  { key: 'today', label: 'Today' },
+                  { key: 'yesterday', label: 'Yesterday' },
+                  { key: 'week', label: 'Week' },
+                  { key: 'month', label: 'Month' },
+                  { key: 'last_month', label: 'Last Month' }
+                ].map(range => (
+                  <button
+                    key={range.key}
+                    onClick={() => { setActiveRange(range.key as any); setFromDate(''); setToDate(''); }}
+                    className={`px-3 py-1.5 rounded-xl transition-all ${
+                      activeRange === range.key
+                        ? 'bg-[#1E2D4E] text-white font-extrabold shadow-xs'
+                        : 'bg-[#F9F7F4] text-[#555555] border border-[#e2dfd7] hover:bg-white'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Date Range Picker */}
+            <div className="flex flex-wrap items-center gap-3 bg-[#F9F7F4] p-3 rounded-2xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E]">
+              <span className="text-[#777777] uppercase text-[10.5px] font-black">Custom Range:</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => { setFromDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-white font-semibold outline-none text-xs"
+                  placeholder="dd-mm-yyyy"
+                />
+                <span className="text-[#777777] font-extrabold">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => { setToDate(e.target.value); setActiveRange('custom'); }}
+                  className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-white font-semibold outline-none text-xs"
+                  placeholder="dd-mm-yyyy"
+                />
+              </div>
+              {(fromDate || toDate || activeRange !== 'all') && (
+                <button
+                  onClick={() => { setActiveRange('all'); setFromDate(''); setToDate(''); }}
+                  className="text-rose-600 hover:underline text-[11px] font-extrabold ml-auto"
+                >
+                  Reset Date Filter
+                </button>
+              )}
+            </div>
+          </div>
           {/* Status Pills Bar */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-bold scrollbar-none">
             {[
