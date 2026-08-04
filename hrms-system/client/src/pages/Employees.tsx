@@ -23,6 +23,11 @@ export default function EmployeesPage() {
   const [desigFilter, setDesigFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
+  // Recruitment Analytics & Pipeline Date Range Filter State
+  const [activeRange, setActiveRange] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom'>('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   // Drawer
   const [drawerEmp, setDrawerEmp] = useState<any | null>(null);
   const [drawerTab, setDrawerTab] = useState<'overview' | 'personal' | 'professional' | 'documents'>('overview');
