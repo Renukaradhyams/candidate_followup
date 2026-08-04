@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const fs = require('fs');
 const path = require('path');
+const { formatISTDate, getISTDateRange, isDateInRange, getBusinessDate } = require('../utils/dateUtils');
 
 class CandidateService {
   async generateCandidateCode() {
@@ -498,46 +499,7 @@ class CandidateService {
         LEFT JOIN selection_offers so ON c.app_no = so.app_no
       `);
 
-      let startTime = 0;
-      let endTime = Infinity;
-      const now = new Date();
-      const todayStr = now.toDateString();
-
-      if (range === 'today') {
-        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        startTime = start.getTime();
-        endTime = startTime + 86400000 - 1;
-      } else if (range === 'yesterday') {
-        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-        startTime = start.getTime();
-        endTime = startTime + 86400000 - 1;
-      } else if (range === 'week') {
-        startTime = Date.now() - 7 * 86400000;
-      } else if (range === 'month') {
-        startTime = Date.now() - 30 * 86400000;
-      } else if (range === 'last_month') {
-        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-        startTime = firstDayLastMonth.getTime();
-        endTime = lastDayLastMonth.getTime();
-      } else if (range === 'custom' && fromDate) {
-        const fParts = fromDate.split('-').map(Number);
-        startTime = new Date(fParts[0], fParts[1] - 1, fParts[2], 0, 0, 0).getTime();
-        if (toDate) {
-          const tParts = toDate.split('-').map(Number);
-          endTime = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
-        } else {
-          endTime = startTime + 86400000 - 1;
-        }
-      }
-
-      const filteredRows = (range && range !== 'all')
-        ? candRows.filter(r => {
-            if (!r.created_at) return false;
-            const t = new Date(r.created_at).getTime();
-            return t >= startTime && t <= endTime;
-          })
-        : candRows;
+      const filteredRows = candRows.filter(r => isDateInRange(getBusinessDate(r, 'CRM'), range, fromDate, toDate));
 
       // 1. Total Pipeline = Total registered candidates in selected range (created_at)
       const total = filteredRows.length;
@@ -575,13 +537,7 @@ class CandidateService {
         const os = (r.offer_status || '').toLowerCase().trim();
         const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
         if (!isJoined) return false;
-
-        if (!range || range === 'all') return true;
-
-        const joiningDate = r.actual_doj ? new Date(r.actual_doj) : (r.updated_at ? new Date(r.updated_at) : new Date(r.created_at));
-        if (isNaN(joiningDate.getTime())) return true;
-        const t = joiningDate.getTime();
-        return t >= startTime && t <= endTime;
+        return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
       }).length;
 
       // 5. Acceptance Rate = (Joined Staff ÷ Shortlisted) * 100 (0% if Shortlisted is 0)
@@ -598,13 +554,7 @@ class CandidateService {
       let interviewsToday = 0;
       try {
         const [schedRows] = await pool.query(`SELECT interview_date FROM interview_schedules WHERE interview_date IS NOT NULL`);
-        interviewsToday = (schedRows || []).filter(r => {
-          if (!r.interview_date) return false;
-          const d = new Date(r.interview_date);
-          return d.getFullYear() === now.getFullYear() &&
-                 d.getMonth() === now.getMonth() &&
-                 d.getDate() === now.getDate();
-        }).length;
+        interviewsToday = (schedRows || []).filter(r => isDateInRange(getBusinessDate(r, 'INTERVIEW'), 'today')).length;
       } catch (e) {}
 
       // 9. Drop-off Metrics: Rejected & Hold

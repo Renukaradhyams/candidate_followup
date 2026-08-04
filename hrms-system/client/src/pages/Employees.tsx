@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
+
 export default function EmployeesPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
@@ -104,66 +106,8 @@ export default function EmployeesPage() {
   useEffect(() => {
     let list = [...employees];
 
-    const getItemDateStr = (item: any): string => {
-      let raw = item.actualDoj || item.offeredDoj || '';
-      if (typeof raw === 'string' && raw.length >= 10 && raw.includes('-')) {
-        return raw.slice(0, 10);
-      }
-      const refMs = item.rawDate || (item.createdAt ? new Date(item.createdAt).getTime() : 0);
-      if (refMs) {
-        const d = new Date(refMs);
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      return '';
-    };
-
-    const getItemTimestamp = (item: any): number => {
-      const dateStr = getItemDateStr(item);
-      if (dateStr) {
-        const parts = dateStr.split('-').map(Number);
-        return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
-      }
-      return 0;
-    };
-
-    if (activeRange === 'today') {
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      list = list.filter(e => getItemDateStr(e) === todayStr);
-    } else if (activeRange === 'yesterday') {
-      const yest = new Date();
-      yest.setDate(yest.getDate() - 1);
-      const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
-      list = list.filter(e => getItemDateStr(e) === yestStr);
-    } else if (activeRange === 'week') {
-      const weekAgo = Date.now() - 7 * 86400000;
-      list = list.filter(e => getItemTimestamp(e) >= weekAgo);
-    } else if (activeRange === 'month') {
-      const monthAgo = Date.now() - 30 * 86400000;
-      list = list.filter(e => getItemTimestamp(e) >= monthAgo);
-    } else if (activeRange === 'last_month') {
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0).getTime();
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
-      list = list.filter(e => {
-        const t = getItemTimestamp(e);
-        return t >= firstDay && t <= lastDay;
-      });
-    } else if (activeRange === 'custom' && fromDate) {
-      const fParts = fromDate.split('-').map(Number);
-      const start = new Date(fParts[0], fParts[1] - 1, fParts[2], 0, 0, 0).getTime();
-      let end = start + 86400000 - 1;
-      if (toDate) {
-        const tParts = toDate.split('-').map(Number);
-        end = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
-      }
-      list = list.filter(e => {
-        const t = getItemTimestamp(e);
-        return t >= start && t <= end;
-      });
+    if (activeRange && activeRange !== 'all') {
+      list = list.filter(e => isDateInRange(getBusinessDate(e, 'EMPLOYEES'), activeRange, fromDate, toDate));
     }
 
     if (desigFilter) {
