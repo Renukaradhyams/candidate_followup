@@ -432,6 +432,7 @@ export default function CandidatesPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
+                    <th className="py-3 px-3 text-center w-12">SL.NO</th>
                     <th className="py-3 px-4">App No</th>
                     <th className="py-3 px-4">Candidate Name</th>
                     <th className="py-3 px-4">Phone Number</th>
@@ -445,8 +446,9 @@ export default function CandidatesPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filtered.length > 0 ? (
-                    (filtered || []).map((c) => (
+                    (filtered || []).map((c, idx) => (
                       <tr key={c.appNo} className="hover:bg-black/5 transition-colors font-medium">
+                        <td className="py-3.5 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                         <td className="py-3.5 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
                         <td className="py-3.5 px-4">
                           <button

@@ -501,6 +501,7 @@ export default function SectionAllocationPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
+                    <th className="py-3.5 px-3 text-center w-12">SL.NO</th>
                     {isHR && (
                       <th className="py-3.5 px-3 text-center w-10">
                         <button onClick={toggleSelectAll} className="focus:outline-none">
@@ -525,12 +526,13 @@ export default function SectionAllocationPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filteredEmployees.length > 0 ? (
-                    filteredEmployees.map((emp) => {
+                    filteredEmployees.map((emp, idx) => {
                       const isSelected = selectedEmpIds.includes(emp.empId);
                       const deptSections = activeDeptSectionsMap[emp.department] || getSectionsForDepartment(emp.department);
 
                       return (
                         <tr key={emp.empId} className={`hover:bg-black/5 transition-colors font-medium ${isSelected ? 'bg-[#C9952A]/10' : ''}`}>
+                          <td className="py-3.5 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                           {isHR && (
                             <td className="py-3.5 px-3 text-center">
                               <button onClick={() => toggleSelectEmp(emp.empId)} className="focus:outline-none">

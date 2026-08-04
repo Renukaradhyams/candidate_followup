@@ -398,8 +398,9 @@ export default function OfferProcessPage() {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50/80 text-[10.5px] font-black uppercase text-slate-500 tracking-wider">
+                        <th className="py-3.5 px-3 text-center w-12">SL.NO</th>
                         <th className="py-3.5 px-4">Candidate</th>
-                        <th className="py-3.5 px-4">Role & Dept</th>
+                        <th className="py-3.5 px-4">Role &amp; Dept</th>
                         <th className="py-3.5 px-4">Compensation Breakdown</th>
                         <th className="py-3.5 px-4">Est. Joining</th>
                         <th className="py-3.5 px-4">Status</th>
@@ -407,10 +408,11 @@ export default function OfferProcessPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {(filtered || []).map(o => {
+                      {(filtered || []).map((o, idx) => {
                         const sal = parseSalaryAndIncentive(o.salary);
                         return (
                           <tr key={o.appNo} onClick={() => openProfile(o)} className="hover:bg-slate-50/80 transition-colors cursor-pointer group">
+                            <td className="py-3.5 px-3 text-center font-bold text-slate-400">{idx + 1}</td>
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs shadow-xs flex items-center justify-center border border-[#C9952A]/30 flex-shrink-0">

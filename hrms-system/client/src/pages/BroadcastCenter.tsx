@@ -182,6 +182,7 @@ export default function BroadcastCenterPage() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-[#e2dfd7] text-[#777777] font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3 text-center w-12">SL.NO</th>
                         <th className="py-2.5 px-3">Priority</th>
                         <th className="py-2.5 px-3">Title &amp; Subject</th>
                         <th className="py-2.5 px-3">Category</th>
@@ -192,8 +193,9 @@ export default function BroadcastCenterPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#e2dfd7]">
-                      {broadcasts.map((b) => (
+                      {broadcasts.map((b, idx) => (
                         <tr key={b.id} className="hover:bg-[#F9F7F4] transition-colors">
+                          <td className="py-3 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase ${
                               b.priority === 'critical' ? 'bg-rose-100 text-rose-800' :

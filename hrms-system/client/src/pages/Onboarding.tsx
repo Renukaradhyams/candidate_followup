@@ -127,6 +127,7 @@ export default function OnboardingPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e0ddd8] text-[10px] font-black uppercase text-[#888888]">
+                    <th className="py-2.5 px-3 text-center w-12">SL.NO</th>
                     <th className="py-2.5 px-3">Employee</th>
                     <th className="py-2.5 px-3">Designation</th>
                     <th className="py-2.5 px-3">Joining Date</th>
@@ -137,8 +138,9 @@ export default function OnboardingPage() {
                 </thead>
                 <tbody className="divide-y divide-[#e0ddd8]/50">
                   {filtered.length > 0 ? (
-                    filtered.map(r => (
+                    filtered.map((r, idx) => (
                       <tr key={r.recordId} className="hover:bg-black/5 font-medium">
+                        <td className="py-3 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                         <td className="py-3 px-3 font-bold text-[#1E2D4E]">{r.empName}</td>
                         <td className="py-3 px-3">{r.desig}</td>
                         <td className="py-3 px-3">{r.joiningDate}</td>

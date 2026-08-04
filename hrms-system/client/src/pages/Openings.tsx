@@ -143,6 +143,7 @@ export default function OpeningsPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-[#e0ddd8] text-xs font-black uppercase text-[#888888] tracking-wider">
+                  <th className="py-3 px-3 text-center w-12">SL.NO</th>
                   <th className="py-3 px-4">Designation Role</th>
                   <th className="py-3 px-4">Required Openings</th>
                   <th className="py-3 px-4">Already Hired</th>
@@ -151,13 +152,14 @@ export default function OpeningsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e0ddd8]/50">
-                {openings.map((op) => {
+                {openings.map((op, idx) => {
                   const isEditing = editMode[op.designation] !== undefined;
                   const reqCount = isEditing ? editMode[op.designation] : op.required;
                   const stillNeeded = Math.max(0, reqCount - op.hired);
                   
                   return (
                     <tr key={op.designation} className="hover:bg-black/5 transition-colors font-medium">
+                      <td className="py-4 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                       <td className="py-4 px-4 text-[#1E2D4E] font-bold">{op.designation}</td>
                       <td className="py-4 px-4">
                         {isEditing ? (

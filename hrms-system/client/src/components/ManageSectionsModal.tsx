@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../services/api';
 import { showToast } from './Toast';
 import { BSC_DEPARTMENTS } from '../utils/bscDepartments';
@@ -231,6 +231,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] bg-[#F9F7F4]">
+                  <th className="py-2.5 px-3 text-center w-12">SL.NO</th>
                   <th className="py-2.5 px-3">Department</th>
                   <th className="py-2.5 px-3">Section Name</th>
                   <th className="py-2.5 px-3">Description</th>
@@ -239,12 +240,13 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
               </thead>
               <tbody className="divide-y divide-[#e2dfd7]/60 font-medium">
                 {filtered.length > 0 ? (
-                  filtered.map(sec => {
+                  filtered.map((sec, idx) => {
                     const isEditing = editingId === sec.id;
 
                     if (isEditing) {
                       return (
                         <tr key={sec.id} className="bg-amber-50">
+                          <td className="py-2 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                           <td className="py-2 px-3">
                             <select
                               value={editDept}
@@ -294,6 +296,7 @@ export default function ManageSectionsModal({ isOpen, onClose, onSectionsUpdated
 
                     return (
                       <tr key={sec.id} className="hover:bg-black/5 transition-colors">
+                        <td className="py-2.5 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                         <td className="py-2.5 px-3 font-bold text-[#1E2D4E]">{sec.department}</td>
                         <td className="py-2.5 px-3 font-black text-[#C9952A]">{sec.section_name}</td>
                         <td className="py-2.5 px-3 text-[#666666]">{sec.description || '—'}</td>

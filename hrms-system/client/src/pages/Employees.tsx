@@ -390,6 +390,7 @@ export default function EmployeesPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
+                    <th className="py-3 px-3 text-center w-12">SL.NO</th>
                     <th className="py-3 px-4">App No</th>
                     <th className="py-3 px-4">Employee Name</th>
                     <th className="py-3 px-4">Designation</th>
@@ -402,8 +403,9 @@ export default function EmployeesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
-                  {filtered.map((emp) => (
+                  {filtered.map((emp, idx) => (
                     <tr key={emp.appNo} onClick={() => setDrawerEmp(emp)} className="hover:bg-black/5 cursor-pointer transition-colors font-medium">
+                      <td className="py-3.5 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
                       <td className="py-3.5 px-4 font-mono text-[#555555] font-bold">{emp.appNo}</td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3 group text-left">
