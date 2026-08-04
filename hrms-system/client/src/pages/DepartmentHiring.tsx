@@ -7,7 +7,7 @@ import { API, Auth, UserSession } from '../services/api';
 import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import ManageSectionsModal from '../components/ManageSectionsModal';
-import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS, getSectionsForDepartment } from '../utils/bscDepartments';
+import { BSC_DEPARTMENT_SECTIONS, BSC_DEPARTMENTS } from '../utils/bscDepartments';
 import { 
   Building2, 
   Search, 
@@ -22,11 +22,19 @@ import {
   CheckCircle2, 
   Clock, 
   AlertTriangle,
-  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  FolderPlus,
   Layers,
   Sparkles,
   ArrowRight,
-  Plus
+  Maximize2,
+  Minimize2,
+  UserCheck,
+  CheckCircle,
+  Briefcase
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -37,10 +45,30 @@ import {
   Tooltip, 
   ResponsiveContainer, 
   Legend,
-  Cell,
-  PieChart,
-  Pie
+  Cell
 } from 'recharts';
+
+interface SectionHiringData {
+  department: string;
+  section: string;
+  designation: string;
+  required: number;
+  filled: number;
+  remaining: number;
+  percentage: number;
+  status: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant';
+  remarks: string;
+}
+
+interface DeptHierarchyNode {
+  department: string;
+  required: number;
+  filled: number;
+  remaining: number;
+  percentage: number;
+  status: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant';
+  sections: SectionHiringData[];
+}
 
 export default function DepartmentHiringPage() {
   const navigate = useNavigate();
@@ -50,55 +78,55 @@ export default function DepartmentHiringPage() {
   const [loading, setLoading] = useState(true);
   const [targets, setTargets] = useState<Record<string, { required: number; target: number; remarks: string }>>({});
   const [employees, setEmployees] = useState<any[]>([]);
+  const [candidates, setCandidates] = useState<any[]>([]);
   const [dbSections, setDbSections] = useState<any[]>([]);
+  const [designationsMaster, setDesignationsMaster] = useState<string[]>([]);
   const [manageSectionsOpen, setManageSectionsOpen] = useState(false);
+
+  // Expanded department tree node states
+  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({});
 
   // Filter States
   const [selectedDept, setSelectedDept] = useState('All');
   const [selectedSection, setSelectedSection] = useState('All');
-  const [selectedDesig, setSelectedDesig] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [selectedEmpType, setSelectedEmpType] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
 
-  // Edit Modal State
+  // Edit Modal State (Updates Required Sales Executives for a Section)
   const [editModal, setEditModal] = useState<{
     open: boolean;
     rowKey: string;
     department: string;
     section: string;
-    designation: string;
     required: number;
-    target: number;
     remarks: string;
   }>({
     open: false,
     rowKey: '',
     department: '',
     section: '',
-    designation: '',
     required: 10,
-    target: 10,
     remarks: ''
   });
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [tRes, eRes, sRes] = await Promise.all([
+      const [tRes, eRes, cRes, sRes, dRes] = await Promise.all([
         API.getHiringTargets(),
         API.getEmployees(),
-        API.getDepartmentSections()
+        API.getCandidates(),
+        API.getDepartmentSections(),
+        API.getDesignations()
       ]);
 
+      // Load hiring targets
       if (tRes && tRes.targets) {
         const targetMap: Record<string, { required: number; target: number; remarks: string }> = {};
         tRes.targets.forEach((t: any) => {
-          const key = `${t.department}||${t.section}||${t.designation}`;
+          const key = `${t.department}||${t.section}||Sales Executive`;
           targetMap[key] = {
-            required: t.required_openings || 10,
+            required: t.required_openings || t.hiring_target || 10,
             target: t.hiring_target || 10,
             remarks: t.remarks || ''
           };
@@ -106,14 +134,22 @@ export default function DepartmentHiringPage() {
         setTargets(targetMap);
       }
 
-      if (eRes && Array.isArray(eRes)) {
-        setEmployees(eRes);
-      } else if (eRes && eRes.employees) {
-        setEmployees(eRes.employees);
-      }
+      // Employees list
+      if (Array.isArray(eRes)) setEmployees(eRes);
+      else if (eRes && eRes.employees) setEmployees(eRes.employees);
 
-      if (sRes && sRes.sections) {
-        setDbSections(sRes.sections);
+      // Joined Candidates list
+      if (Array.isArray(cRes)) setCandidates(cRes);
+      else if (cRes && cRes.candidates) setCandidates(cRes.candidates);
+
+      // Sections from Database
+      if (sRes && sRes.sections) setDbSections(sRes.sections);
+
+      // Designations master (from Manpower Planning / Settings)
+      if (Array.isArray(dRes)) {
+        setDesignationsMaster(dRes.map((d: any) => typeof d === 'string' ? d : d.name));
+      } else if (dRes && dRes.designations) {
+        setDesignationsMaster(dRes.designations.map((d: any) => typeof d === 'string' ? d : d.name));
       }
     } catch (err: any) {
       console.warn('Load Department Hiring data warning:', err.message);
@@ -131,7 +167,14 @@ export default function DepartmentHiringPage() {
     loadData();
   }, [navigate, loadData]);
 
-  // Combined DB & default sections map
+  // Expand all departments by default when data loads
+  useEffect(() => {
+    const initialExpanded: Record<string, boolean> = {};
+    BSC_DEPARTMENTS.forEach(dept => { initialExpanded[dept] = true; });
+    setExpandedDepts(initialExpanded);
+  }, []);
+
+  // Department Section Mapping (Combining BSC TEXTILES static defaults and Database sections)
   const activeDeptSectionsMap = useMemo(() => {
     const map: Record<string, string[]> = {};
     BSC_DEPARTMENTS.forEach(d => {
@@ -150,165 +193,262 @@ export default function DepartmentHiringPage() {
     return map;
   }, [dbSections]);
 
-  // Generate complete table data across BSC TEXTILES departments and sections
-  const fullTableData = useMemo(() => {
-    const defaultDesignations = ['Floor Manager', 'Section Supervisor', 'Senior Sales Staff', 'Junior Sales Staff', 'Billing Cashier', 'Trainee / Helper'];
+  // Calculate Filled Sales Executives count per Department & Section
+  const filledSalesExecCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
 
-    const rows: Array<{
-      key: string;
-      department: string;
-      section: string;
-      designation: string;
-      required: number;
-      joined: number;
-      remaining: number;
-      percentage: number;
-      status: 'Completed' | 'Almost Full' | 'Hiring in Progress' | 'Vacant';
-      remarks: string;
-      updatedAt: string;
-    }> = [];
-
-    const countMap: Record<string, number> = {};
+    // Count from onboarded employees directory
     employees.forEach(emp => {
+      const desig = (emp.desig || emp.designation || '').toLowerCase();
+      // Only count Sales Executives
+      const isSalesExec = desig.includes('sales') || desig.includes('executive') || desig === 'sales executive';
+      if (!isSalesExec && desig !== '') return;
+
       const dept = emp.department || 'Mens';
       const sec = emp.section || (activeDeptSectionsMap[dept] ? activeDeptSectionsMap[dept][0] : 'General');
-      const desig = emp.desig || emp.designation || 'Sales Staff';
-
-      const exactKey = `${dept}||${sec}||${desig}`;
-      countMap[exactKey] = (countMap[exactKey] || 0) + 1;
-
-      const fallbackKey = `${dept}||${desig}`;
-      countMap[fallbackKey] = (countMap[fallbackKey] || 0) + 1;
+      
+      const key = `${dept}||${sec}`;
+      map[key] = (map[key] || 0) + 1;
+      map[dept] = (map[dept] || 0) + 1;
     });
 
+    // Count from joined candidates
+    candidates.forEach(cand => {
+      if (cand.status === 'Joined') {
+        const desig = (cand.designation || '').toLowerCase();
+        const isSalesExec = desig.includes('sales') || desig.includes('executive') || desig === 'sales executive';
+        if (!isSalesExec && desig !== '') return;
+
+        const dept = cand.department || 'Mens';
+        const sec = cand.section || (activeDeptSectionsMap[dept] ? activeDeptSectionsMap[dept][0] : 'General');
+
+        const key = `${dept}||${sec}`;
+        map[key] = (map[key] || 0) + 1;
+      }
+    });
+
+    return map;
+  }, [employees, candidates, activeDeptSectionsMap]);
+
+  // Build Department Hierarchy Nodes (Tree Data)
+  const treeHierarchy = useMemo(() => {
+    const list: DeptHierarchyNode[] = [];
+
     Object.keys(activeDeptSectionsMap).forEach(dept => {
-      const sections = activeDeptSectionsMap[dept] || ['General'];
-      sections.forEach(sec => {
-        const desigs = defaultDesignations.slice(0, 3);
-        desigs.forEach(desig => {
-          const rowKey = `${dept}||${sec}||${desig}`;
-          const customTarget = targets[rowKey];
+      const sectionsList = activeDeptSectionsMap[dept] || ['General'];
 
-          const req = customTarget ? customTarget.required : 10;
-          const joinedCount = countMap[rowKey] || Math.min(req, (countMap[`${dept}||${desig}`] || 0));
-          const remaining = Math.max(0, req - joinedCount);
-          const pct = req > 0 ? Math.round((joinedCount / req) * 100) : 0;
+      let deptReq = 0;
+      let deptFilled = 0;
 
-          let status: 'Completed' | 'Almost Full' | 'Hiring in Progress' | 'Vacant' = 'Hiring in Progress';
-          if (pct >= 100) status = 'Completed';
-          else if (pct >= 75) status = 'Almost Full';
-          else if (pct > 0) status = 'Hiring in Progress';
-          else status = 'Vacant';
+      const sectionNodes: SectionHiringData[] = sectionsList.map(sec => {
+        const rowKey = `${dept}||${sec}||Sales Executive`;
+        const target = targets[rowKey];
 
-          rows.push({
-            key: rowKey,
-            department: dept,
-            section: sec,
-            designation: desig,
-            required: req,
-            joined: joinedCount,
-            remaining,
-            percentage: pct,
-            status,
-            remarks: customTarget?.remarks || 'Active hiring drive',
-            updatedAt: 'Today'
-          });
-        });
+        const required = target ? target.required : 10;
+        const filled = filledSalesExecCountMap[`${dept}||${sec}`] || 0;
+        const remaining = Math.max(0, required - filled);
+        const percentage = required > 0 ? Math.round((filled / required) * 100) : 0;
+
+        let status: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant' = 'In Progress';
+        if (percentage >= 100) status = 'Completed';
+        else if (percentage >= 75) status = 'Almost Full';
+        else if (percentage > 0) status = 'In Progress';
+        else status = 'Vacant';
+
+        deptReq += required;
+        deptFilled += filled;
+
+        return {
+          department: dept,
+          section: sec,
+          designation: 'Sales Executive',
+          required,
+          filled,
+          remaining,
+          percentage,
+          status,
+          remarks: target?.remarks || ''
+        };
+      });
+
+      const deptRemaining = Math.max(0, deptReq - deptFilled);
+      const deptPct = deptReq > 0 ? Math.round((deptFilled / deptReq) * 100) : 0;
+
+      let deptStatus: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant' = 'In Progress';
+      if (deptPct >= 100) deptStatus = 'Completed';
+      else if (deptPct >= 75) deptStatus = 'Almost Full';
+      else if (deptPct > 0) deptStatus = 'In Progress';
+      else deptStatus = 'Vacant';
+
+      list.push({
+        department: dept,
+        required: deptReq,
+        filled: deptFilled,
+        remaining: deptRemaining,
+        percentage: deptPct,
+        status: deptStatus,
+        sections: sectionNodes
       });
     });
 
-    return rows;
-  }, [targets, employees, activeDeptSectionsMap]);
+    return list;
+  }, [activeDeptSectionsMap, targets, filledSalesExecCountMap]);
 
-  // Section options dependent on selected Department
-  const sectionOptions = useMemo(() => {
+  // Section options for filter dropdown
+  const sectionFilterOptions = useMemo(() => {
     if (selectedDept === 'All') {
-      const allSecs = new Set<string>();
-      Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => allSecs.add(s)));
-      return Array.from(allSecs);
+      const set = new Set<string>();
+      Object.values(activeDeptSectionsMap).forEach(list => list.forEach(s => set.add(s)));
+      return Array.from(set);
     }
     return activeDeptSectionsMap[selectedDept] || [];
   }, [selectedDept, activeDeptSectionsMap]);
 
-  // Filtered Rows
-  const filteredRows = useMemo(() => {
-    return fullTableData.filter(row => {
-      if (selectedDept !== 'All' && row.department !== selectedDept) return false;
-      if (selectedSection !== 'All' && row.section !== selectedSection) return false;
-      if (selectedDesig !== 'All' && row.designation !== selectedDesig) return false;
-      if (selectedStatus !== 'All' && row.status !== selectedStatus) return false;
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matches = row.department.toLowerCase().includes(q) || 
-                        row.section.toLowerCase().includes(q) || 
-                        row.designation.toLowerCase().includes(q) ||
-                        row.remarks.toLowerCase().includes(q);
-        if (!matches) return false;
+  // Filtered Tree Nodes based on User Selection
+  const filteredTreeHierarchy = useMemo(() => {
+    return treeHierarchy.map(deptNode => {
+      if (selectedDept !== 'All' && deptNode.department !== selectedDept) {
+        return null;
       }
-      return true;
-    });
-  }, [fullTableData, selectedDept, selectedSection, selectedDesig, selectedStatus, searchQuery]);
 
-  // Summary Metrics
+      // Filter sections inside department
+      const matchingSections = deptNode.sections.filter(sec => {
+        if (selectedSection !== 'All' && sec.section !== selectedSection) return false;
+        if (selectedStatus !== 'All' && sec.status !== selectedStatus) return false;
+
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const match = sec.department.toLowerCase().includes(q) ||
+                        sec.section.toLowerCase().includes(q) ||
+                        sec.remarks.toLowerCase().includes(q);
+          if (!match) return false;
+        }
+
+        return true;
+      });
+
+      if (matchingSections.length === 0 && selectedSection !== 'All') {
+        return null;
+      }
+
+      // Recalculate summary metrics for matching view
+      const reqSum = matchingSections.reduce((sum, s) => sum + s.required, 0);
+      const fillSum = matchingSections.reduce((sum, s) => sum + s.filled, 0);
+      const remSum = matchingSections.reduce((sum, s) => sum + s.remaining, 0);
+      const pct = reqSum > 0 ? Math.round((fillSum / reqSum) * 100) : 0;
+
+      let st: 'Completed' | 'In Progress' | 'Almost Full' | 'Vacant' = 'In Progress';
+      if (pct >= 100) st = 'Completed';
+      else if (pct >= 75) st = 'Almost Full';
+      else if (pct > 0) st = 'In Progress';
+      else st = 'Vacant';
+
+      return {
+        ...deptNode,
+        required: reqSum,
+        filled: fillSum,
+        remaining: remSum,
+        percentage: pct,
+        status: st,
+        sections: matchingSections
+      };
+    }).filter(Boolean) as DeptHierarchyNode[];
+  }, [treeHierarchy, selectedDept, selectedSection, selectedStatus, searchQuery]);
+
+  // Overall Dashboard Metrics
   const summary = useMemo(() => {
-    const depts = new Set(filteredRows.map(r => r.department)).size;
-    const totalRequired = filteredRows.reduce((sum, r) => sum + r.required, 0);
-    const totalJoined = filteredRows.reduce((sum, r) => sum + r.joined, 0);
-    const totalRemaining = filteredRows.reduce((sum, r) => sum + r.remaining, 0);
-    const overallPct = totalRequired > 0 ? Math.round((totalJoined / totalRequired) * 100) : 0;
+    let totalDepts = filteredTreeHierarchy.length;
+    let totalSections = 0;
+    let totalReq = 0;
+    let totalFilled = 0;
+    let totalRemaining = 0;
+
+    filteredTreeHierarchy.forEach(d => {
+      totalSections += d.sections.length;
+      totalReq += d.required;
+      totalFilled += d.filled;
+      totalRemaining += d.remaining;
+    });
+
+    const overallPct = totalReq > 0 ? Math.round((totalFilled / totalReq) * 100) : 0;
 
     return {
-      departmentsCount: depts,
-      totalRequired,
-      totalJoined,
+      totalDepts,
+      totalSections,
+      totalReq,
+      totalFilled,
       totalRemaining,
       overallPct
     };
-  }, [filteredRows]);
+  }, [filteredTreeHierarchy]);
 
-  // Chart Data: Department-wise Required vs Joined
+  // Department Hiring Progress Bar Chart Data
   const deptChartData = useMemo(() => {
-    const map: Record<string, { department: string; required: number; joined: number }> = {};
-    filteredRows.forEach(r => {
-      if (!map[r.department]) {
-        map[r.department] = { department: r.department, required: 0, joined: 0 };
-      }
-      map[r.department].required += r.required;
-      map[r.department].joined += r.joined;
-    });
-    return Object.values(map);
-  }, [filteredRows]);
+    return filteredTreeHierarchy.map(d => ({
+      department: d.department,
+      required: d.required,
+      filled: d.filled,
+      remaining: d.remaining,
+      percentage: d.percentage
+    }));
+  }, [filteredTreeHierarchy]);
 
-  // Save Target Edit
+  // Top Performing & Needing Recruitment Departments
+  const topPerformingDepts = useMemo(() => {
+    return [...filteredTreeHierarchy]
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 4);
+  }, [filteredTreeHierarchy]);
+
+  const needingRecruitmentDepts = useMemo(() => {
+    return [...filteredTreeHierarchy]
+      .sort((a, b) => b.remaining - a.remaining)
+      .slice(0, 4);
+  }, [filteredTreeHierarchy]);
+
+  // Save Edit for Required Sales Executives
   const handleSaveEdit = async () => {
     try {
       const res = await API.saveHiringTarget({
         department: editModal.department,
         section: editModal.section,
-        designation: editModal.designation,
+        designation: 'Sales Executive',
         requiredOpenings: editModal.required,
-        hiringTarget: editModal.target,
+        hiringTarget: editModal.required,
         remarks: editModal.remarks
       });
 
       if (res && res.success !== false) {
-        showToast('Hiring target updated successfully', 'success');
+        showToast(`Required Sales Executives target updated for ${editModal.section}`, 'success');
         setTargets(prev => ({
           ...prev,
-          [editModal.rowKey]: {
+          [`${editModal.department}||${editModal.section}||Sales Executive`]: {
             required: editModal.required,
-            target: editModal.target,
+            target: editModal.required,
             remarks: editModal.remarks
           }
         }));
         setEditModal(prev => ({ ...prev, open: false }));
       } else {
-        showToast(res.error || 'Failed to update hiring target', 'error');
+        showToast(res.error || 'Failed to save target', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Save error', 'error');
     }
+  };
+
+  const toggleExpandDept = (dept: string) => {
+    setExpandedDepts(prev => ({ ...prev, [dept]: !prev[dept] }));
+  };
+
+  const expandAllTree = () => {
+    const allExp: Record<string, boolean> = {};
+    BSC_DEPARTMENTS.forEach(d => { allExp[d] = true; });
+    setExpandedDepts(allExp);
+  };
+
+  const collapseAllTree = () => {
+    setExpandedDepts({});
   };
 
   const isHR = session?.role === 'HR' || session?.role === 'Admin' || session?.role === 'Super Admin';
@@ -337,10 +477,10 @@ export default function DepartmentHiringPage() {
             <div>
               <h2 className="text-xl font-black text-[#1E2D4E] tracking-tight flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#C9952A]" />
-                <span>BSC Textiles - Hiring Progress Monitor</span>
+                <span>BSC Textiles - Sales Executive Workforce Dashboard</span>
               </h2>
               <p className="text-xs text-[#666666] font-medium mt-0.5">
-                Department-wise, section-wise and designation-wise required vs filled workforce metrics.
+                Tree-based department &amp; section-wise Required, Filled and Remaining Sales Executives status.
               </p>
             </div>
 
@@ -358,37 +498,44 @@ export default function DepartmentHiringPage() {
                 onClick={() => navigate('/openings')}
                 className="btn-secondary text-xs flex items-center gap-1.5 shadow-xs"
               >
-                <span>Manpower Requisitions</span>
+                <span>Manpower Planning</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Top Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Top 6 Summary Dashboard Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
             <MetricCard
-              title="Active Departments"
-              value={summary.departmentsCount}
-              subtext="BSC Textiles sections"
+              title="Departments"
+              value={summary.totalDepts}
+              subtext="BSC Textiles floors"
               icon={Building2}
               color="gold"
             />
             <MetricCard
-              title="Total Openings"
-              value={summary.totalRequired}
-              subtext="Required workforce target"
+              title="Sections"
+              value={summary.totalSections}
+              subtext="Showroom sections"
               icon={Layers}
+              color="indigo"
+            />
+            <MetricCard
+              title="Required Sales Execs"
+              value={summary.totalReq}
+              subtext="Total workforce target"
+              icon={Briefcase}
               color="navy"
             />
             <MetricCard
-              title="Filled Positions"
-              value={summary.totalJoined}
-              subtext="Successfully onboarded"
-              icon={CheckCircle2}
+              title="Filled Sales Execs"
+              value={summary.totalFilled}
+              subtext="Currently onboarded"
+              icon={UserCheck}
               color="emerald"
             />
             <MetricCard
-              title="Remaining Positions"
+              title="Total Remaining"
               value={summary.totalRemaining}
               subtext="Pending recruitment"
               icon={Clock}
@@ -397,32 +544,46 @@ export default function DepartmentHiringPage() {
             <MetricCard
               title="Overall Hiring %"
               value={`${summary.overallPct}%`}
-              subtext="Fill rate completion"
+              subtext="Showroom fill rate"
               icon={TrendingUp}
-              color="indigo"
+              color="emerald"
             />
           </div>
 
-          {/* Filter Bar */}
+          {/* Filter Bar & Quick Controls */}
           <div className="card-glass p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-2.5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#e2dfd7] pb-2.5">
               <div className="text-xs font-black text-[#1E2D4E] uppercase tracking-wider flex items-center gap-2">
                 <Filter className="w-4 h-4 text-[#C9952A]" />
-                <span>Filter Department Hiring Status</span>
+                <span>Filter Department &amp; Section Hierarchy</span>
               </div>
-              <span className="text-[11px] text-[#777777] font-semibold">
-                Showing {filteredRows.length} section positions
-              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={expandAllTree}
+                  className="px-2.5 py-1 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] hover:bg-[#F9F7F4] text-xs font-extrabold flex items-center gap-1 shadow-xs"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Expand All</span>
+                </button>
+                <button
+                  onClick={collapseAllTree}
+                  className="px-2.5 py-1 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] hover:bg-[#F9F7F4] text-xs font-extrabold flex items-center gap-1 shadow-xs"
+                >
+                  <Minimize2 className="w-3 h-3" />
+                  <span>Collapse All</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-              {/* Department */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Department Filter */}
               <div>
                 <label className="text-[10.5px] font-extrabold text-[#555555] uppercase block mb-1">Department</label>
                 <select
                   value={selectedDept}
                   onChange={(e) => { setSelectedDept(e.target.value); setSelectedSection('All'); }}
-                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Departments</option>
                   {BSC_DEPARTMENTS.map(d => (
@@ -431,67 +592,34 @@ export default function DepartmentHiringPage() {
                 </select>
               </div>
 
-              {/* Section */}
+              {/* Section Filter */}
               <div>
                 <label className="text-[10.5px] font-extrabold text-[#555555] uppercase block mb-1">Section</label>
                 <select
                   value={selectedSection}
                   onChange={(e) => setSelectedSection(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Sections</option>
-                  {sectionOptions.map(s => (
+                  {sectionFilterOptions.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Designation */}
-              <div>
-                <label className="text-[10.5px] font-extrabold text-[#555555] uppercase block mb-1">Designation</label>
-                <select
-                  value={selectedDesig}
-                  onChange={(e) => setSelectedDesig(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
-                >
-                  <option value="All">All Designations</option>
-                  <option value="Floor Manager">Floor Manager</option>
-                  <option value="Section Supervisor">Section Supervisor</option>
-                  <option value="Senior Sales Staff">Senior Sales Staff</option>
-                  <option value="Junior Sales Staff">Junior Sales Staff</option>
-                  <option value="Billing Cashier">Billing Cashier</option>
-                </select>
-              </div>
-
-              {/* Status */}
+              {/* Status Filter */}
               <div>
                 <label className="text-[10.5px] font-extrabold text-[#555555] uppercase block mb-1">Hiring Status</label>
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                 >
                   <option value="All">All Statuses</option>
-                  <option value="Completed">Completed (100%)</option>
-                  <option value="Almost Full">Almost Full (75%+)</option>
-                  <option value="Hiring in Progress">Hiring in Progress</option>
-                  <option value="Vacant">Vacant (0%)</option>
-                </select>
-              </div>
-
-              {/* Employment Type */}
-              <div>
-                <label className="text-[10.5px] font-extrabold text-[#555555] uppercase block mb-1">Employment Type</label>
-                <select
-                  value={selectedEmpType}
-                  onChange={(e) => setSelectedEmpType(e.target.value)}
-                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
-                >
-                  <option value="All">All Types</option>
-                  <option value="Full Time">Full Time</option>
-                  <option value="Part Time">Part Time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Trainee">Trainee</option>
+                  <option value="Completed">Completed (Green 100%)</option>
+                  <option value="In Progress">In Progress (Blue 1-74%)</option>
+                  <option value="Almost Full">Almost Full (Orange 75-99%)</option>
+                  <option value="Vacant">Vacant (Red 0%)</option>
                 </select>
               </div>
 
@@ -504,128 +632,206 @@ export default function DepartmentHiringPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search dept, section..."
-                    className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                    placeholder="Search dept or section..."
+                    className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Department Hiring Progress Table */}
+          {/* TREE-BASED ENTERPRISE HIERARCHY LAYOUT */}
           <div className="card-glass p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
               <div>
-                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight">Department &amp; Section Hiring Breakdown</h3>
-                <p className="text-xs text-[#777777] font-medium mt-0.5">Real-time required vs filled staff position targets.</p>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-[#C9952A]" />
+                  <span>Showroom Department &amp; Section Workforce Tree</span>
+                </h3>
+                <p className="text-xs text-[#777777] font-medium mt-0.5">
+                  Designation Target: <span className="font-bold text-[#1E2D4E] bg-[#C9952A]/20 px-2 py-0.5 rounded-md">Sales Executive</span>
+                </p>
               </div>
-              {isHR && (
-                <div className="text-xs text-[#777777] font-semibold bg-[#F9F7F4] px-3 py-1 rounded-full border border-[#e2dfd7]">
-                  💡 Click <span className="font-bold text-[#1E2D4E]">Edit</span> to adjust hiring targets
+            </div>
+
+            {/* Tree Container */}
+            <div className="space-y-3">
+              {filteredTreeHierarchy.length > 0 ? (
+                filteredTreeHierarchy.map((deptNode) => {
+                  const isExpanded = expandedDepts[deptNode.department] ?? true;
+
+                  let deptBadgeColor = 'blue';
+                  if (deptNode.status === 'Completed') deptBadgeColor = 'green';
+                  else if (deptNode.status === 'Almost Full') deptBadgeColor = 'gold';
+                  else if (deptNode.status === 'Vacant') deptBadgeColor = 'red';
+
+                  return (
+                    <div 
+                      key={deptNode.department} 
+                      className="border border-[#e2dfd7] rounded-2xl bg-white/80 overflow-hidden shadow-xs transition-all"
+                    >
+                      {/* Department Root Row */}
+                      <div 
+                        onClick={() => toggleExpandDept(deptNode.department)}
+                        className="p-4 bg-[#F9F7F4] hover:bg-[#EDE8DE]/60 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e2dfd7]/80"
+                      >
+                        <div className="flex items-center gap-3">
+                          <button className="p-1 rounded-lg bg-[#1E2D4E]/10 text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-colors">
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                          <Building2 className="w-5 h-5 text-[#1E2D4E]" />
+                          <div>
+                            <h4 className="font-black text-[#1E2D4E] text-base tracking-tight">
+                              {deptNode.department}
+                            </h4>
+                            <p className="text-[11px] text-[#777777] font-medium">
+                              {deptNode.sections.length} Showroom Sections
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Department Summary Metrics & Progress */}
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                          <div className="text-right text-xs">
+                            <span className="text-[10px] text-[#777777] font-extrabold uppercase block">Required</span>
+                            <span className="font-extrabold text-[#1E2D4E] text-sm">{deptNode.required}</span>
+                          </div>
+
+                          <div className="text-right text-xs">
+                            <span className="text-[10px] text-emerald-700 font-extrabold uppercase block">Filled</span>
+                            <span className="font-extrabold text-emerald-700 text-sm">{deptNode.filled}</span>
+                          </div>
+
+                          <div className="text-right text-xs">
+                            <span className="text-[10px] text-rose-700 font-extrabold uppercase block">Remaining</span>
+                            <span className="font-extrabold text-rose-700 text-sm">{deptNode.remaining}</span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-36 sm:w-44 space-y-1">
+                            <div className="flex items-center justify-between text-[11px] font-extrabold text-[#1E2D4E]">
+                              <span>{deptNode.filled} / {deptNode.required}</span>
+                              <span>{deptNode.percentage}%</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-[#e2dfd7] rounded-full overflow-hidden shadow-inner">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  deptNode.percentage >= 100 ? 'bg-emerald-600' :
+                                  deptNode.percentage >= 75 ? 'bg-[#C9952A]' :
+                                  deptNode.percentage > 0 ? 'bg-sky-600' : 'bg-rose-500'
+                                }`}
+                                style={{ width: `${Math.min(deptNode.percentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <StatusBadge status={deptNode.status} color={deptBadgeColor} size="sm" />
+                        </div>
+                      </div>
+
+                      {/* Expanded Children: Sections Tree Branches */}
+                      {isExpanded && (
+                        <div className="divide-y divide-[#e2dfd7]/50 bg-white">
+                          {deptNode.sections.map((secNode) => {
+                            let secBadgeColor = 'blue';
+                            if (secNode.status === 'Completed') secBadgeColor = 'green';
+                            else if (secNode.status === 'Almost Full') secBadgeColor = 'gold';
+                            else if (secNode.status === 'Vacant') secBadgeColor = 'red';
+
+                            return (
+                              <div 
+                                key={secNode.section}
+                                className="p-3.5 pl-6 sm:pl-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#F9F7F4]/80 transition-colors font-medium border-l-4 border-l-[#C9952A]/40 ml-3 sm:ml-6 my-1"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[#C9952A] font-mono font-bold text-sm">├──</span>
+                                  <Layers className="w-4 h-4 text-[#C9952A]" />
+                                  <div>
+                                    <span className="font-extrabold text-[#1E2D4E] text-xs sm:text-sm">
+                                      {secNode.section}
+                                    </span>
+                                    <span className="text-[10px] text-[#777777] block font-medium">
+                                      Sales Executive Target
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                                  <div className="text-right text-xs">
+                                    <span className="text-[9.5px] text-[#777777] font-bold block">Required</span>
+                                    <span className="font-extrabold text-[#1E2D4E]">{secNode.required}</span>
+                                  </div>
+
+                                  <div className="text-right text-xs">
+                                    <span className="text-[9.5px] text-emerald-700 font-bold block">Filled</span>
+                                    <span className="font-extrabold text-emerald-700">{secNode.filled}</span>
+                                  </div>
+
+                                  <div className="text-right text-xs">
+                                    <span className="text-[9.5px] text-rose-700 font-bold block">Remaining</span>
+                                    <span className="font-extrabold text-rose-700">{secNode.remaining}</span>
+                                  </div>
+
+                                  {/* Section Progress Bar */}
+                                  <div className="w-32 sm:w-36 space-y-1">
+                                    <div className="flex items-center justify-between text-[10.5px] font-bold text-[#1E2D4E]">
+                                      <span>{secNode.filled} / {secNode.required}</span>
+                                      <span>{secNode.percentage}%</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-[#e2dfd7] rounded-full overflow-hidden">
+                                      <div 
+                                        className={`h-full rounded-full transition-all duration-500 ${
+                                          secNode.percentage >= 100 ? 'bg-emerald-600' :
+                                          secNode.percentage >= 75 ? 'bg-[#C9952A]' :
+                                          secNode.percentage > 0 ? 'bg-sky-600' : 'bg-rose-500'
+                                        }`}
+                                        style={{ width: `${Math.min(secNode.percentage, 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <StatusBadge status={secNode.status} color={secBadgeColor} size="sm" />
+
+                                  {isHR && (
+                                    <button
+                                      onClick={() => setEditModal({
+                                        open: true,
+                                        rowKey: `${secNode.department}||${secNode.section}||Sales Executive`,
+                                        department: secNode.department,
+                                        section: secNode.section,
+                                        required: secNode.required,
+                                        remarks: secNode.remarks
+                                      })}
+                                      className="px-2.5 py-1 rounded-lg bg-[#1E2D4E]/10 text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white font-bold text-xs transition-colors flex items-center gap-1"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                      <span>Edit</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-12 text-center text-xs text-[#777777] font-semibold bg-white rounded-2xl border border-[#e2dfd7]">
+                  No department hiring hierarchy data matches your filters.
                 </div>
               )}
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
-                    <th className="py-3.5 px-4">Department</th>
-                    <th className="py-3.5 px-4">Section</th>
-                    <th className="py-3.5 px-4">Designation</th>
-                    <th className="py-3.5 px-4 text-center">Required</th>
-                    <th className="py-3.5 px-4 text-center">Filled</th>
-                    <th className="py-3.5 px-4 text-center">Remaining</th>
-                    <th className="py-3.5 px-4 w-60">Hiring Progress</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e2dfd7]/60">
-                  {filteredRows.length > 0 ? (
-                    filteredRows.map((row) => {
-                      let badgeColor = 'blue';
-                      if (row.status === 'Completed') badgeColor = 'green';
-                      else if (row.status === 'Almost Full') badgeColor = 'gold';
-                      else if (row.status === 'Vacant') badgeColor = 'red';
-
-                      return (
-                        <tr key={row.key} className="hover:bg-black/5 transition-colors font-medium">
-                          <td className="py-3.5 px-4 font-black text-[#1E2D4E]">{row.department}</td>
-                          <td className="py-3.5 px-4 font-bold text-[#C9952A]">{row.section}</td>
-                          <td className="py-3.5 px-4 text-[#444444] font-semibold">{row.designation}</td>
-                          <td className="py-3.5 px-4 text-center font-extrabold text-[#1E2D4E]">{row.required}</td>
-                          <td className="py-3.5 px-4 text-center font-extrabold text-emerald-700">{row.joined}</td>
-                          <td className="py-3.5 px-4 text-center font-extrabold text-rose-700">{row.remaining}</td>
-                          
-                          {/* Progress Bar Column */}
-                          <td className="py-3.5 px-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between text-[11px] font-extrabold text-[#1E2D4E]">
-                                <span>{row.joined} / {row.required} Filled</span>
-                                <span>{row.percentage}%</span>
-                              </div>
-                              <div className="w-full h-2.5 bg-[#e2dfd7] rounded-full overflow-hidden shadow-inner">
-                                <div 
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    row.percentage >= 100 ? 'bg-emerald-600' :
-                                    row.percentage >= 75 ? 'bg-[#C9952A]' :
-                                    row.percentage > 0 ? 'bg-sky-600' : 'bg-rose-500'
-                                  }`}
-                                  style={{ width: `${Math.min(row.percentage, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-3.5 px-4 text-center">
-                            <StatusBadge status={row.status} color={badgeColor} size="sm" />
-                          </td>
-
-                          <td className="py-3.5 px-4 text-right">
-                            {isHR ? (
-                              <button
-                                onClick={() => setEditModal({
-                                  open: true,
-                                  rowKey: row.key,
-                                  department: row.department,
-                                  section: row.section,
-                                  designation: row.designation,
-                                  required: row.required,
-                                  target: row.required,
-                                  remarks: row.remarks
-                                })}
-                                className="px-2.5 py-1 rounded-lg bg-[#1E2D4E]/10 text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white font-bold text-xs transition-colors flex items-center gap-1 ml-auto"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>Edit</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-[#888888]">View Only</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-xs text-[#777777] font-semibold">
-                        No matching department hiring records found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
 
-          {/* Interactive Recharts Analytics */}
+          {/* MANAGEMENT RECHARTS DASHBOARD */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Dept Bar Chart */}
+            {/* Department Hiring Comparison Bar Chart */}
             <div className="card-glass p-5 space-y-4">
               <h3 className="font-extrabold text-[#1E2D4E] text-sm tracking-tight flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-[#C9952A]" />
-                <span>Department-Wise Required vs Filled Positions</span>
+                <span>Department-Wise Required vs Filled Sales Executives</span>
               </h3>
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -633,68 +839,73 @@ export default function DepartmentHiringPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2dfd7" />
                     <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: 700, fill: '#1E2D4E' }} />
                     <YAxis tick={{ fontSize: 10, fontWeight: 700, fill: '#1E2D4E' }} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1E2D4E', borderRadius: '12px', color: '#fff', fontSize: '12px' }} 
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: '#1E2D4E', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
                     <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                    <Bar dataKey="required" name="Required Openings" fill="#1E2D4E" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="joined" name="Filled Staff" fill="#C9952A" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="required" name="Required Target" fill="#1E2D4E" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="filled" name="Filled Staff" fill="#C9952A" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Overall Progress Distribution Pie */}
-            <div className="card-glass p-5 space-y-4">
+            {/* Top Performing vs Needing Recruitment Panels */}
+            <div className="card-glass p-5 space-y-4 flex flex-col justify-between">
               <h3 className="font-extrabold text-[#1E2D4E] text-sm tracking-tight flex items-center gap-2">
-                <PieIcon className="w-4 h-4 text-[#C9952A]" />
-                <span>Hiring Status Distribution</span>
+                <TrendingUp className="w-4 h-4 text-[#C9952A]" />
+                <span>Department Hiring Performance Overview</span>
               </h3>
-              <div className="h-64 w-full flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Completed', value: filteredRows.filter(r => r.status === 'Completed').length, color: '#16a34a' },
-                        { name: 'Almost Full', value: filteredRows.filter(r => r.status === 'Almost Full').length, color: '#d97706' },
-                        { name: 'In Progress', value: filteredRows.filter(r => r.status === 'Hiring in Progress').length, color: '#0284c7' },
-                        { name: 'Vacant', value: filteredRows.filter(r => r.status === 'Vacant').length, color: '#dc2626' }
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {[
-                        { color: '#16a34a' },
-                        { color: '#d97706' },
-                        { color: '#0284c7' },
-                        { color: '#dc2626' }
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#1E2D4E', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
-                    <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 700 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Top Performing */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#e2dfd7] space-y-2.5">
+                  <h4 className="font-black text-xs text-emerald-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-emerald-100 pb-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Top Performing Departments</span>
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    {topPerformingDepts.map(d => (
+                      <div key={d.department} className="flex justify-between items-center font-semibold">
+                        <span className="text-[#1E2D4E]">{d.department}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-extrabold">
+                          {d.percentage}% ({d.filled}/{d.required})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Needing Recruitment */}
+                <div className="p-3.5 rounded-2xl bg-white border border-[#e2dfd7] space-y-2.5">
+                  <h4 className="font-black text-xs text-rose-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-rose-100 pb-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    <span>Needing Recruitment</span>
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    {needingRecruitmentDepts.map(d => (
+                      <div key={d.department} className="flex justify-between items-center font-semibold">
+                        <span className="text-[#1E2D4E]">{d.department}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-extrabold">
+                          {d.remaining} Vacant
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </main>
       </div>
 
-      {/* Edit Target Modal */}
+      {/* Edit Required Openings Target Modal */}
       {editModal.open && (
         <div className="fixed inset-0 z-50 bg-[#1E2D4E]/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[#EDE8DE] rounded-2xl border border-[#e2dfd7] shadow-2xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
               <div>
-                <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Hiring Target</h3>
+                <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Sales Executive Target</h3>
                 <p className="text-xs text-[#777777] font-medium">
-                  {editModal.department} · {editModal.section} ({editModal.designation})
+                  {editModal.department} · {editModal.section}
                 </p>
               </div>
               <button 
@@ -707,7 +918,9 @@ export default function DepartmentHiringPage() {
 
             <div className="space-y-4 text-xs font-semibold text-[#1E2D4E]">
               <div>
-                <label className="block text-[11px] font-black uppercase mb-1">Required Openings Target</label>
+                <label className="block text-[11px] font-black uppercase mb-1">
+                  Required Sales Executives Target
+                </label>
                 <input
                   type="number"
                   min={1}
@@ -718,12 +931,12 @@ export default function DepartmentHiringPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-black uppercase mb-1">Hiring Target Remarks</label>
+                <label className="block text-[11px] font-black uppercase mb-1">Target Remarks</label>
                 <textarea
                   rows={3}
                   value={editModal.remarks}
                   onChange={(e) => setEditModal(prev => ({ ...prev, remarks: e.target.value }))}
-                  placeholder="Enter target notes or urgency..."
+                  placeholder="Enter notes or recruitment urgency..."
                   className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-medium text-xs focus:outline-none"
                 />
               </div>
@@ -741,12 +954,13 @@ export default function DepartmentHiringPage() {
                 className="btn-primary text-xs flex items-center gap-1.5 shadow-sm"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>Save Hiring Target</span>
+                <span>Save Openings Target</span>
               </button>
             </div>
           </div>
         </div>
       )}
+
       {/* Manage Sections Modal */}
       <ManageSectionsModal
         isOpen={manageSectionsOpen}
