@@ -47,7 +47,7 @@ class CandidateService {
     const { 
       status, desig, source, gender, cityState, 
       minSalary, maxSalary, minExp, maxExp,
-      fromDate, toDate, q, page = 1, limit = 500, sortDir = 'asc' 
+      fromDate, toDate, q, page = 1, limit = 50000, sortDir = 'desc' 
     } = filters;
 
     // Auto-synchronize candidate status to 'Joined' if offer status is 'Joined'
