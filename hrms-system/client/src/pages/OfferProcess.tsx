@@ -222,9 +222,10 @@ export default function OfferProcessPage() {
     try {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      await API.acceptOffer({ appNo, remarks: 'Accepted via Offer Desk', joiningDate: todayStr });
-      showToast('Offer accepted & candidate marked as Accepted!', 'success');
-      loadOffers();
+      await API.markJoined({ appNo, joiningDate: todayStr });
+      showToast('Offer accepted & automatically marked as Joined! 🎉 Moving to directory...', 'success');
+      setProfileOffer(null);
+      setTimeout(() => { navigate('/employees'); }, 1500);
     } catch (e: any) {
       showToast('Error: ' + e.message, 'error');
     } finally {
@@ -251,11 +252,11 @@ export default function OfferProcessPage() {
 
   const handleMarkJoined = async (appNo: string) => {
     if (saving) return;
-    const joiningDate = window.prompt('Enter Actual Date of Joining (YYYY-MM-DD):', new Date().toISOString().slice(0, 10));
-    if (!joiningDate) return;
     setSaving(true);
     try {
-      await API.markJoined({ appNo, joiningDate });
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      await API.markJoined({ appNo, joiningDate: todayStr });
       showToast('Candidate marked as Joined! 🎉 Moving to Employee directory...', 'success');
       setProfileOffer(null);
       setTimeout(() => { navigate('/employees'); }, 1500);
