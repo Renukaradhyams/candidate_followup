@@ -39,7 +39,7 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         const resList: { type: string; title: string; subtitle: string; href: string }[] = [];
 
         // Search Candidates
-        const candRes = await API.getCandidates({ search: query, limit: 10 });
+        const candRes = await API.getCandidates({ q: query, limit: 10 });
         if (candRes && candRes.candidates) {
           candRes.candidates.forEach((c: any) => {
             const formattedName = c.name ? c.name.toLowerCase().replace(/\b\w/g, (char: string) => char.toUpperCase()) : '';

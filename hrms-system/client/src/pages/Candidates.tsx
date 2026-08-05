@@ -164,9 +164,9 @@ export default function CandidatesPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.appNo.toLowerCase().includes(q) ||
-        c.phone.includes(q)
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.appNo || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q)
       );
     }
 

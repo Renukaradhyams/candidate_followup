@@ -129,9 +129,9 @@ export default function EmployeesPage() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(e =>
-        e.name.toLowerCase().includes(q) ||
-        e.appNo.toLowerCase().includes(q) ||
-        e.phone.includes(q)
+        (e.name || '').toLowerCase().includes(q) ||
+        (e.appNo || '').toLowerCase().includes(q) ||
+        (e.phone || '').toLowerCase().includes(q)
       );
     }
 
