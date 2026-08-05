@@ -58,7 +58,7 @@ export default function CandidatesPage() {
 
   const loadCandidates = useCallback(async () => {
     try {
-      const d = await API.getCandidates({ limit: 500 });
+      const d = await API.getCandidates({ limit: 50000 });
       if (d && d.candidates) {
         setCandidates(d.candidates);
       }
