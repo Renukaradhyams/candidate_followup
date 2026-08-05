@@ -191,10 +191,10 @@ export default function DashboardPage() {
   const stages = [
     { label: 'Applied', val: kpis.total || 0, color: '#1E2D4E' },
     { label: 'Shortlisted', val: kpis.shortlisted || 0, color: '#2a3f6e' },
-    { label: 'Interview Scheduled', val: kpis.interviewsToday || 0, color: '#C9952A' },
-    { label: 'Selected', val: kpis.selected || 0, color: '#2d8a4e' },
     { label: 'Offer Desk', val: kpis.shortlisted || 0, color: '#1a8a84' },
-    { label: 'Joined', val: kpis.joined || 0, color: '#0d5c58' }
+    { label: 'Joined', val: kpis.joined || 0, color: '#0d5c58' },
+    { label: 'Rejected', val: kpis.rejected || 0, color: '#e11d48' },
+    { label: 'On Hold', val: kpis.hold || 0, color: '#d97706' }
   ];
 
   return (

@@ -134,6 +134,10 @@ class CandidateService {
       const term = `%${q.toLowerCase()}%`;
       params.push(term, term, term, term);
     }
+    if (filters.appNo) {
+      query += ` AND c.app_no = ?`;
+      params.push(filters.appNo);
+    }
 
     const order = sortDir.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
     query += ` ORDER BY c.created_at ${order}`;

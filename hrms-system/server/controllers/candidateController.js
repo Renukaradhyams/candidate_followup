@@ -172,13 +172,13 @@ class CandidateController {
         if (r.designation) reqMap[r.designation.trim().toLowerCase()] = r.required_count;
       });
 
-      // Count hired candidates (status: Offer Accepted, Joined, Hired OR Offer Accepted/Joined in offer desk)
+      // Count hired candidates (status: Joined, Hired OR Joined in offer desk)
       const [hiredRows] = await db.query(
         `SELECT c.designation, COUNT(*) as cnt 
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
-         WHERE LOWER(TRIM(c.status)) IN ('offer accepted', 'joined', 'hired') 
-            OR LOWER(TRIM(so.status)) IN ('accepted', 'joined')
+         WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired') 
+            OR LOWER(TRIM(so.status)) IN ('joined')
          GROUP BY c.designation`
       );
       const hiredMap = {};

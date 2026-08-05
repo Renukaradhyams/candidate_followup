@@ -64,7 +64,7 @@ export default function CandidateEntryPage() {
     if (editId) {
       setEditAppNo(editId);
       setLoading(true);
-      API.call('getCandidates', { search: editId }).then(res => {
+      API.call('getCandidates', { appNo: editId }).then(res => {
         if (res.candidates && res.candidates.length > 0) {
           const c = res.candidates[0];
           setName(c.name || '');
