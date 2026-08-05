@@ -109,13 +109,13 @@ export default function DashboardPage() {
     }
     const reg = (candidates || []).filter(c => {
       const g = (c.gender || '').toLowerCase().trim();
-      return g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+      return ['f', 'female', 'girl', 'women', 'woman'].includes(g);
     }).length;
     const jnd = (candidates || []).filter(c => {
       const s = (c.status || '').toLowerCase().trim();
       const isJoined = s === 'joined' || s === 'hired';
       const g = (c.gender || '').toLowerCase().trim();
-      const isFemale = g.startsWith('f') || g.includes('girl') || g.includes('women') || g.includes('female');
+      const isFemale = ['f', 'female', 'girl', 'women', 'woman'].includes(g);
       return isJoined && isFemale;
     }).length;
     return { registered: reg, joined: jnd };
@@ -127,13 +127,13 @@ export default function DashboardPage() {
     }
     const reg = (candidates || []).filter(c => {
       const g = (c.gender || '').toLowerCase().trim();
-      return g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+      return ['m', 'male', 'boy', 'men', 'man'].includes(g);
     }).length;
     const jnd = (candidates || []).filter(c => {
       const s = (c.status || '').toLowerCase().trim();
       const isJoined = s === 'joined' || s === 'hired';
       const g = (c.gender || '').toLowerCase().trim();
-      const isMale = g.startsWith('m') || g.includes('boy') || g.includes('men') || g.includes('male');
+      const isMale = ['m', 'male', 'boy', 'men', 'man'].includes(g);
       return isJoined && isMale;
     }).length;
     return { registered: reg, joined: jnd };
