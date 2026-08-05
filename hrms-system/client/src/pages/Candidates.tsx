@@ -5,6 +5,8 @@ import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import StatusBadge from '../components/ui/StatusBadge';
+import { getBusinessDate } from '../utils/dateUtils';
+import { formatName } from '../utils/formatName';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import { 
@@ -599,7 +601,7 @@ export default function CandidatesPage() {
                             <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
                               {c.initials}
                             </div>
-                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline">{c.name}</span>
+                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline">{formatName(c.name)}</span>
                           </button>
                         </td>
                         <td className="py-3.5 px-4 font-mono text-[#555555]">{maskPhone(c.phone)}</td>
@@ -738,7 +740,7 @@ export default function CandidatesPage() {
                     {(selRejData || []).map((c, idx) => (
                       <tr key={idx} className="hover:bg-black/5 font-medium">
                         <td className="py-2.5 px-3 font-mono">{c.appNo}</td>
-                        <td className="py-2.5 px-3 font-bold text-[#1E2D4E]">{c.name}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#1E2D4E]">{formatName(c.name)}</td>
                         <td className="py-2.5 px-3">{c.desig}</td>
                         <td className="py-2.5 px-3 font-mono">{c.phone}</td>
                       </tr>

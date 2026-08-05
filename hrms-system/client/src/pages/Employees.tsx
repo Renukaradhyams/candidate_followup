@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx';
 
 import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
 import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
+import { formatName } from '../utils/formatName';
 
 export default function EmployeesPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function EmployeesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [desigFilter, setDesigFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
   // Recruitment Analytics & Pipeline Date Range Filter State
@@ -44,6 +46,7 @@ export default function EmployeesPage() {
     email: '',
     desig: '',
     department: '',
+    section: '',
     salary: '',
     incentive: '',
     offeredDoj: '',
@@ -116,6 +119,10 @@ export default function EmployeesPage() {
       list = list.filter(e => (e.department || '').toLowerCase().trim() === deptFilter.toLowerCase().trim());
     }
 
+    if (sectionFilter) {
+      list = list.filter(e => (e.section || '').toLowerCase().trim() === sectionFilter.toLowerCase().trim());
+    }
+
     if (desigFilter) {
       list = list.filter(e => e.desig === desigFilter);
     }
@@ -143,7 +150,7 @@ export default function EmployeesPage() {
     }
 
     setFiltered(list);
-  }, [employees, deptFilter, desigFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
+  }, [employees, deptFilter, sectionFilter, desigFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
@@ -174,6 +181,7 @@ export default function EmployeesPage() {
       email: emp.email || '',
       desig: emp.desig || emp.designation || '',
       department: emp.department || '',
+      section: emp.section || '',
       salary: parsedSal.rawBase || (parsedSal.base ? String(parsedSal.base) : ''),
       incentive: parsedSal.rawIncentive || (parsedSal.incentive ? String(parsedSal.incentive) : ''),
       offeredDoj: emp.offeredDoj || emp.estDoj || emp.actualDoj || '',
@@ -204,6 +212,7 @@ export default function EmployeesPage() {
         email: editForm.email,
         desig: editForm.desig,
         department: editForm.department,
+        section: editForm.section,
         salary: combinedSalary,
         offeredDoj: editForm.offeredDoj,
         status: editForm.status,
@@ -303,6 +312,7 @@ export default function EmployeesPage() {
 
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
+  const uniqueSections = Array.from(new Set(employees.map(e => e.section).filter(Boolean)));
   const uniqueDepts = useMemo(() => {
     return getUniqueDepartments(employees.map(e => e.department));
   }, [employees]);
@@ -437,6 +447,17 @@ export default function EmployeesPage() {
               </select>
 
               <select
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
+              >
+                <option value="">All Sections</option>
+                {uniqueSections.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              <select
                 value={desigFilter}
                 onChange={(e) => setDesigFilter(e.target.value)}
                 className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
@@ -513,8 +534,8 @@ export default function EmployeesPage() {
                             {emp.initials}
                           </div>
                           <div>
-                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{emp.name}</span>
-                            <span className="text-[10px] text-[#777777] font-medium">{emp.email || 'No Email'}</span>
+                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{formatName(emp.name)}</span>
+                            {emp.email && <span className="text-[10px] text-[#888888] font-semibold truncate max-w-[150px] block">{emp.email}</span>}
                           </div>
                         </div>
                       </td>
@@ -639,6 +660,10 @@ export default function EmployeesPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
+                  <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Section / Floor Area</label>
+                  <input type="text" value={editForm.section || ''} onChange={(e) => setEditForm({ ...editForm, section: e.target.value })} placeholder="e.g. Counter 3" className="input-modern font-bold" />
+                </div>
+                <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Base Salary (₹)</label>
                   <input type="text" value={editForm.salary} onChange={(e) => setEditForm({ ...editForm, salary: e.target.value })} placeholder="e.g. 25000" className="input-modern font-mono font-bold text-emerald-800" />
                 </div>
@@ -727,7 +752,7 @@ export default function EmployeesPage() {
                 )}
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{drawerEmp.name}</h2>
+                    <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{formatName(drawerEmp.name)}</h2>
                     <StatusBadge status={drawerEmp.status || 'Joined'} size="sm" />
                   </div>
                   <div className="text-xs text-[#C9952A] font-extrabold font-mono mt-1.5 flex flex-wrap items-center gap-2">
@@ -1007,7 +1032,15 @@ export default function EmployeesPage() {
                 onClick={() => handleOpenEdit(drawerEmp)}
                 className="px-5 py-2.5 rounded-xl bg-[#1E2D4E] text-white font-black hover:bg-[#162340] transition-colors shadow-md flex items-center gap-2"
               >
-                <Edit3 className="w-4 h-4" /> Edit Details
+                <Edit3 className="w-4 h-4" /> Quick Edit
+              </button>
+              )}
+              {isAdmin && (
+              <button
+                onClick={() => navigate(`/candidate-entry?edit=${drawerEmp.appNo}`)}
+                className="px-5 py-2.5 rounded-xl bg-[#C9952A] text-white font-black hover:bg-[#b07d20] transition-colors shadow-md flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" /> Edit Full Profile
               </button>
               )}
             </div>

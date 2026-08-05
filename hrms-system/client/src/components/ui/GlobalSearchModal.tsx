@@ -42,9 +42,10 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         const candRes = await API.getCandidates({ search: query, limit: 10 });
         if (candRes && candRes.candidates) {
           candRes.candidates.forEach((c: any) => {
+            const formattedName = c.name ? c.name.toLowerCase().replace(/\b\w/g, (char: string) => char.toUpperCase()) : '';
             resList.push({
               type: 'Candidate',
-              title: c.name,
+              title: formattedName,
               subtitle: `${c.appNo} · ${c.desig} · ${c.status}`,
               href: `/candidates?search=${c.appNo}`
             });
@@ -54,10 +55,15 @@ export default function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModal
         // Search Employees
         const empRes = await API.getEmployees();
         if (empRes && empRes.employees) {
-          empRes.employees.filter((e: any) => e.name.toLowerCase().includes(q) || e.appNo.toLowerCase().includes(q)).slice(0, 5).forEach((e: any) => {
+          empRes.employees.filter((e: any) => 
+            (e.name && e.name.toLowerCase().includes(q)) || 
+            (e.appNo && e.appNo.toLowerCase().includes(q)) ||
+            (e.phone && e.phone.includes(q))
+          ).slice(0, 5).forEach((e: any) => {
+            const formattedName = e.name ? e.name.toLowerCase().replace(/\b\w/g, (char: string) => char.toUpperCase()) : '';
             resList.push({
               type: 'Employee',
-              title: e.name,
+              title: formattedName,
               subtitle: `${e.appNo} · ${e.desig} · Active Staff`,
               href: `/employees`
             });
