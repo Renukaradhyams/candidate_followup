@@ -182,62 +182,8 @@ export default function DashboardPage() {
     setCurrentPage(1);
   }, [candidates, activeRange, fromDate, toDate, searchQuery]);
 
-  // Compute Day-Wise / Date-Wise Breakdown
-  const dateWiseBreakdown = useMemo(() => {
-    const map: Record<string, {
-      date: string;
-      formattedDate: string;
-      rawTimestamp: number;
-      total: number;
-      shortlisted: number;
-      selected: number;
-      joined: number;
-      rejected: number;
-      hold: number;
-    }> = {};
-
-    filteredCandidates.forEach(c => {
-      let rawMs = c.rawDate;
-      if (!rawMs && c.date) {
-        rawMs = new Date(c.date).getTime();
-      }
-      if (!rawMs) return;
-
-      const d = new Date(rawMs);
-      if (isNaN(d.getTime())) return;
-
-      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (!map[dateKey]) {
-        map[dateKey] = {
-          date: dateKey,
-          formattedDate: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-          rawTimestamp: new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(),
-          total: 0,
-          shortlisted: 0,
-          selected: 0,
-          joined: 0,
-          rejected: 0,
-          hold: 0
-        };
-      }
-
-      map[dateKey].total += 1;
-      const status = (c.status || '').toLowerCase();
-      if (status === 'selected') {
-        map[dateKey].selected += 1;
-      } else if (status === 'joined') {
-        map[dateKey].joined += 1;
-      } else if (status === 'rejected') {
-        map[dateKey].rejected += 1;
-      } else if (status === 'hold') {
-        map[dateKey].hold += 1;
-      } else if (['shortlisted', '1st call done', '2nd call done', 'interview scheduled', 'interviewed'].includes(status)) {
-        map[dateKey].shortlisted += 1;
-      }
-    });
-
-    return Object.values(map).sort((a, b) => b.rawTimestamp - a.rawTimestamp);
-  }, [filteredCandidates]);
+  // Use Day-Wise / Date-Wise Breakdown from backend KPIs
+  const dateWiseBreakdown = kpis.dailyBreakdown || [];
 
   const totalPages = Math.ceil(filteredCandidates.length / pageSize) || 1;
   const paginatedCandidates = filteredCandidates.slice((currentPage - 1) * pageSize, currentPage * pageSize);

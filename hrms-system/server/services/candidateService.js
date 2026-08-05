@@ -653,7 +653,7 @@ class CandidateService {
 
       // Date-wise breakdown map
       const dailyMap = {};
-      candRows.forEach(r => {
+      filteredRows.forEach(r => {
         if (!r.created_at) return;
         const d = new Date(r.created_at);
         if (isNaN(d.getTime())) return;
