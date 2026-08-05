@@ -355,13 +355,13 @@ export default function SettingsPage() {
                   <div key={roleName} className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-3">
                     <div className="font-black text-sm text-[#1E2D4E] border-b border-[#e2dfd7] pb-2 uppercase tracking-wider">{roleName} Access</div>
                     <div className="space-y-2">
-                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'exit', 'settings'].map(pageKey => {
+                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast', 'settings'].map(pageKey => {
                         const key = `${roleName.toLowerCase()}_${pageKey}`;
                         const allowed = pageSettings[key] !== false;
 
                         return (
                           <label key={pageKey} className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#e2dfd7] cursor-pointer font-bold text-[#1E2D4E]">
-                            <span className="capitalize">{pageKey} Module</span>
+                            <span className="capitalize">{pageKey.replace('_', ' ')} Module</span>
                             <input
                               type="checkbox"
                               checked={allowed}

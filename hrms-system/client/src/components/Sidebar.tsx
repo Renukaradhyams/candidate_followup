@@ -45,14 +45,24 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     // Dynamically fetch page visibility from the database
     API.getPageSettings().then(res => {
       const settingsObj = (res && res.settings) ? res.settings : (res || {});
+      const defaultAllowed = roleNavMap[role] || roleNavMap['HR'];
+      
       if (settingsObj && Object.keys(settingsObj).length > 0) {
-        const dynamicAllowed = Object.entries(settingsObj)
-          .filter(([key, isAllowed]) => isAllowed === true && key.startsWith(`${role}_`))
-          .map(([key]) => key.replace(`${role}_`, ''));
+        const allKeys = [
+          'dashboard', 'candidates', 'interview', 'offer', 'openings', 
+          'onboarding', 'employees', 'dept_hiring', 'section_allocation', 
+          'exit', 'form', 'broadcast', 'settings'
+        ];
         
-        if (dynamicAllowed.length > 0) {
-          setAllowed(dynamicAllowed);
-        }
+        const newAllowed = allKeys.filter(key => {
+          const dbKey = `${role}_${key}`;
+          if (settingsObj[dbKey] !== undefined) {
+            return settingsObj[dbKey] === true;
+          }
+          return defaultAllowed.includes(key);
+        });
+        
+        setAllowed(newAllowed);
       }
     }).catch(() => {
       // Quietly fallback to default role permissions

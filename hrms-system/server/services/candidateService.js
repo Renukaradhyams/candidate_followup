@@ -531,7 +531,7 @@ class CandidateService {
       } catch (e) {}
 
       const [candRows] = await pool.query(`
-        SELECT c.id, c.app_no, c.status, c.created_at, c.updated_at, so.actual_doj, so.status as offer_status
+        SELECT c.id, c.app_no, c.gender, c.status, c.created_at, c.updated_at, so.actual_doj, so.status as offer_status
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no = so.app_no
       `);
