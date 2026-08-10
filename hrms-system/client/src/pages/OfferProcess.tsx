@@ -156,8 +156,8 @@ export default function OfferProcessPage() {
       });
     }
 
-    if (activeFilter === 'Pending Accept') list = list.filter(o => o.status === 'Pending Accept');
-    if (activeFilter === 'Accepted') list = list.filter(o => o.status === 'Accepted');
+    if (activeFilter === 'Pending Accept') list = list.filter(o => o.status === 'Pending Accept' || o.status === 'Offer Sent' || o.status === 'Shortlisted');
+    if (activeFilter === 'Accepted') list = list.filter(o => o.status === 'Accepted' || o.status === 'Offer Accepted');
     if (activeFilter === 'Declined') list = list.filter(o => o.status === 'Declined' || o.status === 'Offer Rejected');
     if (activeFilter === 'Joined') list = list.filter(o => o.status === 'Joined');
     
@@ -174,8 +174,8 @@ export default function OfferProcessPage() {
 
   const stats = useMemo(() => {
     const list = filtered || [];
-    const pending = list.filter(o => o.status === 'Pending Accept').length;
-    const accepted = list.filter(o => o.status === 'Accepted').length;
+    const pending = list.filter(o => o.status === 'Pending Accept' || o.status === 'Offer Sent' || o.status === 'Shortlisted').length;
+    const accepted = list.filter(o => o.status === 'Accepted' || o.status === 'Offer Accepted').length;
     const rejected = list.filter(o => o.status === 'Declined' || o.status === 'Offer Rejected').length;
     const joined = list.filter(o => o.status === 'Joined').length;
     const totalPkgSum = list.reduce((acc, curr) => acc + parseSalaryAndIncentive(curr.salary).total, 0);
@@ -1237,6 +1237,25 @@ export default function OfferProcessPage() {
                               </div>
                             ))}
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Shortlisting & Role Evaluation Questions Section */}
+                      <div className="bg-white rounded-2xl border border-[#e2dfd7] shadow-xs p-5 space-y-3">
+                        <div className="text-[10px] font-black uppercase text-[#777777] tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-1.5">
+                          <Star className="w-3.5 h-3.5 text-[#C9952A]" />
+                          <span>Shortlisting &amp; Role Evaluation Questions</span>
+                        </div>
+                        <div className="text-xs space-y-2">
+                          {candidateData?.evaluationNotes || candidateData?.questionNotes || profileOffer.remarks ? (
+                            <div className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#1E2D4E] font-medium whitespace-pre-wrap">
+                              {candidateData?.evaluationNotes || candidateData?.questionNotes || profileOffer.remarks}
+                            </div>
+                          ) : (
+                            <div className="p-3.5 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#777777] text-center font-medium italic">
+                              No shortlisting evaluation notes recorded.
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>

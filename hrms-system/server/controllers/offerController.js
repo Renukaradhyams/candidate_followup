@@ -7,7 +7,7 @@ const getOffers = async (req, res) => {
     // Auto-create selection_offers rows for candidates in Offer Sent, Shortlisted, Accepted, or Joined status
     try {
       await db.query(`
-        INSERT INTO selection_offers (app_no, name, desig, department, salary, est_doj, status, remarks, created_at, updated_at)
+        INSERT INTO selection_offers (app_no, name, designation, department, salary, est_doj, status, remarks, created_at, updated_at)
         SELECT 
           c.app_no,
           c.name,
@@ -171,7 +171,7 @@ const updateOfferDetails = async (req, res) => {
       const [candRows] = await db.query(`SELECT name, designation, department, salary, offered_doj FROM candidates WHERE app_no = ?`, [appNo]);
       const c = candRows[0] || {};
       await db.query(
-        `INSERT INTO selection_offers (app_no, name, desig, department, salary, est_doj, status, remarks, created_at, updated_at)
+        `INSERT INTO selection_offers (app_no, name, designation, department, salary, est_doj, status, remarks, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
           appNo,
@@ -285,25 +285,34 @@ const createDirectOffer = async (req, res) => {
     const now = new Date();
     const doj = estDoj ? new Date(estDoj) : null;
 
-    const [existing] = await db.query(`SELECT id FROM selection_offers WHERE app_no = ?`, [appNo]);
+    const [existing] = await db.query(`SELECT id FROM selection_offers WHERE TRIM(app_no) = TRIM(?)`, [appNo]);
     if (existing.length > 0) {
-      return errorRes(res, 'Offer already exists for this candidate', [], 400);
+      await db.query(
+        `UPDATE selection_offers SET designation = ?, department = ?, salary = ?, est_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
+        [designation || '', department || '', salaryOffered, doj, remarks || null, now, appNo]
+      );
+      await db.query(
+        `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
+        [salaryOffered, designation || '', department || '', doj, remarks || null, now, appNo]
+      );
+      await logAction(req.user ? req.user.username : 'HR', 'DIRECT_OFFER_UPDATE', 'OFFER', { appNo, salaryOffered, estDoj });
+      return res.json({ success: true });
     }
 
-    const [candRows] = await db.query(`SELECT name, designation, department FROM candidates WHERE app_no = ?`, [appNo]);
+    const [candRows] = await db.query(`SELECT name, designation, department FROM candidates WHERE TRIM(app_no) = TRIM(?)`, [appNo]);
     if (candRows.length === 0) return errorRes(res, 'Candidate not found', [], 404);
     const c = candRows[0];
 
-    const finalDesig = designation || c.designation;
-    const finalDept = department || c.department;
+    const finalDesig = designation || c.designation || '';
+    const finalDept = department || c.department || '';
 
     await db.query(
-      `INSERT INTO selection_offers (app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [appNo, c.name, finalDesig, finalDept, null, doj, 'Pending Accept', now, now, remarks || null]
+      `INSERT INTO selection_offers (app_no, name, designation, department, salary, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [appNo, c.name, finalDesig, finalDept, salaryOffered, null, doj, 'Pending Accept', now, now, remarks || null]
     );
 
     await db.query(
-      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE app_no = ?`,
+      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
       [salaryOffered, finalDesig, finalDept, doj, remarks || null, now, appNo]
     );
 
