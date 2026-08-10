@@ -51,7 +51,7 @@ const getOffers = async (req, res) => {
           NOW(),
           NOW()
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN selection_offers so ON TRIM(c.app_no) = TRIM(so.app_no)
         WHERE so.id IS NULL 
           AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
       `);
@@ -75,7 +75,7 @@ const getOffers = async (req, res) => {
             NOW(),
             NOW()
           FROM candidates c
-          LEFT JOIN selection_offers so ON c.app_no = so.app_no
+          LEFT JOIN selection_offers so ON TRIM(c.app_no) = TRIM(so.app_no)
           WHERE so.id IS NULL 
             AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
         `);
@@ -85,31 +85,63 @@ const getOffers = async (req, res) => {
     try {
       await db.query(`
         UPDATE selection_offers so
-        JOIN candidates c ON so.app_no = c.app_no
+        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
         SET so.status = 'Joined'
         WHERE LOWER(TRIM(c.status)) = 'joined' AND LOWER(TRIM(so.status)) != 'joined'
       `);
       await db.query(`
         UPDATE candidates c
-        JOIN selection_offers so ON c.app_no = so.app_no
+        JOIN selection_offers so ON TRIM(so.app_no) = TRIM(c.app_no)
         SET c.status = 'Joined'
         WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
       `);
     } catch (e) {}
 
-    const [rows] = await db.query(`
-      SELECT 
-        so.*,
-        he.hr_score_json,
-        he.assigned_score_json,
-        c.salary,
-        c.department as cand_department,
-        c.status as cand_status
-      FROM selection_offers so
-      LEFT JOIN hr_evaluations he ON so.app_no = he.app_no
-      LEFT JOIN candidates c ON so.app_no = c.app_no
-      ORDER BY so.created_at DESC
-    `);
+    let rows = [];
+    try {
+      const [dbRows] = await db.query(`
+        SELECT 
+          so.*,
+          he.hr_score_json,
+          he.assigned_score_json,
+          c.salary as cand_salary,
+          c.department as cand_department,
+          c.status as cand_status,
+          c.name as cand_name,
+          c.designation as cand_designation
+        FROM selection_offers so
+        LEFT JOIN hr_evaluations he ON TRIM(so.app_no) = TRIM(he.app_no)
+        LEFT JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        ORDER BY so.created_at DESC
+      `);
+      rows = dbRows || [];
+    } catch (e) {
+      console.warn('[getOffers Query Warning]', e.message);
+    }
+
+    // Fallback directly to candidates table if selection_offers is empty or unavailable
+    if (rows.length === 0) {
+      try {
+        const [candRows] = await db.query(`
+          SELECT 
+            c.app_no,
+            c.name,
+            c.designation,
+            c.department,
+            c.salary,
+            c.offered_doj as est_doj,
+            c.status,
+            c.remarks,
+            c.created_at
+          FROM candidates c
+          WHERE LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
+          ORDER BY c.created_at DESC
+        `);
+        rows = candRows || [];
+      } catch (e) {
+        rows = [];
+      }
+    }
 
     const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
     const iso = (d) => {
@@ -125,9 +157,10 @@ const getOffers = async (req, res) => {
 
     const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
 
-    const offers = rows.map((r) => {
-      const initials = r.name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
-      const colorIndex = (r.name.charCodeAt(0) + (r.name.charCodeAt(1) || 0)) % colors.length;
+    const offers = (rows || []).map((r) => {
+      const nameStr = (r.name || r.cand_name || 'Candidate').trim();
+      const initials = nameStr ? nameStr.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() : 'C';
+      const colorIndex = (nameStr.charCodeAt(0) + (nameStr.charCodeAt(1) || 0)) % colors.length;
 
       const createdDate = new Date(r.created_at || Date.now());
       const isJoined = (r.status || '').toLowerCase().trim() === 'joined' || (r.cand_status || '').toLowerCase().trim() === 'joined';
@@ -138,11 +171,11 @@ const getOffers = async (req, res) => {
         : (isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime());
 
       return {
-        appNo: r.app_no,
-        name: r.name,
+        appNo: r.app_no || '',
+        name: nameStr,
         initials,
         color: colors[colorIndex],
-        desig: r.designation,
+        desig: r.designation || r.cand_designation || '',
         noticePd: r.notice_period || '',
         estDoj: iso(r.est_doj),
         actualDoj: iso(r.actual_doj),
@@ -153,7 +186,7 @@ const getOffers = async (req, res) => {
         confirm: fmt(r.confirm_date),
         confirmRemarks: r.confirm_remarks || '',
         status,
-        salary: r.salary || '',
+        salary: r.salary || r.cand_salary || '',
         remarks: r.remarks || '',
         department: r.cand_department || r.department || '',
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
@@ -166,6 +199,7 @@ const getOffers = async (req, res) => {
 
     return res.json({ offers, total: offers.length });
   } catch (err) {
+    console.error('[getOffers Error]', err);
     return res.json({ offers: [], total: 0 });
   }
 };
