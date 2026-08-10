@@ -551,6 +551,8 @@ export default function EmployeesPage() {
                             <img
                               src={fileUrl(emp.photoUrl)!}
                               alt={emp.name}
+                              loading="lazy"
+                              decoding="async"
                               className="w-10 h-10 rounded-full object-cover border-2 border-[#C9952A] shadow-xs flex-shrink-0 bg-white"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />

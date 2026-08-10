@@ -697,6 +697,8 @@ export default function CandidatesPage() {
                                 <img
                                   src={fileUrl(c.photoUrl)!}
                                   alt={c.name}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover/avatar:scale-110 group-hover/avatar:shadow-xl group-hover/avatar:border-[#C9952A] transition-all duration-200 bg-white"
                                   onError={(e) => {
                                     (e.target as HTMLElement).style.display = 'none';
@@ -886,6 +888,8 @@ export default function CandidatesPage() {
                     <img
                       src={fileUrl(drawerCandidate.photoUrl)!}
                       alt={drawerCandidate.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
