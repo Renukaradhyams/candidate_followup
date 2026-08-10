@@ -216,17 +216,27 @@ export default function CandidatesPage() {
     } catch (e) {}
   };
 
+  const openShortlistModal = (candidate: any) => {
+    const defaultDoj = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    setShortlistModal({ open: true, candidate });
+    setOfferForm({
+      salary: candidate.expectedSalary || candidate.previousSalary || candidate.currentSalary || "",
+      incentive: "",
+      doj: candidate.offeredDoj || defaultDoj,
+      desig: candidate.desig || "",
+      department: candidate.department || "",
+      remarks: ""
+    });
+  };
+
   const handleStatusSelect = (candidate: any, targetStatus: string) => {
     if (!candidate || candidate.status === targetStatus) return;
 
-    // 'Offer Sent' opens the Direct Offer modal to collect salary/DOJ details
-    if (targetStatus === 'Offer Sent') {
-      setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
+    if (targetStatus === 'Shortlisted' || targetStatus === 'Offer Sent') {
+      openShortlistModal(candidate);
       return;
     }
 
-    // All other status changes go through confirmation modal
     setConfirmStatusModal({ open: true, candidate, newStatus: targetStatus });
   };
 
@@ -270,15 +280,7 @@ export default function CandidatesPage() {
     if (!candidate || actionLoading) return;
     
     if (action === 'shortlist') {
-      setShortlistModal({ open: true, candidate });
-      setShortlistRemarksText('');
-      setEvaluationNotesText(candidate.evaluationNotes || candidate.questionNotes || '');
-      setShortlistQuestions([]);
-      try {
-        API.getInterviewQuestions(candidate.desig, 'HR').then(res => {
-          if (res && res.questions) setShortlistQuestions(res.questions);
-        }).catch(() => {});
-      } catch (e) {}
+      openShortlistModal(candidate);
       return;
     }
     
@@ -293,7 +295,6 @@ export default function CandidatesPage() {
         showToast(`${candidate.name} rejected`, 'warn');
       } else {
         const statusMap: Record<string, string> = {
-          shortlist: 'Shortlisted',
           hold: 'Hold',
           reactivate: 'New',
           schedule: 'Interview Scheduled'
@@ -313,24 +314,46 @@ export default function CandidatesPage() {
 
   const handleConfirmShortlist = async () => {
     if (!shortlistModal.candidate) return;
+    if (!offerForm.salary) {
+      showToast('Please enter offered salary (₹)', 'error');
+      return;
+    }
+    if (!offerForm.desig) {
+      showToast('Please select final designation', 'error');
+      return;
+    }
+    if (!offerForm.department) {
+      showToast('Please select allocated department', 'error');
+      return;
+    }
+    if (!offerForm.doj) {
+      showToast('Please select estimated date of joining', 'error');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await API.updateCandidate(shortlistModal.candidate.appNo, {
-        status: 'Shortlisted',
-        remarks: shortlistRemarksText || 'Shortlisted via Candidate CRM',
-        questionNotes: evaluationNotesText,
-        evaluationNotes: evaluationNotesText
+      const c = shortlistModal.candidate;
+      await API.updateCandidate(c.appNo, {
+        status: 'Offer Sent',
+        remarks: offerForm.remarks || 'Shortlisted & moved to Offer Desk'
       });
-      showToast(`${shortlistModal.candidate.name} marked as Shortlisted 🎉`, 'success');
-      setShortlistModal({ open: false, candidate: null });
-      if (drawerCandidate && drawerCandidate.appNo === shortlistModal.candidate.appNo) {
-        setDrawerCandidate({
-          ...drawerCandidate,
-          status: 'Shortlisted',
-          remarks: shortlistRemarksText || drawerCandidate.remarks,
-          evaluationNotes: evaluationNotesText
+
+      try {
+        await API.updateOfferDetails({
+          appNo: c.appNo,
+          offeredSalary: offerForm.salary,
+          offeredIncentive: offerForm.incentive,
+          estDoj: offerForm.doj,
+          desig: offerForm.desig,
+          department: offerForm.department,
+          remarks: offerForm.remarks
         });
-      }
+      } catch (e) {}
+
+      showToast(`${c.name} Shortlisted & Sent to Offer Desk! 🎉`, 'success');
+      setShortlistModal({ open: false, candidate: null });
+      setDrawerCandidate(null);
       loadCandidates();
     } catch (err: any) {
       showToast('Failed to shortlist candidate: ' + err.message, 'error');
@@ -1172,83 +1195,140 @@ export default function CandidatesPage() {
         </div>
       )}
 
-      {/* Shortlist & Interview Questions Modal */}
+      {/* Shortlist & Offer Details Modal */}
       {shortlistModal.open && shortlistModal.candidate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 shadow-2xl animate-fade-in border border-[#C9952A]/40">
             <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <h3 className="font-black text-[#1E2D4E] text-base flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-                <span>Shortlist Applicant — {shortlistModal.candidate.name}</span>
-              </h3>
-              <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="text-[#888888] hover:text-[#1E2D4E]">
+              <div>
+                <h3 className="font-black text-[#1E2D4E] text-base flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <span>Shortlist Applicant — {shortlistModal.candidate.name}</span>
+                </h3>
+                <p className="text-[11px] text-[#777777] font-medium mt-0.5">
+                  App No: <span className="font-mono font-bold text-[#1E2D4E]">{shortlistModal.candidate.appNo}</span> • Applied: {shortlistModal.candidate.date}
+                </p>
+              </div>
+              <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="text-[#888888] hover:text-[#1E2D4E] p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3.5 text-xs max-h-[70vh] overflow-y-auto pr-1">
-              <div className="p-3 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] flex items-center justify-between font-bold text-[#1E2D4E]">
-                <span>Applied Role: <span className="text-[#C9952A] font-extrabold">{shortlistModal.candidate.desig || '—'}</span></span>
-                <span>App No: <span className="font-mono">{shortlistModal.candidate.appNo}</span></span>
-              </div>
-
-              {/* Question Bank for Designation */}
-              <div className="space-y-2">
-                <label className="block font-black text-[#1E2D4E] text-xs flex items-center gap-1.5 uppercase tracking-wider text-[10.5px]">
-                  <MessageSquare className="w-4 h-4 text-[#C9952A]" />
-                  <span>Role Evaluation Questions ({shortlistModal.candidate.desig || 'General'})</span>
-                </label>
+            <div className="space-y-4 text-xs max-h-[72vh] overflow-y-auto pr-1">
+              {/* Section 1: Compensation & Financials */}
+              <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-3">
+                <h4 className="font-black text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2 border-b border-[#e2dfd7] pb-1.5">
+                  <DollarSign className="w-4 h-4 text-[#C9952A]" />
+                  <span>Compensation &amp; Financials</span>
+                </h4>
                 
-                {shortlistQuestions.length > 0 ? (
-                  <div className="space-y-2">
-                    {shortlistQuestions.map((q: any, idx: number) => (
-                      <div key={idx} className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] space-y-1">
-                        <div className="font-extrabold text-[#1E2D4E]">
-                          <span className="text-[#C9952A] font-black mr-1">{idx + 1}.</span> {q.question || q}
-                        </div>
-                        {q.category && <span className="text-[10px] uppercase font-bold text-[#777777] bg-white px-2 py-0.5 rounded-md border border-[#e2dfd7] inline-block">{q.category}</span>}
-                      </div>
-                    ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-[#1E2D4E] mb-1">Offered Salary (₹) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-extrabold text-[#777777]">₹</span>
+                      <input
+                        type="text"
+                        value={offerForm.salary}
+                        onChange={(e) => setOfferForm({ ...offerForm, salary: e.target.value })}
+                        placeholder="e.g. 25000"
+                        className="w-full pl-7 pr-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-emerald-800 focus:outline-none focus:border-[#1E2D4E]"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-medium text-[#777777] text-center italic">
-                    Standard Shortlisting Questions: Check communication skills, availability for store shifts &amp; salary expectations.
+
+                  <div>
+                    <label className="block font-bold text-[#1E2D4E] mb-1">Offered Incentive (₹) (Optional)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-extrabold text-emerald-600">+₹</span>
+                      <input
+                        type="text"
+                        value={offerForm.incentive}
+                        onChange={(e) => setOfferForm({ ...offerForm, incentive: e.target.value })}
+                        placeholder="e.g. 2000 (Monthly / Performance)"
+                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-emerald-700 focus:outline-none focus:border-[#1E2D4E]"
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Question Evaluation & Answer Notes */}
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Evaluation &amp; Question Answers Notes *</label>
-                <textarea
-                  rows={3}
-                  value={evaluationNotesText}
-                  onChange={(e) => setEvaluationNotesText(e.target.value)}
-                  placeholder="Record applicant responses to shortlisting questions, communication rating, and recruiter assessment..."
-                  className="input-modern"
-                />
+              {/* Section 2: Role & Allocation Details */}
+              <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-3">
+                <h4 className="font-black text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2 border-b border-[#e2dfd7] pb-1.5">
+                  <Briefcase className="w-4 h-4 text-[#C9952A]" />
+                  <span>Role &amp; Allocation Details</span>
+                </h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-bold text-[#1E2D4E] mb-1">Final Designation *</label>
+                    <select
+                      value={offerForm.desig}
+                      onChange={(e) => setOfferForm({ ...offerForm, desig: e.target.value })}
+                      className="w-full p-2.5 rounded-xl border border-[#e2dfd7] bg-white font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                    >
+                      <option value="">Select Final Designation</option>
+                      {(designations || []).map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department *</label>
+                      <select
+                        value={offerForm.department}
+                        onChange={(e) => setOfferForm({ ...offerForm, department: e.target.value })}
+                        className="w-full p-2.5 rounded-xl border border-[#e2dfd7] bg-white font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                      >
+                        <option value="">Select Department</option>
+                        <option value="Ground Floor Saree">Ground Floor Saree</option>
+                        <option value="First Floor Saree">First Floor Saree</option>
+                        <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
+                        <option value="Ladies">Ladies</option>
+                        <option value="Kids">Kids</option>
+                        <option value="Mens">Mens</option>
+                        <option value="Home Furnishing">Home Furnishing</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-[#1E2D4E] mb-1">Est. Date of Joining *</label>
+                      <input
+                        type="date"
+                        value={offerForm.doj}
+                        onChange={(e) => setOfferForm({ ...offerForm, doj: e.target.value })}
+                        className="w-full p-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-amber-800 focus:outline-none focus:border-[#1E2D4E]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Recruiter Remarks */}
-              <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Recruiter Shortlisting Remarks (Optional)</label>
+              {/* Section 3: Shortlisting & Recruiter Remarks */}
+              <div className="p-4 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] space-y-2">
+                <label className="block font-bold text-[#1E2D4E]">Shortlisting &amp; Recruiter Remarks (Optional)</label>
                 <textarea
                   rows={2}
-                  value={shortlistRemarksText}
-                  onChange={(e) => setShortlistRemarksText(e.target.value)}
-                  placeholder="Enter shortlisting summary or special notes..."
-                  className="input-modern"
+                  value={offerForm.remarks}
+                  onChange={(e) => setOfferForm({ ...offerForm, remarks: e.target.value })}
+                  placeholder="Enter shortlisting notes, recruiter remarks or special conditions..."
+                  className="w-full p-3 rounded-xl border border-[#e2dfd7] bg-white text-xs font-medium focus:outline-none focus:border-[#1E2D4E]"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
-              <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
-                Cancel
-              </button>
-              <button onClick={handleConfirmShortlist} disabled={actionLoading} className="btn-primary text-xs shadow-md disabled:opacity-50">
-                {actionLoading ? 'Shortlisting...' : 'Confirm Candidate Shortlisting 🎉'}
-              </button>
+            <div className="flex items-center justify-between pt-3 border-t border-[#e2dfd7]">
+              <span className="text-[11px] font-bold text-[#777777]">Will move candidate directly to <span className="text-emerald-700 font-extrabold">Offer Desk</span></span>
+              <div className="flex gap-2">
+                <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs hover:bg-[#F9F7F4]">
+                  Cancel
+                </button>
+                <button onClick={handleConfirmShortlist} disabled={actionLoading} className="btn-primary text-xs shadow-md disabled:opacity-50">
+                  {actionLoading ? 'Processing...' : 'Shortlist & Send to Offer Desk 🚀'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
