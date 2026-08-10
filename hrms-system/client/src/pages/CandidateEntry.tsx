@@ -667,8 +667,8 @@ export default function CandidateEntryPage() {
   const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1–2 Years', '2–5 Years', 'More than 5 Years'];
   const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Others'];
 
-  // Suggestion Chips Data
-  const CITY_SUGGESTIONS = ['Bangalore', 'Mysore', 'Tumkur', 'Mandya', 'Hassan', 'Davangere', 'Hubli', 'Belgaum', 'Chitradurga'];
+  // Suggestion Chips Data (Nearby Shivamogga, Karnataka)
+  const CITY_SUGGESTIONS = ['Shivamogga', 'Bhadravathi', 'Sagar', 'Shikaripura', 'Thirthahalli', 'Soraba', 'Hosanagara', 'Tarikere', 'Channagiri', 'Honnali', 'Davanagere'];
   const RELIGION_SUGGESTIONS = ['Hindu', 'Muslim', 'Christian', 'Jain', 'Sikh', 'Buddhist'];
   const CASTE_SUGGESTIONS = ['General / GM', 'OBC', 'SC', 'ST', 'Cat-1', '2A', '2B', '3A', '3B'];
 
