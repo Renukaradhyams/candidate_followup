@@ -157,7 +157,10 @@ export default function CandidatesPage() {
     if (activeStatus !== 'all') {
       list = list.filter(c => {
         if (activeStatus === 'Selected') {
-          return c.status === 'Selected' || c.status === 'Already Selected' || c.status === 'Joined';
+          return c.status === 'Selected' || c.status === 'Already Selected' || c.status === 'Joined' || c.status === 'Offer Accepted';
+        }
+        if (activeStatus === 'Rejected') {
+          return c.status === 'Rejected' || c.status === 'Offer Rejected';
         }
         return c.status === activeStatus;
       });
@@ -621,15 +624,18 @@ export default function CandidatesPage() {
               { key: 'all', label: 'All Candidates' },
               { key: 'New', label: 'New Applicants' },
               { key: 'Shortlisted', label: 'Shortlisted' },
-              { key: '1st Call', label: '1st Call Logged' },
-              { key: 'Interview Scheduled', label: 'Interview Scheduled' },
-              { key: 'Interviewed', label: 'Interview Completed' },
-              { key: 'Selected', label: 'Selected' },
               { key: 'Offer Sent', label: 'Offer Sent' },
+              { key: 'Selected', label: 'Selected / Joined' },
               { key: 'Hold', label: 'On Hold' },
               { key: 'Rejected', label: 'Rejected' }
             ].map(p => {
-              const count = p.key === 'all' ? candidates.length : candidates.filter(c => c.status === p.key).length;
+              const count = p.key === 'all'
+                ? candidates.length
+                : p.key === 'Selected'
+                ? candidates.filter(c => c.status === 'Selected' || c.status === 'Already Selected' || c.status === 'Joined' || c.status === 'Offer Accepted').length
+                : p.key === 'Rejected'
+                ? candidates.filter(c => c.status === 'Rejected' || c.status === 'Offer Rejected').length
+                : candidates.filter(c => c.status === p.key).length;
               return (
                 <button
                   key={p.key}

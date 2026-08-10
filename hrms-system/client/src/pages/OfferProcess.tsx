@@ -61,10 +61,15 @@ export default function OfferProcessPage() {
     setImgError(false);
     setLoadingProfile(true);
     try {
-      const res = await API.getCandidates({ limit: 50000 });
-      if (res?.candidates) {
-        const match = (res.candidates as any[]).find((c: any) => c.appNo === o.appNo);
-        if (match) setCandidateData(match);
+      const res = await API.getCandidates({ appNo: o.appNo });
+      if (res?.candidates && res.candidates.length > 0) {
+        setCandidateData(res.candidates[0]);
+      } else {
+        const fallbackRes = await API.getCandidates({ search: o.appNo });
+        if (fallbackRes?.candidates && fallbackRes.candidates.length > 0) {
+          const match = (fallbackRes.candidates as any[]).find((c: any) => c.appNo === o.appNo);
+          if (match) setCandidateData(match);
+        }
       }
     } catch (e) {}
     setLoadingProfile(false);
