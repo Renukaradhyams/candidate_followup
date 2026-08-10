@@ -4,8 +4,32 @@ const { logAction } = require('../utils/logger');
 
 const getOffers = async (req, res) => {
   try {
-    // Bidirectional auto-synchronization between selection_offers and candidates for Joined status
+    // Auto-create selection_offers rows for candidates in Offer Sent, Shortlisted, Accepted, or Joined status
     try {
+      await db.query(`
+        INSERT INTO selection_offers (app_no, name, desig, department, salary, est_doj, status, remarks, created_at, updated_at)
+        SELECT 
+          c.app_no,
+          c.name,
+          COALESCE(c.designation, ''),
+          COALESCE(c.department, ''),
+          COALESCE(c.salary, ''),
+          c.offered_doj,
+          CASE 
+            WHEN LOWER(TRIM(c.status)) = 'joined' THEN 'Joined'
+            WHEN LOWER(TRIM(c.status)) IN ('accepted', 'offer accepted') THEN 'Accepted'
+            WHEN LOWER(TRIM(c.status)) IN ('offer rejected', 'declined') THEN 'Declined'
+            ELSE 'Pending Accept'
+          END,
+          COALESCE(c.remarks, 'Auto-synced from CRM shortlisting'),
+          NOW(),
+          NOW()
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        WHERE so.id IS NULL 
+          AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
+      `);
+
       await db.query(`
         UPDATE selection_offers so
         JOIN candidates c ON so.app_no = c.app_no
@@ -142,8 +166,28 @@ const updateOfferDetails = async (req, res) => {
     if (remarks !== undefined) { updFields.push('remarks = ?'); params.push(remarks); }
     if (status) { updFields.push('status = ?'); params.push(status); }
 
-    params.push(appNo);
-    await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
+    const [existingOffer] = await db.query(`SELECT id FROM selection_offers WHERE app_no = ?`, [appNo]);
+    if (existingOffer.length === 0) {
+      const [candRows] = await db.query(`SELECT name, designation, department, salary, offered_doj FROM candidates WHERE app_no = ?`, [appNo]);
+      const c = candRows[0] || {};
+      await db.query(
+        `INSERT INTO selection_offers (app_no, name, desig, department, salary, est_doj, status, remarks, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [
+          appNo,
+          c.name || 'Candidate',
+          finalDesignation || c.designation || '',
+          department || c.department || '',
+          salaryOffered || c.salary || '',
+          estDoj ? new Date(estDoj) : (c.offered_doj || null),
+          status || 'Pending Accept',
+          remarks || ''
+        ]
+      );
+    } else {
+      params.push(appNo);
+      await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
+    }
 
     // Sync with candidates table
     const candUpd = ['updated_at = ?'];

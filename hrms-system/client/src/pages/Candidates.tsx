@@ -334,22 +334,39 @@ export default function CandidatesPage() {
     setActionLoading(true);
     try {
       const c = shortlistModal.candidate;
+      const combinedSalary = offerForm.incentive ? `${offerForm.salary.trim()}|${offerForm.incentive.trim()}` : offerForm.salary.trim();
+
+      // 1. Update candidate details and set status to 'Offer Sent'
       await API.updateCandidate(c.appNo, {
         status: 'Offer Sent',
+        salary: combinedSalary,
+        designation: offerForm.desig,
+        department: offerForm.department,
+        offeredDoj: offerForm.doj,
         remarks: offerForm.remarks || 'Shortlisted & moved to Offer Desk'
       });
 
+      // 2. Create or update offer in selection_offers table
       try {
+        await API.createDirectOffer({
+          appNo: c.appNo,
+          salaryOffered: combinedSalary,
+          estDoj: offerForm.doj,
+          designation: offerForm.desig,
+          department: offerForm.department,
+          remarks: offerForm.remarks || 'Shortlisted & moved to Offer Desk'
+        });
+      } catch (e) {
         await API.updateOfferDetails({
           appNo: c.appNo,
-          offeredSalary: offerForm.salary,
-          offeredIncentive: offerForm.incentive,
+          salaryOffered: combinedSalary,
           estDoj: offerForm.doj,
-          desig: offerForm.desig,
+          finalDesignation: offerForm.desig,
           department: offerForm.department,
-          remarks: offerForm.remarks
+          remarks: offerForm.remarks,
+          status: 'Pending Accept'
         });
-      } catch (e) {}
+      }
 
       showToast(`${c.name} Shortlisted & Sent to Offer Desk! 🎉`, 'success');
       setShortlistModal({ open: false, candidate: null });
