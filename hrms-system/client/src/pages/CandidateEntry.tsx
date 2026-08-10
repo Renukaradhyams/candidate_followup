@@ -1,12 +1,234 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../services/api';
 import ToastContainer, { showToast } from '../components/Toast';
 import { optimizeFile } from '../utils/fileOptimizer';
 import { 
   User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
-  FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, Image as ImageIcon, FileCheck
+  FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, 
+  Image as ImageIcon, FileCheck, Camera, RefreshCw, X, Check, AlertCircle, Eye
 } from 'lucide-react';
 
+const DRAFT_KEY = 'bsc_candidate_entry_draft_v2';
+
+// ── Live Camera Modal Component ──────────────────────────────────────────────
+interface CameraModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCapture: (file: File) => void;
+  title: string;
+  defaultFacingMode?: 'user' | 'environment';
+}
+
+function CameraModal({ isOpen, onClose, onCapture, title, defaultFacingMode = 'user' }: CameraModalProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string>('');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(defaultFacingMode);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  const stopStream = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const startCamera = async (mode: 'user' | 'environment') => {
+    setIsInitializing(true);
+    setCameraError('');
+    stopStream();
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err: any) {
+      setCameraError('Unable to access device camera. Please grant permission or choose a file from your device instead.');
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !capturedDataUrl) {
+      startCamera(facingMode);
+    } else if (!isOpen) {
+      stopStream();
+      setCapturedDataUrl(null);
+      setCameraError('');
+    }
+    return () => {
+      stopStream();
+    };
+  }, [isOpen, facingMode]);
+
+  if (!isOpen) return null;
+
+  const handleTakeSnapshot = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Mirror front camera for natural selfie view if user mode
+      if (facingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      setCapturedDataUrl(dataUrl);
+      stopStream();
+    }
+  };
+
+  const handleConfirmPhoto = () => {
+    if (!capturedDataUrl) return;
+    try {
+      const arr = capturedDataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+      const fileName = `camera_photo_${Date.now()}.jpg`;
+      const file = new File([blob], fileName, { type: 'image/jpeg', lastModified: Date.now() });
+      onCapture(file);
+      onClose();
+    } catch (e: any) {
+      showToast('Error processing captured photo', 'error');
+    }
+  };
+
+  const handleRetake = () => {
+    setCapturedDataUrl(null);
+    startCamera(facingMode);
+  };
+
+  const toggleFacingMode = () => {
+    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl space-y-4 animate-scale-in border border-white/20">
+        {/* Header */}
+        <div className="bg-[#1E2D4E] text-white p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-extrabold text-sm">
+            <Camera className="w-5 h-5 text-[#C9952A]" />
+            <span>{title}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-4 space-y-4">
+          {cameraError ? (
+            <div className="p-6 text-center space-y-3 bg-rose-50 rounded-2xl border border-rose-200 text-rose-900">
+              <AlertCircle className="w-10 h-10 mx-auto text-rose-600" />
+              <p className="text-xs font-bold leading-relaxed">{cameraError}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors shadow-md"
+              >
+                Close &amp; Choose File Upload
+              </button>
+            </div>
+          ) : capturedDataUrl ? (
+            <div className="space-y-4">
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner">
+                <img src={capturedDataUrl} alt="Captured preview" className="w-full h-full object-contain" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleRetake}
+                  className="flex-1 py-3 px-4 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] hover:bg-white transition-colors flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4 text-[#C9952A]" />
+                  <span>Retake</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPhoto}
+                  className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors shadow-md flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Use Photo</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-inner flex items-center justify-center">
+                {isInitializing && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 text-white text-xs font-bold gap-2.5 z-10">
+                    <RefreshCw className="w-6 h-6 animate-spin text-[#C9952A]" />
+                    <span>Opening Camera Stream...</span>
+                  </div>
+                )}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={toggleFacingMode}
+                  className="px-4 py-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] hover:bg-white transition-colors flex items-center gap-2"
+                  title="Switch between front and back camera"
+                >
+                  <RefreshCw className="w-4 h-4 text-[#C9952A]" />
+                  <span className="hidden sm:inline">Flip Camera</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTakeSnapshot}
+                  disabled={isInitializing}
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#1E2D4E] text-white text-xs font-extrabold hover:bg-[#162340] transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Camera className="w-4 h-4 text-[#C9952A]" />
+                  <span>Capture Snapshot</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page Component ──────────────────────────────────────────────────────
 export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
   const [designations, setDesignations] = useState<string[]>([]);
@@ -33,7 +255,6 @@ export default function CandidateEntryPage() {
   const [motherDetails, setMotherDetails] = useState('');
   const [religion, setReligion] = useState('');
   const [caste, setCaste] = useState('');
-  const [religionCaste, setReligionCaste] = useState('');
   const [languagesKnown, setLanguagesKnown] = useState<string[]>([]);
   const [previousSalary, setPreviousSalary] = useState('');
   const [expectedSalary, setExpectedSalary] = useState('');
@@ -42,6 +263,8 @@ export default function CandidateEntryPage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const [existingResume, setExistingResume] = useState('');
   const [existingPhoto, setExistingPhoto] = useState('');
@@ -53,14 +276,28 @@ export default function CandidateEntryPage() {
   const [loadingText, setLoadingText] = useState('Submitting Registration...');
   const [successAppNo, setSuccessAppNo] = useState('');
 
+  // Camera Modal State
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
+  const [cameraModalTitle, setCameraModalTitle] = useState('Take Candidate Photo');
+  const [cameraTarget, setCameraTarget] = useState<'photo' | 'aadhaar' | null>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
+
+  // Input refs for file triggers
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const aadhaarInputRef = useRef<HTMLInputElement | null>(null);
+  const aadhaarCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const resumeInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Restore Draft on initial load (if not in Edit mode)
   useEffect(() => {
     API.getPublicDesignations().then(res => {
       if (res && res.designations) setDesignations(res.designations);
     }).catch(() => {});
 
-    // Check Edit Mode
     const urlParams = new URLSearchParams(window.location.search);
     const editId = urlParams.get('edit');
+
     if (editId) {
       setEditAppNo(editId);
       setLoading(true);
@@ -86,7 +323,6 @@ export default function CandidateEntryPage() {
           setAadhaarNumber(c.aadhaarNumber || '');
           setFatherDetails(c.fatherDetails || '');
           setMotherDetails(c.motherDetails || '');
-          setReligionCaste(c.religionCaste || '');
           if (c.religionCaste) {
             const parts = c.religionCaste.split(' / ');
             setReligion(parts[0] || c.religionCaste);
@@ -103,8 +339,71 @@ export default function CandidateEntryPage() {
         showToast('Failed to load candidate data', 'error');
         setLoading(false);
       });
+    } else {
+      // Restore draft from sessionStorage if present
+      try {
+        const savedDraft = sessionStorage.getItem(DRAFT_KEY);
+        if (savedDraft) {
+          const d = JSON.parse(savedDraft);
+          if (d.name) setName(d.name);
+          if (d.email) setEmail(d.email);
+          if (d.phone) setPhone(d.phone);
+          if (d.address) setAddress(d.address);
+          if (d.gender) setGender(d.gender);
+          if (d.bloodGroup) setBloodGroup(d.bloodGroup);
+          if (d.dob) setDob(d.dob);
+          if (d.offeredDoj) setOfferedDoj(d.offeredDoj);
+          if (d.desig) setDesig(d.desig);
+          if (d.qualification) setQualification(d.qualification);
+          if (d.experience) setExperience(d.experience);
+          if (d.retailExperience) setRetailExperience(d.retailExperience);
+          if (d.previousCompany) setPreviousCompany(d.previousCompany);
+          if (d.previousDesignation) setPreviousDesignation(d.previousDesignation);
+          if (d.aadhaarNumber) setAadhaarNumber(d.aadhaarNumber);
+          if (d.fatherDetails) setFatherDetails(d.fatherDetails);
+          if (d.motherDetails) setMotherDetails(d.motherDetails);
+          if (d.religion) setReligion(d.religion);
+          if (d.caste) setCaste(d.caste);
+          if (d.languagesKnown) setLanguagesKnown(d.languagesKnown);
+          if (d.previousSalary) setPreviousSalary(d.previousSalary);
+          if (d.expectedSalary) setExpectedSalary(d.expectedSalary);
+          if (d.declaration) setDeclaration(d.declaration);
+          if (d.step === 1 || d.step === 2) setStep(d.step);
+        }
+      } catch (e) {}
     }
   }, []);
+
+  // Save form fields into sessionStorage draft while user types
+  useEffect(() => {
+    if (step === 3 || editAppNo) return;
+    const draftData = {
+      step, name, email, phone, address, gender, bloodGroup, dob, offeredDoj,
+      desig, qualification, experience, retailExperience, previousCompany,
+      previousDesignation, aadhaarNumber, fatherDetails, motherDetails,
+      religion, caste, languagesKnown, previousSalary, expectedSalary, declaration
+    };
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+    } catch (e) {}
+  }, [
+    step, name, email, phone, address, gender, bloodGroup, dob, offeredDoj,
+    desig, qualification, experience, retailExperience, previousCompany,
+    previousDesignation, aadhaarNumber, fatherDetails, motherDetails,
+    religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, editAppNo
+  ]);
+
+  // Handle Photo selection & create preview
+  const handlePhotoSelect = (file: File | null) => {
+    setPhotoFile(file);
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setPhotoPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPhotoPreview(null);
+    }
+  };
 
   const checkDuplicate = async (ph: string) => {
     if (ph.length < 10) {
@@ -136,7 +435,27 @@ export default function CandidateEntryPage() {
     window.scrollTo(0, 0);
   };
 
-  const handleSubmit = async () => {
+  // Trigger Live Camera Modal
+  const openCamera = (target: 'photo' | 'aadhaar', mode: 'user' | 'environment' = 'user') => {
+    setCameraTarget(target);
+    setCameraFacingMode(mode);
+    setCameraModalTitle(target === 'photo' ? 'Take Passport Photo' : 'Snap Aadhaar Document');
+    setCameraModalOpen(true);
+  };
+
+  const handleCameraCapture = (file: File) => {
+    if (cameraTarget === 'photo') {
+      handlePhotoSelect(file);
+      showToast('Candidate photo captured successfully!', 'success');
+    } else if (cameraTarget === 'aadhaar') {
+      setAadhaarFile(file);
+      showToast('Aadhaar document captured successfully!', 'success');
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!declaration) {
       showToast('You must agree to the declaration', 'error');
       return;
@@ -147,7 +466,8 @@ export default function CandidateEntryPage() {
     }
 
     setLoading(true);
-    setLoadingText('Optimizing documents...');
+    setLoadingText('Optimizing documents under 1000 KB...');
+
     try {
       let resumeUrl = existingResume;
       let photoUrl = existingPhoto;
@@ -165,20 +485,22 @@ export default function CandidateEntryPage() {
         
         try {
           if (resumeFile) {
+            setLoadingText('Optimizing Resume document...');
             const optimizedResume = await optimizeFile(resumeFile, 'Resume');
             formData.append('resume', optimizedResume);
           }
           if (photoFile) {
+            setLoadingText('Optimizing Candidate Photo...');
             const optimizedPhoto = await optimizeFile(photoFile, 'Candidate Photo');
             formData.append('photo', optimizedPhoto);
           }
           if (aadhaarFile) {
+            setLoadingText('Optimizing Aadhaar Document...');
             const optimizedAadhaar = await optimizeFile(aadhaarFile, 'Aadhaar Document');
             formData.append('aadhar', optimizedAadhaar);
           }
         } catch (optimizationError: any) {
-          // If any file fails the 800KB validation, we stop the whole process and alert the user
-          showToast(optimizationError.message, 'error');
+          showToast(optimizationError.message || 'File optimization failed.', 'error');
           setLoading(false);
           return;
         }
@@ -192,7 +514,7 @@ export default function CandidateEntryPage() {
         }
       }
 
-      setLoadingText('Finalizing Registration...');
+      setLoadingText('Finalizing Candidate Registration...');
       const payload = {
         name,
         email,
@@ -215,7 +537,7 @@ export default function CandidateEntryPage() {
         motherDetails,
         religion,
         caste,
-        religionCaste,
+        religionCaste: religion && caste ? `${religion} / ${caste}` : (religion || caste || ''),
         languagesKnown,
         resumeUrl,
         photoUrl,
@@ -234,10 +556,15 @@ export default function CandidateEntryPage() {
         showToast(`Registration Successful! App No: ${res.appNo || targetAppNo}`, 'success');
       }
 
+      // Clear draft on completion
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch (e) {}
+
       setStep(3);
       window.scrollTo(0, 0);
     } catch (err: any) {
-      showToast('Error submitting registration: ' + err.message, 'error');
+      showToast('Error submitting registration: ' + (err.message || 'Server error'), 'error');
     } finally {
       setLoading(false);
     }
@@ -252,6 +579,15 @@ export default function CandidateEntryPage() {
   return (
     <div className="min-h-screen bg-[#EDE8DE] pb-12">
       <ToastContainer />
+
+      {/* Camera Capture Modal */}
+      <CameraModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        title={cameraModalTitle}
+        defaultFacingMode={cameraFacingMode}
+      />
 
       {/* Modern Header */}
       <header className="bg-[#1E2D4E] p-4 sm:p-5 text-white shadow-lg sticky top-0 z-30 border-b border-[#C9952A]/30">
@@ -609,71 +945,219 @@ export default function CandidateEntryPage() {
         {/* STEP 2 FORM */}
         {step === 2 && (
           <div className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
-            <div className="border-b border-[#e2dfd7] pb-3 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-[#C9952A]" />
-              <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
-                3. Mandatory Document Uploads &amp; Declaration
-              </h2>
+            <div className="border-b border-[#e2dfd7] pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-[#C9952A]" />
+                <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
+                  3. Mandatory Document Uploads &amp; Declaration
+                </h2>
+              </div>
+              <span className="text-[11px] font-extrabold text-[#C9952A] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                Max file limit: 1000 KB (1 MB)
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Photo Upload */}
-              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
-                <ImageIcon className="w-8 h-8 text-[#C9952A] mx-auto" />
-                <div className="font-extrabold text-xs text-[#1E2D4E]">Candidate Passport Photo *</div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPhotoFile(e.target.files ? e.target.files[0] : null)}
-                  className="hidden"
-                  id="photo-input"
-                />
-                <label htmlFor="photo-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
-                  {photoFile ? photoFile.name : (existingPhoto ? 'Change Photo' : 'Choose Image')}
-                </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* 1. Candidate Passport Photo */}
+              <div className="p-5 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] space-y-3 hover:border-[#1E2D4E] transition-all flex flex-col justify-between">
+                <div className="space-y-2 text-center">
+                  {photoPreview ? (
+                    <div className="w-20 h-20 mx-auto rounded-xl overflow-hidden border-2 border-[#1E2D4E] shadow-md relative group">
+                      <img src={photoPreview} alt="Candidate Photo" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => { handlePhotoSelect(null); setPhotoPreview(null); }}
+                          className="p-1 bg-rose-600 text-white rounded-full hover:bg-rose-700"
+                          title="Remove photo"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <ImageIcon className="w-10 h-10 text-[#C9952A] mx-auto" />
+                  )}
+                  
+                  <div>
+                    <div className="font-extrabold text-xs text-[#1E2D4E]">Candidate Photo *</div>
+                    <div className="text-[10px] text-[#777777] font-semibold mt-0.5">JPG, PNG up to 1000 KB</div>
+                  </div>
+
+                  {photoFile && (
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold truncate">
+                      ✓ {photoFile.name} ({(photoFile.size / 1024).toFixed(0)} KB)
+                    </div>
+                  )}
+                </div>
+
+                {/* Multiple Upload Options */}
+                <div className="space-y-2 pt-2 border-t border-[#e2dfd7]">
+                  {/* Option 1: Live Web Camera */}
+                  <button
+                    type="button"
+                    onClick={() => openCamera('photo', 'user')}
+                    className="w-full py-2 px-3 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <Camera className="w-4 h-4 text-[#C9952A]" />
+                    <span>Take Live Photo</span>
+                  </button>
+
+                  {/* Option 2: Browse Device Gallery */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handlePhotoSelect(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                    ref={photoInputRef}
+                    id="photo-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="w-full py-2 px-3 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Choose File / Gallery</span>
+                  </button>
+
+                  {/* Option 3: Direct Mobile Camera */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    onChange={(e) => handlePhotoSelect(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                    ref={photoCameraInputRef}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => photoCameraInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 rounded-lg bg-transparent text-[10.5px] font-bold text-[#777777] hover:text-[#1E2D4E] transition-colors flex items-center justify-center gap-1"
+                  >
+                    <span>📱 Use Mobile Device Camera</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Aadhaar Upload */}
-              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
-                <FileCheck className="w-8 h-8 text-[#C9952A] mx-auto" />
-                <div className="font-extrabold text-xs text-[#1E2D4E]">Aadhaar Card (Front/Back) *</div>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => setAadhaarFile(e.target.files ? e.target.files[0] : null)}
-                  className="hidden"
-                  id="aadhar-input"
-                />
-                <label htmlFor="aadhar-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
-                  {aadhaarFile ? aadhaarFile.name : (existingAadhaar ? 'Change Aadhaar' : 'Choose Document')}
-                </label>
+              {/* 2. Aadhaar Card Document */}
+              <div className="p-5 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] space-y-3 hover:border-[#1E2D4E] transition-all flex flex-col justify-between">
+                <div className="space-y-2 text-center">
+                  <FileCheck className="w-10 h-10 text-[#C9952A] mx-auto" />
+                  
+                  <div>
+                    <div className="font-extrabold text-xs text-[#1E2D4E]">Aadhaar Document *</div>
+                    <div className="text-[10px] text-[#777777] font-semibold mt-0.5">Photo or PDF up to 1000 KB</div>
+                  </div>
+
+                  {aadhaarFile ? (
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold truncate">
+                      ✓ {aadhaarFile.name} ({(aadhaarFile.size / 1024).toFixed(0)} KB)
+                    </div>
+                  ) : existingAadhaar ? (
+                    <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-bold truncate">
+                      Existing Aadhaar Attached
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Multiple Upload Options */}
+                <div className="space-y-2 pt-2 border-t border-[#e2dfd7]">
+                  {/* Option 1: Snap Document Camera */}
+                  <button
+                    type="button"
+                    onClick={() => openCamera('aadhaar', 'environment')}
+                    className="w-full py-2 px-3 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <Camera className="w-4 h-4 text-[#C9952A]" />
+                    <span>Snap Aadhaar Photo</span>
+                  </button>
+
+                  {/* Option 2: Upload Document File / PDF */}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setAadhaarFile(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                    ref={aadhaarInputRef}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => aadhaarInputRef.current?.click()}
+                    className="w-full py-2 px-3 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Choose File / PDF</span>
+                  </button>
+
+                  {/* Option 3: Direct Mobile Camera Snap */}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    onChange={(e) => setAadhaarFile(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                    ref={aadhaarCameraInputRef}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => aadhaarCameraInputRef.current?.click()}
+                    className="w-full py-1.5 px-2 rounded-lg bg-transparent text-[10.5px] font-bold text-[#777777] hover:text-[#1E2D4E] transition-colors flex items-center justify-center gap-1"
+                  >
+                    <span>📱 Snap via Mobile Camera</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Resume Upload */}
-              <div className="p-4 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] text-center space-y-2 hover:border-[#1E2D4E] transition-colors">
-                <FileText className="w-8 h-8 text-[#C9952A] mx-auto" />
-                <div className="font-extrabold text-xs text-[#1E2D4E]">Resume / CV Document *</div>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,image/*"
-                  onChange={(e) => setResumeFile(e.target.files ? e.target.files[0] : null)}
-                  className="hidden"
-                  id="resume-input"
-                />
-                <label htmlFor="resume-input" className="inline-block px-3 py-1.5 rounded-lg bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] cursor-pointer hover:bg-[#1E2D4E] hover:text-white transition-colors">
-                  {resumeFile ? resumeFile.name : (existingResume ? 'Change Resume' : 'Choose File')}
-                </label>
+              {/* 3. Resume / CV Document */}
+              <div className="p-5 rounded-2xl border-2 border-dashed border-[#e2dfd7] bg-[#F9F7F4] space-y-3 hover:border-[#1E2D4E] transition-all flex flex-col justify-between">
+                <div className="space-y-2 text-center">
+                  <FileText className="w-10 h-10 text-[#C9952A] mx-auto" />
+                  
+                  <div>
+                    <div className="font-extrabold text-xs text-[#1E2D4E]">Resume / CV Document *</div>
+                    <div className="text-[10px] text-[#777777] font-semibold mt-0.5">PDF, DOC, DOCX up to 1000 KB</div>
+                  </div>
+
+                  {resumeFile ? (
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold truncate">
+                      ✓ {resumeFile.name} ({(resumeFile.size / 1024).toFixed(0)} KB)
+                    </div>
+                  ) : existingResume ? (
+                    <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-bold truncate">
+                      Existing Resume Attached
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-[#e2dfd7]">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={(e) => setResumeFile(e.target.files ? e.target.files[0] : null)}
+                    className="hidden"
+                    ref={resumeInputRef}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => resumeInputRef.current?.click()}
+                    className="w-full py-2.5 px-3 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Upload className="w-4 h-4 text-[#C9952A]" />
+                    <span>Choose Resume File</span>
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Declaration Checkbox */}
-            <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
               <label className="flex items-start gap-3 cursor-pointer text-xs font-semibold text-[#1E2D4E]">
                 <input
                   type="checkbox"
                   checked={declaration}
                   onChange={(e) => setDeclaration(e.target.checked)}
-                  className="mt-0.5 rounded accent-[#1E2D4E]"
+                  className="mt-0.5 rounded accent-[#1E2D4E] w-4 h-4 cursor-pointer"
                 />
                 <span>
                   I hereby declare that all information provided in this registration form is true, correct, and complete to the best of my knowledge. I understand that any false statement or omission may lead to immediate disqualification.
@@ -686,7 +1170,7 @@ export default function CandidateEntryPage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-4 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] transition-colors flex items-center gap-1.5"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span>Back to Step 1</span>
@@ -696,10 +1180,13 @@ export default function CandidateEntryPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="btn-gold flex items-center gap-2 shadow-lg disabled:opacity-50"
+                className="btn-gold flex items-center gap-2 shadow-lg disabled:opacity-50 py-3 px-6 text-xs font-extrabold"
               >
                 {loading ? (
-                  <span>{loadingText}</span>
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{loadingText}</span>
+                  </span>
                 ) : (
                   <>
                     <span>Complete Candidate Registration</span>
@@ -730,7 +1217,11 @@ export default function CandidateEntryPage() {
 
             <div className="pt-4 border-t border-[#e2dfd7] flex justify-center gap-3">
               <button
-                onClick={() => window.location.href = '/candidate-entry'}
+                type="button"
+                onClick={() => {
+                  try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+                  window.location.href = '/candidate-entry';
+                }}
                 className="btn-primary text-xs"
               >
                 Submit Another Candidate Form
