@@ -341,31 +341,7 @@ export default function CandidateEntryPage() {
     showToast('Cleared saved draft. You can start fresh!', 'info');
   };
 
-  // Auto-Fill Sample Test Data Helper
-  const handleAutoFillSample = () => {
-    setName('Rajesh Kumar');
-    setPhone('9876543210');
-    setEmail('rajesh.kumar@example.com');
-    setGender('MALE');
-    setDob('1998-05-15');
-    setBloodGroup('O+');
-    setAddress('No 45, 2nd Cross, MG Road, Indiranagar, Bangalore - 560038');
-    setAadhaarNumber('9876 5432 1098');
-    setReligion('Hindu');
-    setCaste('General');
-    setFatherDetails('Suresh Kumar - Shopkeeper');
-    setMotherDetails('Sunitha Kumar - Homemaker');
-    setLanguagesKnown(['Kannada', 'English', 'Hindi']);
-    setDesig('Sales Executive');
-    setQualification('Graduate');
-    setExperience('1–2 Years');
-    setRetailExperience('Yes, in a clothing/apparel store');
-    setPreviousCompany('Trends Apparel Store');
-    setPreviousDesignation('Sales Assistant');
-    setPreviousSalary('18000');
-    setExpectedSalary('22000');
-    showToast('✨ Sample candidate data filled automatically!', 'success');
-  };
+
 
   // Populate candidate data from duplicate lookup or previous candidate record
   const populateCandidateRecord = (c: any) => {
@@ -722,18 +698,7 @@ export default function CandidateEntryPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {!editAppNo && step === 1 && (
-              <button
-                type="button"
-                onClick={handleAutoFillSample}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] transition-colors shadow-md"
-                title="Fill sample candidate data for testing"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Auto-Fill Sample</span>
-              </button>
-            )}
+
 
             <div className="hidden sm:flex items-center gap-2 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
               <ShieldCheck className="w-4 h-4 text-[#C9952A]" />
@@ -825,16 +790,7 @@ export default function CandidateEntryPage() {
                   </h2>
                 </div>
 
-                {!editAppNo && (
-                  <button
-                    type="button"
-                    onClick={handleAutoFillSample}
-                    className="sm:hidden text-[10px] font-black text-[#C9952A] bg-amber-50 border border-amber-300 px-2 py-1 rounded-lg flex items-center gap-1"
-                  >
-                    <Zap className="w-3 h-3" />
-                    <span>Auto-Fill Sample</span>
-                  </button>
-                )}
+
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
