@@ -37,6 +37,7 @@ export default function EmployeesPage() {
   // Drawer
   const [drawerEmp, setDrawerEmp] = useState<any | null>(null);
   const [drawerTab, setDrawerTab] = useState<'overview' | 'personal' | 'professional' | 'documents'>('overview');
+  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string | null>(null);
 
   // Edit Modal State
   const [editModal, setEditModal] = useState<{ open: boolean; emp: any | null }>({ open: false, emp: null });
@@ -320,6 +321,22 @@ export default function EmployeesPage() {
   return (
     <div className="min-h-screen bg-[#EDE8DE] flex">
       <ToastContainer />
+
+      {/* High-Res Photo Lightbox Viewer */}
+      {expandedPhotoUrl && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setExpandedPhotoUrl(null)}>
+          <button
+            onClick={() => setExpandedPhotoUrl(null)}
+            className="absolute top-5 right-5 p-2.5 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+            title="Close Lightbox"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="max-w-3xl max-h-[85vh] p-3 bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-[#C9952A]" onClick={(e) => e.stopPropagation()}>
+            <img src={expandedPhotoUrl} alt="Expanded Employee Photo" className="w-full h-full object-contain max-h-[80vh] rounded-2xl" />
+          </div>
+        </div>
+      )}
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
@@ -530,9 +547,18 @@ export default function EmployeesPage() {
                       <td className="py-3.5 px-4 font-mono text-[#555555] font-bold">{emp.appNo}</td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3 group text-left">
-                          <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
-                            {emp.initials}
-                          </div>
+                          {fileUrl(emp.photoUrl) ? (
+                            <img
+                              src={fileUrl(emp.photoUrl)!}
+                              alt={emp.name}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-[#C9952A] shadow-xs flex-shrink-0 bg-white"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                              {emp.initials}
+                            </div>
+                          )}
                           <div>
                             <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{formatName(emp.name)}</span>
                             {emp.email && <span className="text-[10px] text-[#888888] font-semibold truncate max-w-[150px] block">{emp.email}</span>}
@@ -739,14 +765,19 @@ export default function EmployeesPage() {
             <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
               <div className="flex items-center gap-3.5">
                 {fileUrl(drawerEmp.photoUrl) ? (
-                  <img
-                    src={fileUrl(drawerEmp.photoUrl)!}
-                    alt={drawerEmp.name}
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
+                  <div className="relative group flex-shrink-0 cursor-pointer" onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)} title="Click to view full enlarged photo">
+                    <img
+                      src={fileUrl(drawerEmp.photoUrl)!}
+                      alt={drawerEmp.name}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-extrabold">
+                      🔍 Expand
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-xl flex items-center justify-center border-2 border-[#C9952A] shadow-md">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-2xl sm:text-3xl flex items-center justify-center border-3 border-[#C9952A] shadow-xl flex-shrink-0">
                     {drawerEmp.initials || drawerEmp.name?.slice(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -975,13 +1006,25 @@ export default function EmployeesPage() {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {fileUrl(drawerEmp.photoUrl) ? (
-                      <a href={fileUrl(drawerEmp.photoUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
-                        <ImageIcon className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-[#1E2D4E] text-xs">📷 Photo</span>
-                      </a>
+                      <div className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] flex flex-col items-center gap-3 shadow-2xs">
+                        <img
+                          src={fileUrl(drawerEmp.photoUrl)!}
+                          alt="Employee Photo"
+                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)}
+                          className="w-36 h-36 object-cover rounded-2xl border-2 border-[#C9952A] shadow-md cursor-pointer hover:scale-105 transition-transform"
+                        />
+                        <span className="text-xs">Employee Passport Photo</span>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)}
+                          className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-[11px] font-extrabold hover:bg-[#162340] transition-colors"
+                        >
+                          🔍 Expand Photo
+                        </button>
+                      </div>
                     ) : (
-                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
-                        <span className="font-bold text-[10px] uppercase">No Photo</span>
+                      <div className="p-4 rounded-2xl border border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 text-[#aaa] font-bold">
+                        <span>No Photo Uploaded</span>
                       </div>
                     )}
 
