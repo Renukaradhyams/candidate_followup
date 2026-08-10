@@ -104,12 +104,27 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedExts = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', ''];
-  const ext = file.originalname ? path.extname(file.originalname).toLowerCase() : '.jpg';
-  if (allowedExts.includes(ext) || ext === '') {
+  const allowedTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/pjpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/heic',
+    'image/heif',
+    'image/svg+xml'
+  ];
+  const allowedExts = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif', '.svg', '', '.'];
+  const ext = file.originalname ? path.extname(file.originalname).toLowerCase() : '';
+  const mime = file.mimetype ? file.mimetype.toLowerCase() : '';
+
+  if (allowedExts.includes(ext) || allowedTypes.includes(mime) || mime.startsWith('image/') || !ext || ext === '.') {
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file format: ${ext}. Allowed formats: PDF, DOC, DOCX, JPG, JPEG, PNG.`));
+    cb(new Error(`Invalid file format: ${ext}. Allowed formats: PDF, DOC, DOCX, JPG, JPEG, PNG, WEBP.`));
   }
 };
 
