@@ -5,10 +5,10 @@ import { optimizeFile } from '../utils/fileOptimizer';
 import { 
   User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
   FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, 
-  Image as ImageIcon, FileCheck, Camera, RefreshCw, X, Check, AlertCircle, Eye
+  Image as ImageIcon, FileCheck, Camera, RefreshCw, X, Check, AlertCircle, Eye, Zap
 } from 'lucide-react';
 
-const DRAFT_KEY = 'bsc_candidate_entry_draft_v2';
+const DRAFT_KEY = 'bsc_candidate_entry_draft_v3';
 
 // ── Live Camera Modal Component ──────────────────────────────────────────────
 interface CameraModalProps {
@@ -83,7 +83,6 @@ function CameraModal({ isOpen, onClose, onCapture, title, defaultFacingMode = 'u
     canvas.height = video.videoHeight || 720;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Mirror front camera for natural selfie view if user mode
       if (facingMode === 'user') {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
@@ -128,7 +127,6 @@ function CameraModal({ isOpen, onClose, onCapture, title, defaultFacingMode = 'u
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl space-y-4 animate-scale-in border border-white/20">
-        {/* Header */}
         <div className="bg-[#1E2D4E] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2 font-extrabold text-sm">
             <Camera className="w-5 h-5 text-[#C9952A]" />
@@ -143,7 +141,6 @@ function CameraModal({ isOpen, onClose, onCapture, title, defaultFacingMode = 'u
           </button>
         </div>
 
-        {/* Content Body */}
         <div className="p-4 space-y-4">
           {cameraError ? (
             <div className="p-6 text-center space-y-3 bg-rose-50 rounded-2xl border border-rose-200 text-rose-900">
@@ -289,7 +286,43 @@ export default function CandidateEntryPage() {
   const aadhaarCameraInputRef = useRef<HTMLInputElement | null>(null);
   const resumeInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Restore Draft on initial load (if not in Edit mode)
+  // Helper to format Aadhaar input with spaces: 1234 5678 9012
+  const formatAadhaar = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 12);
+    const parts = [];
+    for (let i = 0; i < digits.length; i += 4) {
+      parts.push(digits.slice(i, i + 4));
+    }
+    return parts.join(' ');
+  };
+
+  // Auto-Fill Sample Test Data Helper
+  const handleAutoFillSample = () => {
+    setName('Rajesh Kumar');
+    setPhone('9876543210');
+    setEmail('rajesh.kumar@example.com');
+    setGender('MALE');
+    setDob('1998-05-15');
+    setBloodGroup('O+');
+    setAddress('No 45, 2nd Cross, MG Road, Indiranagar, Bangalore - 560038');
+    setAadhaarNumber('9876 5432 1098');
+    setReligion('Hindu');
+    setCaste('General');
+    setFatherDetails('Suresh Kumar - Shopkeeper');
+    setMotherDetails('Sunitha Kumar - Homemaker');
+    setLanguagesKnown(['Kannada', 'English', 'Hindi']);
+    setDesig('Sales Executive');
+    setQualification('Graduate');
+    setExperience('1–2 Years');
+    setRetailExperience('Yes, in a clothing/apparel store');
+    setPreviousCompany('Trends Apparel Store');
+    setPreviousDesignation('Sales Assistant');
+    setPreviousSalary('18000');
+    setExpectedSalary('22000');
+    showToast('✨ Sample candidate data filled automatically!', 'success');
+  };
+
+  // Restore Draft on initial load (Dual localStorage + sessionStorage check)
   useEffect(() => {
     API.getPublicDesignations().then(res => {
       if (res && res.designations) setDesignations(res.designations);
@@ -320,7 +353,7 @@ export default function CandidateEntryPage() {
           setPreviousDesignation(c.previousDesignation || '');
           setPreviousSalary(c.previousSalary || c.currentSalary || c.current_salary || '');
           setExpectedSalary(c.expectedSalary || c.expected_salary || '');
-          setAadhaarNumber(c.aadhaarNumber || '');
+          setAadhaarNumber(formatAadhaar(c.aadhaarNumber || ''));
           setFatherDetails(c.fatherDetails || '');
           setMotherDetails(c.motherDetails || '');
           if (c.religionCaste) {
@@ -340,11 +373,11 @@ export default function CandidateEntryPage() {
         setLoading(false);
       });
     } else {
-      // Restore draft from sessionStorage if present
+      // Restore persistent draft from localStorage or sessionStorage
       try {
-        const savedDraft = sessionStorage.getItem(DRAFT_KEY);
-        if (savedDraft) {
-          const d = JSON.parse(savedDraft);
+        const rawSaved = localStorage.getItem(DRAFT_KEY) || sessionStorage.getItem(DRAFT_KEY);
+        if (rawSaved) {
+          const d = JSON.parse(rawSaved);
           if (d.name) setName(d.name);
           if (d.email) setEmail(d.email);
           if (d.phone) setPhone(d.phone);
@@ -359,7 +392,7 @@ export default function CandidateEntryPage() {
           if (d.retailExperience) setRetailExperience(d.retailExperience);
           if (d.previousCompany) setPreviousCompany(d.previousCompany);
           if (d.previousDesignation) setPreviousDesignation(d.previousDesignation);
-          if (d.aadhaarNumber) setAadhaarNumber(d.aadhaarNumber);
+          if (d.aadhaarNumber) setAadhaarNumber(formatAadhaar(d.aadhaarNumber));
           if (d.fatherDetails) setFatherDetails(d.fatherDetails);
           if (d.motherDetails) setMotherDetails(d.motherDetails);
           if (d.religion) setReligion(d.religion);
@@ -368,29 +401,32 @@ export default function CandidateEntryPage() {
           if (d.previousSalary) setPreviousSalary(d.previousSalary);
           if (d.expectedSalary) setExpectedSalary(d.expectedSalary);
           if (d.declaration) setDeclaration(d.declaration);
+          if (d.photoPreview) setPhotoPreview(d.photoPreview);
           if (d.step === 1 || d.step === 2) setStep(d.step);
         }
       } catch (e) {}
     }
   }, []);
 
-  // Save form fields into sessionStorage draft while user types
+  // Persistent Draft Auto-Save to localStorage & sessionStorage
   useEffect(() => {
     if (step === 3 || editAppNo) return;
     const draftData = {
       step, name, email, phone, address, gender, bloodGroup, dob, offeredDoj,
       desig, qualification, experience, retailExperience, previousCompany,
       previousDesignation, aadhaarNumber, fatherDetails, motherDetails,
-      religion, caste, languagesKnown, previousSalary, expectedSalary, declaration
+      religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, photoPreview
     };
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+      const str = JSON.stringify(draftData);
+      localStorage.setItem(DRAFT_KEY, str);
+      sessionStorage.setItem(DRAFT_KEY, str);
     } catch (e) {}
   }, [
     step, name, email, phone, address, gender, bloodGroup, dob, offeredDoj,
     desig, qualification, experience, retailExperience, previousCompany,
     previousDesignation, aadhaarNumber, fatherDetails, motherDetails,
-    religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, editAppNo
+    religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, photoPreview, editAppNo
   ]);
 
   // Handle Photo selection & create preview
@@ -406,14 +442,15 @@ export default function CandidateEntryPage() {
   };
 
   const checkDuplicate = async (ph: string) => {
-    if (ph.length < 10) {
+    const cleanPh = ph.replace(/\D/g, '');
+    if (cleanPh.length < 10) {
       setDupWarn('');
       return;
     }
     try {
-      const d = await API.checkDuplicate(ph);
+      const d = await API.checkDuplicate(cleanPh);
       if (d.exists) {
-        setDupWarn(`⚠️ This phone number was already registered by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
+        setDupWarn(`⚠️ Phone number registered by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
       } else {
         setDupWarn('');
       }
@@ -426,9 +463,16 @@ export default function CandidateEntryPage() {
     );
   };
 
-  const handleGoStep2 = () => {
-    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !aadhaarNumber || !bloodGroup || !religion || !caste.trim()) {
+  const handleGoStep2 = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
+
+    if (!name.trim() || !phone.trim() || !dob || !gender || !address.trim() || !desig || !qualification || !experience || !cleanAadhaar || !bloodGroup || !religion || !caste.trim()) {
       showToast('Please fill out all mandatory fields marked with (*)', 'error');
+      return;
+    }
+    if (cleanAadhaar.length !== 12) {
+      showToast('Aadhaar number must be exactly 12 digits', 'error');
       return;
     }
     setStep(2);
@@ -515,6 +559,7 @@ export default function CandidateEntryPage() {
       }
 
       setLoadingText('Finalizing Candidate Registration...');
+      const cleanAadhaar = aadhaarNumber.replace(/\D/g, '');
       const payload = {
         name,
         email,
@@ -532,7 +577,7 @@ export default function CandidateEntryPage() {
         previousDesignation,
         previousSalary,
         expectedSalary,
-        aadhaarNumber,
+        aadhaarNumber: cleanAadhaar,
         fatherDetails,
         motherDetails,
         religion,
@@ -558,6 +603,7 @@ export default function CandidateEntryPage() {
 
       // Clear draft on completion
       try {
+        localStorage.removeItem(DRAFT_KEY);
         sessionStorage.removeItem(DRAFT_KEY);
       } catch (e) {}
 
@@ -575,6 +621,11 @@ export default function CandidateEntryPage() {
   const QUALIFICATIONS = ['SSLC', 'PUC', 'Diploma', 'Graduate', 'Other'];
   const EXP_LEVELS = ['Fresher', 'Less than 1 Year', '1–2 Years', '2–5 Years', 'More than 5 Years'];
   const LANGUAGES = ['Kannada', 'English', 'Hindi', 'Telugu', 'Tamil', 'Marathi', 'Others'];
+
+  // Suggestion Chips Data
+  const CITY_SUGGESTIONS = ['Bangalore', 'Mysore', 'Tumkur', 'Mandya', 'Hassan', 'Davangere', 'Hubli', 'Belgaum', 'Chitradurga'];
+  const RELIGION_SUGGESTIONS = ['Hindu', 'Muslim', 'Christian', 'Jain', 'Sikh', 'Buddhist'];
+  const CASTE_SUGGESTIONS = ['General / GM', 'OBC', 'SC', 'ST', 'Cat-1', '2A', '2B', '3A', '3B'];
 
   return (
     <div className="min-h-screen bg-[#EDE8DE] pb-12">
@@ -602,9 +653,23 @@ export default function CandidateEntryPage() {
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
-            <ShieldCheck className="w-4 h-4 text-[#C9952A]" />
-            <span>Official Recruitment Portal</span>
+          <div className="flex items-center gap-2">
+            {!editAppNo && step === 1 && (
+              <button
+                type="button"
+                onClick={handleAutoFillSample}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] transition-colors shadow-md"
+                title="Fill sample candidate data for testing"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Auto-Fill Sample</span>
+              </button>
+            )}
+
+            <div className="hidden sm:flex items-center gap-2 text-xs font-bold bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+              <ShieldCheck className="w-4 h-4 text-[#C9952A]" />
+              <span>Official Recruitment Portal</span>
+            </div>
           </div>
         </div>
       </header>
@@ -643,14 +708,27 @@ export default function CandidateEntryPage() {
 
         {/* STEP 1 FORM */}
         {step === 1 && (
-          <div className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
+          <form onSubmit={handleGoStep2} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
             {/* Section 1: Personal Details */}
             <div className="space-y-4">
-              <div className="border-b border-[#e2dfd7] pb-3 flex items-center gap-2">
-                <User className="w-5 h-5 text-[#C9952A]" />
-                <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
-                  1. Personal &amp; Contact Details
-                </h2>
+              <div className="border-b border-[#e2dfd7] pb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-[#C9952A]" />
+                  <h2 className="text-sm font-extrabold uppercase text-[#1E2D4E] tracking-wider">
+                    1. Personal &amp; Contact Details
+                  </h2>
+                </div>
+
+                {!editAppNo && (
+                  <button
+                    type="button"
+                    onClick={handleAutoFillSample}
+                    className="sm:hidden text-[10px] font-black text-[#C9952A] bg-amber-50 border border-amber-300 px-2 py-1 rounded-lg flex items-center gap-1"
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>Auto-Fill Sample</span>
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -658,6 +736,7 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Full Name (As per Aadhaar) *</label>
                   <input
                     type="text"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter full name"
@@ -673,6 +752,7 @@ export default function CandidateEntryPage() {
                     </span>
                     <input
                       type="tel"
+                      autoComplete="tel"
                       maxLength={10}
                       value={phone}
                       onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '')); checkDuplicate(e.target.value); }}
@@ -691,6 +771,7 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Email Address (Optional)</label>
                   <input
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
@@ -711,6 +792,7 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Date of Birth *</label>
                   <input
                     type="date"
+                    autoComplete="bday"
                     value={dob}
                     onChange={(e) => setDob(e.target.value)}
                     className="input-modern"
@@ -727,14 +809,37 @@ export default function CandidateEntryPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Complete Residential Address *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-[#1E2D4E]">Complete Residential Address *</label>
+                  <span className="text-[10px] text-[#777777] font-semibold">Auto-fill suggestions:</span>
+                </div>
+
                 <textarea
                   rows={2}
+                  autoComplete="street-address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="House No, Street, Area, City, Pin Code"
-                  className="textarea-modern"
+                  className="textarea-modern mb-2"
                 />
+
+                {/* City Suggestion Chips */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10.5px] font-bold text-[#777777] flex items-center gap-1 mr-1">
+                    <MapPin className="w-3 h-3 text-[#C9952A]" />
+                    <span>Quick Cities:</span>
+                  </span>
+                  {CITY_SUGGESTIONS.map(city => (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => setAddress(prev => prev ? (prev.includes(city) ? prev : `${prev}, ${city}`) : city)}
+                      className="px-2 py-0.5 rounded-lg bg-[#F9F7F4] border border-[#e2dfd7] text-[10.5px] font-bold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-colors"
+                    >
+                      + {city}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -742,11 +847,11 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Aadhaar Number (12 Digits) *</label>
                   <input
                     type="text"
-                    maxLength={12}
+                    autoComplete="off"
                     value={aadhaarNumber}
-                    onChange={(e) => setAadhaarNumber(e.target.value.replace(/\D/g, ''))}
-                    placeholder="12-digit Aadhaar number"
-                    className="input-modern"
+                    onChange={(e) => setAadhaarNumber(formatAadhaar(e.target.value))}
+                    placeholder="1234 5678 9012"
+                    className="input-modern tracking-wider font-mono font-bold"
                   />
                 </div>
 
@@ -754,10 +859,24 @@ export default function CandidateEntryPage() {
                   <label className="block text-xs font-bold text-[#1E2D4E] mb-1">Religion *</label>
                   <select value={religion} onChange={(e) => setReligion(e.target.value)} className="select-modern">
                     <option value="">Select Religion</option>
-                    {['Hindu', 'Muslim', 'Christian', 'Jain', 'Sikh', 'Buddhist', 'Other'].map(r => (
+                    {RELIGION_SUGGESTIONS.map(r => (
                       <option key={r} value={r}>{r}</option>
                     ))}
                   </select>
+
+                  {/* Religion Suggestions */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    {RELIGION_SUGGESTIONS.map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setReligion(r)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors ${religion === r ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-[#F9F7F4] border-[#e2dfd7] text-[#555555] hover:bg-white'}`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -769,6 +888,19 @@ export default function CandidateEntryPage() {
                     placeholder="e.g. General, OBC, SC, ST, Cat-1, 2A, 3B..."
                     className="input-modern"
                   />
+                  {/* Category Suggestions */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                    {CASTE_SUGGESTIONS.map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCaste(c)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors ${caste === c ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-[#F9F7F4] border-[#e2dfd7] text-[#555555] hover:bg-white'}`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -939,12 +1071,12 @@ export default function CandidateEntryPage() {
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* STEP 2 FORM */}
         {step === 2 && (
-          <div className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
+          <form onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }} className="card-glass p-6 sm:p-8 space-y-6 animate-fade-in shadow-xl">
             <div className="border-b border-[#e2dfd7] pb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Upload className="w-5 h-5 text-[#C9952A]" />
@@ -1195,7 +1327,7 @@ export default function CandidateEntryPage() {
                 )}
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* STEP 3 SUCCESS SCREEN */}
@@ -1219,7 +1351,10 @@ export default function CandidateEntryPage() {
               <button
                 type="button"
                 onClick={() => {
-                  try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+                  try {
+                    localStorage.removeItem(DRAFT_KEY);
+                    sessionStorage.removeItem(DRAFT_KEY);
+                  } catch (e) {}
                   window.location.href = '/candidate-entry';
                 }}
                 className="btn-primary text-xs"
