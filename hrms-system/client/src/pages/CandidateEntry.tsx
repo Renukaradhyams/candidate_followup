@@ -705,8 +705,7 @@ export default function CandidateEntryPage() {
               <span>Official Recruitment Portal</span>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Restored Draft Auto-Recovery Banner */}
