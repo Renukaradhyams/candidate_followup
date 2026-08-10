@@ -42,6 +42,12 @@ export default function CandidatesPage() {
   const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
   
+  // Shortlist Modal & Questions State
+  const [shortlistModal, setShortlistModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
+  const [shortlistQuestions, setShortlistQuestions] = useState<any[]>([]);
+  const [evaluationNotesText, setEvaluationNotesText] = useState('');
+  const [shortlistRemarksText, setShortlistRemarksText] = useState('');
+
   const [callModal, setCallModal] = useState<{ open: boolean; candidate: any | null; step: number; callStatus: any }>({ open: false, candidate: null, step: 1, callStatus: null });
   const [callDate, setCallDate] = useState(new Date().toISOString().slice(0, 10));
   const [callRemarks, setCallRemarks] = useState('');
@@ -264,8 +270,15 @@ export default function CandidatesPage() {
     if (!candidate || actionLoading) return;
     
     if (action === 'shortlist') {
-      setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
+      setShortlistModal({ open: true, candidate });
+      setShortlistRemarksText('');
+      setEvaluationNotesText(candidate.evaluationNotes || candidate.questionNotes || '');
+      setShortlistQuestions([]);
+      try {
+        API.getInterviewQuestions(candidate.desig, 'HR').then(res => {
+          if (res && res.questions) setShortlistQuestions(res.questions);
+        }).catch(() => {});
+      } catch (e) {}
       return;
     }
     
@@ -293,6 +306,34 @@ export default function CandidatesPage() {
       loadCandidates();
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmShortlist = async () => {
+    if (!shortlistModal.candidate) return;
+    setActionLoading(true);
+    try {
+      await API.updateCandidate(shortlistModal.candidate.appNo, {
+        status: 'Shortlisted',
+        remarks: shortlistRemarksText || 'Shortlisted via Candidate CRM',
+        questionNotes: evaluationNotesText,
+        evaluationNotes: evaluationNotesText
+      });
+      showToast(`${shortlistModal.candidate.name} marked as Shortlisted 🎉`, 'success');
+      setShortlistModal({ open: false, candidate: null });
+      if (drawerCandidate && drawerCandidate.appNo === shortlistModal.candidate.appNo) {
+        setDrawerCandidate({
+          ...drawerCandidate,
+          status: 'Shortlisted',
+          remarks: shortlistRemarksText || drawerCandidate.remarks,
+          evaluationNotes: evaluationNotesText
+        });
+      }
+      loadCandidates();
+    } catch (err: any) {
+      showToast('Failed to shortlist candidate: ' + err.message, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -1126,6 +1167,88 @@ export default function CandidatesPage() {
                   Reject
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shortlist & Interview Questions Modal */}
+      {shortlistModal.open && shortlistModal.candidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-6 space-y-4 shadow-2xl animate-fade-in border border-[#C9952A]/40">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-black text-[#1E2D4E] text-base flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+                <span>Shortlist Applicant — {shortlistModal.candidate.name}</span>
+              </h3>
+              <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="text-[#888888] hover:text-[#1E2D4E]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs max-h-[70vh] overflow-y-auto pr-1">
+              <div className="p-3 rounded-2xl bg-[#F9F7F4] border border-[#e2dfd7] flex items-center justify-between font-bold text-[#1E2D4E]">
+                <span>Applied Role: <span className="text-[#C9952A] font-extrabold">{shortlistModal.candidate.desig || '—'}</span></span>
+                <span>App No: <span className="font-mono">{shortlistModal.candidate.appNo}</span></span>
+              </div>
+
+              {/* Question Bank for Designation */}
+              <div className="space-y-2">
+                <label className="block font-black text-[#1E2D4E] text-xs flex items-center gap-1.5 uppercase tracking-wider text-[10.5px]">
+                  <MessageSquare className="w-4 h-4 text-[#C9952A]" />
+                  <span>Role Evaluation Questions ({shortlistModal.candidate.desig || 'General'})</span>
+                </label>
+                
+                {shortlistQuestions.length > 0 ? (
+                  <div className="space-y-2">
+                    {shortlistQuestions.map((q: any, idx: number) => (
+                      <div key={idx} className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] space-y-1">
+                        <div className="font-extrabold text-[#1E2D4E]">
+                          <span className="text-[#C9952A] font-black mr-1">{idx + 1}.</span> {q.question || q}
+                        </div>
+                        {q.category && <span className="text-[10px] uppercase font-bold text-[#777777] bg-white px-2 py-0.5 rounded-md border border-[#e2dfd7] inline-block">{q.category}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-xs font-medium text-[#777777] text-center italic">
+                    Standard Shortlisting Questions: Check communication skills, availability for store shifts &amp; salary expectations.
+                  </div>
+                )}
+              </div>
+
+              {/* Question Evaluation & Answer Notes */}
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Evaluation &amp; Question Answers Notes *</label>
+                <textarea
+                  rows={3}
+                  value={evaluationNotesText}
+                  onChange={(e) => setEvaluationNotesText(e.target.value)}
+                  placeholder="Record applicant responses to shortlisting questions, communication rating, and recruiter assessment..."
+                  className="input-modern"
+                />
+              </div>
+
+              {/* Recruiter Remarks */}
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Recruiter Shortlisting Remarks (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={shortlistRemarksText}
+                  onChange={(e) => setShortlistRemarksText(e.target.value)}
+                  placeholder="Enter shortlisting summary or special notes..."
+                  className="input-modern"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
+              <button onClick={() => setShortlistModal({ open: false, candidate: null })} className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs">
+                Cancel
+              </button>
+              <button onClick={handleConfirmShortlist} disabled={actionLoading} className="btn-primary text-xs shadow-md disabled:opacity-50">
+                {actionLoading ? 'Shortlisting...' : 'Confirm Candidate Shortlisting 🎉'}
+              </button>
             </div>
           </div>
         </div>
