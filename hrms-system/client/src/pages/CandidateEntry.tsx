@@ -5,10 +5,10 @@ import { optimizeFile } from '../utils/fileOptimizer';
 import { 
   User, Phone, Mail, MapPin, Calendar, Briefcase, Award, 
   FileText, ShieldCheck, CheckCircle2, Upload, Sparkles, ArrowRight, ArrowLeft, 
-  Image as ImageIcon, FileCheck, Camera, RefreshCw, X, Check, AlertCircle, Eye, Zap
+  Image as ImageIcon, FileCheck, Camera, RefreshCw, X, Check, AlertCircle, Eye, Zap, Save, RotateCcw
 } from 'lucide-react';
 
-const DRAFT_KEY = 'bsc_candidate_entry_draft_v3';
+const DRAFT_KEY = 'bsc_candidate_entry_draft_v4';
 
 // ── Live Camera Modal Component ──────────────────────────────────────────────
 interface CameraModalProps {
@@ -230,6 +230,7 @@ export default function CandidateEntryPage() {
   const [step, setStep] = useState(1);
   const [designations, setDesignations] = useState<string[]>([]);
   const [dupWarn, setDupWarn] = useState('');
+  const [dupCandidateData, setDupCandidateData] = useState<any>(null);
   const [editAppNo, setEditAppNo] = useState<string | null>(null);
 
   // Form Fields - Step 1
@@ -273,6 +274,9 @@ export default function CandidateEntryPage() {
   const [loadingText, setLoadingText] = useState('Submitting Registration...');
   const [successAppNo, setSuccessAppNo] = useState('');
 
+  // Draft Restoration Notification State
+  const [restoredDraftInfo, setRestoredDraftInfo] = useState<{ name: string; step: number; time: string } | null>(null);
+
   // Camera Modal State
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const [cameraModalTitle, setCameraModalTitle] = useState('Take Candidate Photo');
@@ -294,6 +298,47 @@ export default function CandidateEntryPage() {
       parts.push(digits.slice(i, i + 4));
     }
     return parts.join(' ');
+  };
+
+  // Clear all form state and start fresh
+  const handleClearDraftAndStartFresh = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch (e) {}
+
+    setName('');
+    setEmail('');
+    setPhone('');
+    setAddress('');
+    setGender('');
+    setBloodGroup('');
+    setDob('');
+    setOfferedDoj('');
+    setDesig('');
+    setQualification('');
+    setExperience('');
+    setRetailExperience('');
+    setPreviousCompany('');
+    setPreviousDesignation('');
+    setAadhaarNumber('');
+    setFatherDetails('');
+    setMotherDetails('');
+    setReligion('');
+    setCaste('');
+    setLanguagesKnown([]);
+    setPreviousSalary('');
+    setExpectedSalary('');
+    setDeclaration(false);
+    setPhotoFile(null);
+    setAadhaarFile(null);
+    setResumeFile(null);
+    setPhotoPreview(null);
+    setDupWarn('');
+    setDupCandidateData(null);
+    setRestoredDraftInfo(null);
+    setStep(1);
+    showToast('Cleared saved draft. You can start fresh!', 'info');
   };
 
   // Auto-Fill Sample Test Data Helper
@@ -322,6 +367,43 @@ export default function CandidateEntryPage() {
     showToast('✨ Sample candidate data filled automatically!', 'success');
   };
 
+  // Populate candidate data from duplicate lookup or previous candidate record
+  const populateCandidateRecord = (c: any) => {
+    if (!c) return;
+    if (c.name) setName(c.name);
+    if (c.email) setEmail(c.email);
+    if (c.phone) setPhone(c.phone);
+    if (c.address) setAddress(c.address);
+    if (c.gender) setGender(c.gender);
+    if (c.bloodGroup) setBloodGroup(c.bloodGroup);
+    if (c.dob) setDob(c.dob.split('T')[0]);
+    if (c.offeredDoj) setOfferedDoj(c.offeredDoj.split('T')[0]);
+    if (c.desig) setDesig(c.desig);
+    if (c.qualification) setQualification(c.qualification);
+    if (c.experience) setExperience(c.experience);
+    if (c.retailExperience) setRetailExperience(c.retailExperience);
+    if (c.previousCompany) setPreviousCompany(c.previousCompany);
+    if (c.previousDesignation) setPreviousDesignation(c.previousDesignation);
+    if (c.previousSalary || c.currentSalary || c.current_salary) setPreviousSalary(c.previousSalary || c.currentSalary || c.current_salary);
+    if (c.expectedSalary || c.expected_salary) setExpectedSalary(c.expectedSalary || c.expected_salary);
+    if (c.aadhaarNumber) setAadhaarNumber(formatAadhaar(c.aadhaarNumber));
+    if (c.fatherDetails) setFatherDetails(c.fatherDetails);
+    if (c.motherDetails) setMotherDetails(c.motherDetails);
+    if (c.religionCaste) {
+      const parts = c.religionCaste.split(' / ');
+      setReligion(parts[0] || c.religionCaste);
+      setCaste(parts[1] || '');
+    }
+    if (c.languagesKnown) {
+      setLanguagesKnown(typeof c.languagesKnown === 'string' ? (c.languagesKnown.startsWith('[') ? JSON.parse(c.languagesKnown) : [c.languagesKnown]) : c.languagesKnown);
+    }
+    if (c.resumeUrl) setExistingResume(c.resumeUrl);
+    if (c.photoUrl) setExistingPhoto(c.photoUrl);
+    if (c.aadharUrl || c.aadhaarUrl) setExistingAadhaar(c.aadharUrl || c.aadhaarUrl);
+
+    showToast(`⚡ Auto-filled previous registration data for ${c.name}!`, 'success');
+  };
+
   // Restore Draft on initial load (Dual localStorage + sessionStorage check)
   useEffect(() => {
     API.getPublicDesignations().then(res => {
@@ -336,36 +418,8 @@ export default function CandidateEntryPage() {
       setLoading(true);
       API.call('getCandidates', { appNo: editId }).then(res => {
         if (res.candidates && res.candidates.length > 0) {
-          const c = res.candidates[0];
-          setName(c.name || '');
-          setEmail(c.email || '');
-          setPhone(c.phone || '');
-          setAddress(c.address || '');
-          setGender(c.gender || '');
-          setBloodGroup(c.bloodGroup || '');
-          setDob(c.dob ? c.dob.split('T')[0] : '');
-          setOfferedDoj(c.offeredDoj ? c.offeredDoj.split('T')[0] : '');
-          setDesig(c.desig || '');
-          setQualification(c.qualification || '');
-          setExperience(c.experience || '');
-          setRetailExperience(c.retailExperience || '');
-          setPreviousCompany(c.previousCompany || '');
-          setPreviousDesignation(c.previousDesignation || '');
-          setPreviousSalary(c.previousSalary || c.currentSalary || c.current_salary || '');
-          setExpectedSalary(c.expectedSalary || c.expected_salary || '');
-          setAadhaarNumber(formatAadhaar(c.aadhaarNumber || ''));
-          setFatherDetails(c.fatherDetails || '');
-          setMotherDetails(c.motherDetails || '');
-          if (c.religionCaste) {
-            const parts = c.religionCaste.split(' / ');
-            setReligion(parts[0] || c.religionCaste);
-            setCaste(parts[1] || '');
-          }
-          setLanguagesKnown(c.languagesKnown ? (typeof c.languagesKnown === 'string' ? (c.languagesKnown.startsWith('[') ? JSON.parse(c.languagesKnown) : [c.languagesKnown]) : c.languagesKnown) : []);
+          populateCandidateRecord(res.candidates[0]);
           setDeclaration(true);
-          setExistingResume(c.resumeUrl || '');
-          setExistingPhoto(c.photoUrl || '');
-          setExistingAadhaar(c.aadharUrl || c.aadhaarUrl || '');
         }
         setLoading(false);
       }).catch(err => {
@@ -378,31 +432,36 @@ export default function CandidateEntryPage() {
         const rawSaved = localStorage.getItem(DRAFT_KEY) || sessionStorage.getItem(DRAFT_KEY);
         if (rawSaved) {
           const d = JSON.parse(rawSaved);
-          if (d.name) setName(d.name);
-          if (d.email) setEmail(d.email);
-          if (d.phone) setPhone(d.phone);
-          if (d.address) setAddress(d.address);
-          if (d.gender) setGender(d.gender);
-          if (d.bloodGroup) setBloodGroup(d.bloodGroup);
-          if (d.dob) setDob(d.dob);
-          if (d.offeredDoj) setOfferedDoj(d.offeredDoj);
-          if (d.desig) setDesig(d.desig);
-          if (d.qualification) setQualification(d.qualification);
-          if (d.experience) setExperience(d.experience);
-          if (d.retailExperience) setRetailExperience(d.retailExperience);
-          if (d.previousCompany) setPreviousCompany(d.previousCompany);
-          if (d.previousDesignation) setPreviousDesignation(d.previousDesignation);
-          if (d.aadhaarNumber) setAadhaarNumber(formatAadhaar(d.aadhaarNumber));
-          if (d.fatherDetails) setFatherDetails(d.fatherDetails);
-          if (d.motherDetails) setMotherDetails(d.motherDetails);
-          if (d.religion) setReligion(d.religion);
-          if (d.caste) setCaste(d.caste);
-          if (d.languagesKnown) setLanguagesKnown(d.languagesKnown);
-          if (d.previousSalary) setPreviousSalary(d.previousSalary);
-          if (d.expectedSalary) setExpectedSalary(d.expectedSalary);
-          if (d.declaration) setDeclaration(d.declaration);
-          if (d.photoPreview) setPhotoPreview(d.photoPreview);
-          if (d.step === 1 || d.step === 2) setStep(d.step);
+          if (d.name || d.phone || d.address) {
+            if (d.name) setName(d.name);
+            if (d.email) setEmail(d.email);
+            if (d.phone) setPhone(d.phone);
+            if (d.address) setAddress(d.address);
+            if (d.gender) setGender(d.gender);
+            if (d.bloodGroup) setBloodGroup(d.bloodGroup);
+            if (d.dob) setDob(d.dob);
+            if (d.offeredDoj) setOfferedDoj(d.offeredDoj);
+            if (d.desig) setDesig(d.desig);
+            if (d.qualification) setQualification(d.qualification);
+            if (d.experience) setExperience(d.experience);
+            if (d.retailExperience) setRetailExperience(d.retailExperience);
+            if (d.previousCompany) setPreviousCompany(d.previousCompany);
+            if (d.previousDesignation) setPreviousDesignation(d.previousDesignation);
+            if (d.aadhaarNumber) setAadhaarNumber(formatAadhaar(d.aadhaarNumber));
+            if (d.fatherDetails) setFatherDetails(d.fatherDetails);
+            if (d.motherDetails) setMotherDetails(d.motherDetails);
+            if (d.religion) setReligion(d.religion);
+            if (d.caste) setCaste(d.caste);
+            if (d.languagesKnown) setLanguagesKnown(d.languagesKnown);
+            if (d.previousSalary) setPreviousSalary(d.previousSalary);
+            if (d.expectedSalary) setExpectedSalary(d.expectedSalary);
+            if (d.declaration) setDeclaration(d.declaration);
+            if (d.photoPreview) setPhotoPreview(d.photoPreview);
+            if (d.step === 1 || d.step === 2) setStep(d.step);
+
+            const timeStr = d.savedAt ? new Date(d.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently';
+            setRestoredDraftInfo({ name: d.name || 'Candidate', step: d.step || 1, time: timeStr });
+          }
         }
       } catch (e) {}
     }
@@ -415,7 +474,8 @@ export default function CandidateEntryPage() {
       step, name, email, phone, address, gender, bloodGroup, dob, offeredDoj,
       desig, qualification, experience, retailExperience, previousCompany,
       previousDesignation, aadhaarNumber, fatherDetails, motherDetails,
-      religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, photoPreview
+      religion, caste, languagesKnown, previousSalary, expectedSalary, declaration, photoPreview,
+      savedAt: Date.now()
     };
     try {
       const str = JSON.stringify(draftData);
@@ -441,18 +501,27 @@ export default function CandidateEntryPage() {
     }
   };
 
+  // Check duplicate phone & fetch previous candidate details for instant auto-fill
   const checkDuplicate = async (ph: string) => {
     const cleanPh = ph.replace(/\D/g, '');
     if (cleanPh.length < 10) {
       setDupWarn('');
+      setDupCandidateData(null);
       return;
     }
     try {
       const d = await API.checkDuplicate(cleanPh);
       if (d.exists) {
-        setDupWarn(`⚠️ Phone number registered by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
+        setDupWarn(`⚠️ This phone number was registered by ${d.name} (${d.appNo}, applied ${d.appliedOn}).`);
+        // Fetch full candidate record for instant auto-fill option
+        API.call('getCandidates', { phone: cleanPh }).then(res => {
+          if (res.candidates && res.candidates.length > 0) {
+            setDupCandidateData(res.candidates[0]);
+          }
+        }).catch(() => {});
       } else {
         setDupWarn('');
+        setDupCandidateData(null);
       }
     } catch (e) {}
   };
@@ -587,7 +656,7 @@ export default function CandidateEntryPage() {
         resumeUrl,
         photoUrl,
         aadhaarUrl,
-        source: 'Walk-in',
+ source: 'Walk-in',
         status: 'New'
       };
 
@@ -675,6 +744,43 @@ export default function CandidateEntryPage() {
       </header>
 
       <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Restored Draft Auto-Recovery Banner */}
+        {restoredDraftInfo && step !== 3 && (
+          <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black flex-shrink-0 shadow-sm">
+                <Save className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-extrabold text-xs text-[#1E2D4E]">
+                  Form Restored From Your Previous Session!
+                </div>
+                <div className="text-[11px] text-[#555555] font-semibold">
+                  Continuing draft for <span className="font-bold text-[#1E2D4E]">{restoredDraftInfo.name}</span> (Step {restoredDraftInfo.step}, saved {restoredDraftInfo.time}).
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleClearDraftAndStartFresh}
+                className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-extrabold hover:bg-amber-100 transition-colors flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Start Fresh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRestoredDraftInfo(null)}
+                className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-xs font-extrabold hover:bg-[#162340] transition-colors"
+              >
+                Continue Entry
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step Stepper Indicator */}
         {step !== 3 && (
           <div className="card-glass p-4 text-xs font-extrabold space-y-2">
@@ -760,9 +866,21 @@ export default function CandidateEntryPage() {
                       className="input-modern rounded-l-none"
                     />
                   </div>
+                  
+                  {/* Duplicate Phone Notice with Instant Auto-Fill Option */}
                   {dupWarn && (
-                    <div className="p-2.5 mt-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold">
-                      {dupWarn}
+                    <div className="p-3 mt-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold space-y-2">
+                      <div>{dupWarn}</div>
+                      {dupCandidateData && (
+                        <button
+                          type="button"
+                          onClick={() => populateCandidateRecord(dupCandidateData)}
+                          className="px-3 py-1.5 rounded-lg bg-[#1E2D4E] text-white text-xs font-extrabold hover:bg-[#162340] transition-colors flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-[#C9952A]" />
+                          <span>⚡ Auto-Fill From Previous Registration</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
