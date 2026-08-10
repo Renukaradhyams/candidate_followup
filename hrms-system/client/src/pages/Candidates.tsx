@@ -29,8 +29,9 @@ export default function CandidatesPage() {
 
   // Drawer
   const [drawerCandidate, setDrawerCandidate] = useState<any | null>(null);
-  const [drawerTab, setDrawerTab] = useState<'overview' | 'details' | 'questions' | 'activity'>('overview');
+  const [drawerTab, setDrawerTab] = useState<'overview' | 'personal' | 'address' | 'family' | 'education' | 'employment' | 'languages' | 'documents' | 'activity'>('overview');
   const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [expandedPhotoUrl, setExpandedPhotoUrl] = useState<string | null>(null);
 
   // Modals
   const [remarkModal, setRemarkModal] = useState<{ open: boolean; action: string; candidate: any | null }>({ open: false, action: '', candidate: null });
@@ -89,10 +90,6 @@ export default function CandidatesPage() {
         const d = new Date(item.rawDate);
         if (!isNaN(d.getTime())) return d;
       }
-      if (item.createdAt) {
-        const d = new Date(item.createdAt);
-        if (!isNaN(d.getTime())) return d;
-      }
       if (item.date) {
         const d = new Date(item.date);
         if (!isNaN(d.getTime())) return d;
@@ -100,303 +97,225 @@ export default function CandidatesPage() {
       return null;
     };
 
-    if (activeRange === 'today') {
+    if (activeRange !== 'all') {
       const now = new Date();
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-      });
-    } else if (activeRange === 'yesterday') {
-      const yest = new Date();
-      yest.setDate(yest.getDate() - 1);
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getFullYear() === yest.getFullYear() && d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate();
-      });
-    } else if (activeRange === 'week') {
-      const weekAgo = Date.now() - 7 * 86400000;
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getTime() >= weekAgo;
-      });
-    } else if (activeRange === 'month') {
-      const monthAgo = Date.now() - 30 * 86400000;
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getTime() >= monthAgo;
-      });
-    } else if (activeRange === 'last_month') {
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0).getTime();
-      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getTime() >= firstDay && d.getTime() <= lastDay;
-      });
-    } else if (activeRange === 'custom' && fromDate) {
-      const fParts = fromDate.split('-').map(Number);
-      const start = new Date(fParts[0], fParts[1] - 1, fParts[2], 0, 0, 0).getTime();
-      let end = start + 86400000 - 1;
-      if (toDate) {
-        const tParts = toDate.split('-').map(Number);
-        end = new Date(tParts[0], tParts[1] - 1, tParts[2], 23, 59, 59, 999).getTime();
+      let start: Date | null = null;
+      let end: Date | null = null;
+
+      if (activeRange === 'today') {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (activeRange === 'yesterday') {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+      } else if (activeRange === 'week') {
+        const day = now.getDay() || 7;
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (activeRange === 'month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      } else if (activeRange === 'last_month') {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      } else if (activeRange === 'custom') {
+        if (fromDate) start = new Date(fromDate + 'T00:00:00');
+        if (toDate) end = new Date(toDate + 'T23:59:59');
       }
-      list = list.filter(c => {
-        const d = getItemDate(c);
-        return d && d.getTime() >= start && d.getTime() <= end;
+
+      list = list.filter(item => {
+        const d = getItemDate(item);
+        if (!d) return false;
+        if (start && d < start) return false;
+        if (end && d > end) return false;
+        return true;
       });
     }
 
     if (activeStatus !== 'all') {
-      list = list.filter(c => {
-        if (activeStatus === 'Selected') {
-          return c.status === 'Selected' || c.status === 'Already Selected' || c.status === 'Joined';
-        }
-        return c.status === activeStatus;
-      });
+      list = list.filter(c => c.status === activeStatus);
     }
-    if (desigFilter) {
-      list = list.filter(c => c.desig === desigFilter);
-    }
-    if (sourceFilter) {
-      list = list.filter(c => c.source === sourceFilter);
-    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(c =>
-        (c.name || '').toLowerCase().includes(q) ||
-        (c.appNo || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q)
+      list = list.filter(c => 
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.appNo && c.appNo.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.includes(q)) ||
+        (c.desig && c.desig.toLowerCase().includes(q))
       );
     }
 
-    list.sort((a, b) => sortDir === 'asc' ? (a.rawDate || 0) - (b.rawDate || 0) : (b.rawDate || 0) - (a.rawDate || 0));
-
-    setFiltered(list);
-  }, [candidates, activeStatus, desigFilter, sourceFilter, searchQuery, sortDir, activeRange, fromDate, toDate]);
-
-  const maskPhone = (ph: string) => {
-    const p = String(ph || '').replace(/\D/g, '');
-    return p ? p.slice(0, 5) + ' XXXXX' : '—';
-  };
-
-  const fileUrl = (url: string | null | undefined): string | null => {
-    if (!url) return null;
-    let clean = url.trim();
-    if (!clean) return null;
-    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
-
-    if (clean.startsWith('uploads/')) {
-      clean = `/${clean}`;
+    if (desigFilter) {
+      list = list.filter(c => c.desig === desigFilter);
     }
 
-    const filename = clean.split('/').pop() || clean;
+    if (sourceFilter) {
+      list = list.filter(c => c.source === sourceFilter);
+    }
 
-    if (filename.startsWith('photo') && !clean.includes('applicants')) return `/uploads/candidate-photos/${filename}`;
-    if (filename.startsWith('resume') && !clean.includes('applicants')) return `/uploads/candidate-resumes/${filename}`;
-    if ((filename.startsWith('aadhar') || filename.startsWith('aadhaar') || filename.startsWith('pan') || filename.startsWith('document')) && !clean.includes('applicants')) return `/uploads/employee-documents/${filename}`;
+    list.sort((a, b) => {
+      const da = new Date(a.rawDate || a.date).getTime() || 0;
+      const db = new Date(b.rawDate || b.date).getTime() || 0;
+      return sortDir === 'asc' ? db - da : da - db;
+    });
 
-    if (clean.startsWith('/uploads/')) return clean;
-    return `/uploads/misc/${filename}`;
-  };
+    setFiltered(list);
+  }, [candidates, activeStatus, searchQuery, desigFilter, sourceFilter, sortDir, activeRange, fromDate, toDate]);
 
   const openDrawer = async (c: any) => {
     setDrawerCandidate(c);
     setDrawerTab('overview');
-    setActivityLog([]);
     try {
-      const d = await API.getActivityFull(c.appNo);
-      if (d && d.activity) setActivityLog(d.activity);
-    } catch (e) {}
-  };
-
-  const handleStatusSelect = (candidate: any, targetStatus: string) => {
-    if (!candidate || candidate.status === targetStatus) return;
-
-    // 'Offer Sent' opens the Direct Offer modal to collect salary/DOJ details
-    if (targetStatus === 'Offer Sent') {
-      setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
-      return;
-    }
-
-    // All other status changes go through confirmation modal
-    setConfirmStatusModal({ open: true, candidate, newStatus: targetStatus });
-  };
-
-  const executeStatusChange = async () => {
-    if (!confirmStatusModal.candidate || !confirmStatusModal.newStatus || actionLoading) return;
-    const c = confirmStatusModal.candidate;
-    const targetStatus = confirmStatusModal.newStatus;
-
-    setActionLoading(true);
-    try {
-      if (targetStatus === 'Rejected') {
-        await API.rejectCandidate({ appNo: c.appNo, remarks: 'Status updated to Rejected', candName: c.name });
-      } else {
-        await API.updateCandidate(c.appNo, { status: targetStatus, remarks: `Status updated to ${targetStatus}` });
-      }
-      showToast(`${c.name} updated to ${targetStatus} 🎉`, 'success');
-      setHighlightAppNo(c.appNo);
-      setTimeout(() => setHighlightAppNo(null), 2500);
-      setConfirmStatusModal({ open: false, candidate: null, newStatus: '' });
-      loadCandidates();
-    } catch (err: any) {
-      showToast('Failed to update status: ' + err.message, 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDeleteCandidate = async (appNo: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this candidate?')) return;
-    try {
-      await API.deleteCandidate(appNo);
-      showToast('Candidate deleted successfully', 'success');
-      setDrawerCandidate(null);
-      loadCandidates();
-    } catch (err) {
-      showToast('Failed to delete candidate', 'error');
-    }
-  };
-
-  const handleStatusChange = async (action: string, candidate: any) => {
-    if (!candidate || actionLoading) return;
-    
-    if (action === 'shortlist') {
-      setDirectOfferModal({ open: true, candidate });
-      setOfferForm({ salary: "", incentive: "", doj: "", desig: candidate.desig || "", department: candidate.department || "", remarks: "" });
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      if (action === 'reject') {
-        if (!window.confirm(`Are you sure you want to reject ${candidate.name}?`)) {
-          setActionLoading(false);
-          return;
-        }
-        await API.rejectCandidate({ appNo: candidate.appNo, remarks: 'Rejected from Shortlisting phase', candName: candidate.name });
-        showToast(`${candidate.name} rejected`, 'warn');
-      } else {
-        const statusMap: Record<string, string> = {
-          shortlist: 'Shortlisted',
-          hold: 'Hold',
-          reactivate: 'New',
-          schedule: 'Interview Scheduled'
-        };
-        await API.updateCandidate(candidate.appNo, { status: statusMap[action], remarks: '' });
-        showToast(`${candidate.name} updated to ${statusMap[action]}`, 'success');
-      }
-
-      setDrawerCandidate(null);
-      loadCandidates();
-    } catch (err: any) {
-      showToast('Error: ' + err.message, 'error');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleViewSelRej = async (type: 'selected' | 'rejected') => {
-    setSelRejPanel(type);
-    try {
-      const res = type === 'selected' ? await API.getSelectedCandidates() : await API.getRejectedCandidates();
-      setSelRejData(res.candidates || []);
+      const res = await API.getActivityLogs(c.appNo);
+      setActivityLog(res.activities || []);
     } catch (e) {
-      setSelRejData([]);
+      setActivityLog([]);
+    }
+  };
+
+  const handleStatusSelect = (c: any, newStatus: string) => {
+    if (newStatus === 'Offer Sent' || newStatus === 'Selected' || newStatus === 'Already Selected') {
+      setOfferForm({
+        salary: c.expectedSalary || c.previousSalary || c.currentSalary || "",
+        incentive: "",
+        doj: c.offeredDoj || new Date(Date.now() + 7*86400000).toISOString().slice(0,10),
+        desig: c.desig || "",
+        department: c.department || "",
+        remarks: ""
+      });
+      setDirectOfferModal({ open: true, candidate: c });
+      return;
+    }
+    setConfirmStatusModal({ open: true, candidate: c, newStatus });
+  };
+
+  const confirmStatusUpdate = async () => {
+    if (!confirmStatusModal.candidate || !confirmStatusModal.newStatus) return;
+    setActionLoading(true);
+    try {
+      await API.updateStatus(confirmStatusModal.candidate.appNo, confirmStatusModal.newStatus, 'Status changed via CRM UI');
+      showToast(`Status updated to ${confirmStatusModal.newStatus}`, 'success');
+      loadCandidates();
+      setConfirmStatusModal({ open: false, candidate: null, newStatus: '' });
+    } catch (e: any) {
+      showToast(e.message || 'Status update failed', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleDirectOfferSubmit = async () => {
     if (!directOfferModal.candidate) return;
     if (!offerForm.salary) {
-      showToast('Offered salary is mandatory', 'error');
+      showToast('Please enter offered salary', 'error');
       return;
     }
     setActionLoading(true);
     try {
-      const combinedSalary = offerForm.incentive && offerForm.incentive.trim()
-        ? `${offerForm.salary.trim()}|${offerForm.incentive.trim()}`
-        : offerForm.salary.trim();
-
-      await API.createDirectOffer({
+      await API.updateStatus(directOfferModal.candidate.appNo, 'Offer Sent', offerForm.remarks || 'Direct offer sent');
+      await API.saveOfferDetails({
         appNo: directOfferModal.candidate.appNo,
-        salaryOffered: combinedSalary,
+        offeredSalary: offerForm.salary,
+        offeredIncentive: offerForm.incentive,
         estDoj: offerForm.doj,
-        designation: offerForm.desig,
+        desig: offerForm.desig,
         department: offerForm.department,
         remarks: offerForm.remarks
       });
-      showToast('Candidate moved to Offer Desk successfully', 'success');
+      showToast('Offer Details Saved & Sent to Offer Desk!', 'success');
       setDirectOfferModal({ open: false, candidate: null });
-      setDrawerCandidate(null);
       loadCandidates();
-    } catch (err: any) {
-      showToast('Error: ' + err.message, 'error');
+    } catch (e: any) {
+      showToast(e.message || 'Offer failed', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const canDelete = session?.role === 'Admin' || session?.role === 'Super Admin';
+  const handleStatusChange = (action: string, c: any) => {
+    if (action === 'shortlist') {
+      setRemarkModal({ open: true, action: 'Shortlisted', candidate: c });
+    } else if (action === 'schedule') {
+      navigate(`/interview-schedule?appNo=${c.appNo}`);
+    } else if (action === 'hold') {
+      setRemarkModal({ open: true, action: 'Hold', candidate: c });
+    } else if (action === 'reject') {
+      setRemarkModal({ open: true, action: 'Rejected', candidate: c });
+    }
+  };
+
+  const submitRemarkAction = async () => {
+    if (!remarkModal.candidate || !remarkModal.action) return;
+    setActionLoading(true);
+    try {
+      await API.updateStatus(remarkModal.candidate.appNo, remarkModal.action, remarksText);
+      showToast(`Candidate marked as ${remarkModal.action}`, 'success');
+      setRemarkModal({ open: false, action: '', candidate: null });
+      setRemarksText('');
+      loadCandidates();
+    } catch (e: any) {
+      showToast(e.message || 'Action failed', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteCandidate = async (appNo: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete candidate ${appNo}?`)) return;
+    try {
+      await API.deleteCandidate(appNo);
+      showToast('Candidate deleted successfully', 'success');
+      if (drawerCandidate && drawerCandidate.appNo === appNo) setDrawerCandidate(null);
+      loadCandidates();
+    } catch (e: any) {
+      showToast(e.message || 'Delete failed', 'error');
+    }
+  };
+
+  const handleViewSelRej = (type: 'selected' | 'rejected') => {
+    setSelRejPanel(type);
+    if (type === 'selected') {
+      setSelRejData(candidates.filter(c => ['Selected', 'Already Selected', 'Joined', 'Offer Sent', 'Offer Accepted'].includes(c.status)));
+    } else {
+      setSelRejData(candidates.filter(c => ['Rejected', 'Offer Rejected'].includes(c.status)));
+    }
+  };
+
+  const fileUrl = (pathStr?: string) => {
+    if (!pathStr) return null;
+    if (pathStr.startsWith('http')) return pathStr;
+    const clean = pathStr.replace(/\\/g, '/').replace(/^\/+/, '');
+    return `/${clean}`;
+  };
+
+  const maskPhone = (ph: string) => {
+    if (!ph) return '—';
+    if (session && ['ADMIN', 'MANAGER', 'RECRUITER'].includes(session.role)) return ph;
+    return ph.length >= 10 ? `${ph.slice(0, 2)}******${ph.slice(-2)}` : ph;
+  };
+
+  const canDelete = session && ['ADMIN', 'MANAGER'].includes(session.role);
 
   return (
-    <div className="min-h-screen bg-[#EDE8DE] flex">
-      
-      {/* Professional Status Change Confirmation Modal */}
-      {confirmStatusModal.open && confirmStatusModal.candidate && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-[#1E2D4E]/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-[#e2dfd7] space-y-5 animate-scale-in">
-            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#1E2D4E] text-white flex items-center justify-center font-black text-sm shadow-md">
-                  {confirmStatusModal.candidate.initials}
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-[#1E2D4E] text-base">Move Candidate Status</h3>
-                  <div className="text-xs text-[#777777] font-semibold">{confirmStatusModal.candidate.name} ({confirmStatusModal.candidate.appNo})</div>
-                </div>
-              </div>
-              <button onClick={() => setConfirmStatusModal({ open: false, candidate: null, newStatus: '' })} className="text-[#888888] hover:text-[#1E2D4E]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+    <div className="min-h-screen bg-[#EDE8DE] flex flex-col">
+      <ToastContainer />
 
-            <div className="bg-[#F9F7F4] p-4 rounded-2xl border border-[#e2dfd7] space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#777777] uppercase text-[10px]">Current Status</span>
-                <StatusBadge status={confirmStatusModal.candidate.status} size="sm" />
-              </div>
-              <div className="flex justify-center text-[#C9952A]">
-                <ChevronRight className="w-5 h-5 animate-pulse" />
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#777777] uppercase text-[10px]">New Status</span>
-                <StatusBadge status={confirmStatusModal.newStatus} size="sm" />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e2dfd7]">
-              <button 
-                onClick={() => setConfirmStatusModal({ open: false, candidate: null, newStatus: '' })} 
-                className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs text-[#1E2D4E] hover:bg-[#F9F7F4] transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={executeStatusChange} 
-                disabled={actionLoading} 
-                className="btn-primary text-xs shadow-md disabled:opacity-50"
-              >
-                {actionLoading ? 'Updating...' : 'Confirm Status Change'}
-              </button>
-            </div>
+      {/* High-Res Photo Lightbox Viewer */}
+      {expandedPhotoUrl && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setExpandedPhotoUrl(null)}>
+          <button
+            onClick={() => setExpandedPhotoUrl(null)}
+            className="absolute top-5 right-5 p-2.5 rounded-full bg-white/20 hover:bg-white/40 text-white transition-colors"
+            title="Close Lightbox"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="max-w-3xl max-h-[85vh] p-3 bg-white rounded-3xl overflow-hidden shadow-2xl border-4 border-[#C9952A]" onClick={(e) => e.stopPropagation()}>
+            <img src={expandedPhotoUrl} alt="Expanded Candidate Photo" className="w-full h-full object-contain max-h-[80vh] rounded-2xl" />
           </div>
         </div>
       )}
-
-      <ToastContainer />
 
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -418,7 +337,7 @@ export default function CandidatesPage() {
         />
 
         <main className="p-4 lg:p-6 space-y-5 flex-1 overflow-y-auto">
-          {/* Recruitment Analytics & Pipeline Banner */}
+          {/* Recruitment Analytics Banner */}
           <div className="card-glass p-5 space-y-4 border-2 border-[#1E2D4E]/10">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#e2dfd7] pb-3.5">
               <div>
@@ -465,7 +384,6 @@ export default function CandidatesPage() {
                   value={fromDate}
                   onChange={(e) => { setFromDate(e.target.value); setActiveRange('custom'); }}
                   className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-white font-semibold outline-none text-xs"
-                  placeholder="dd-mm-yyyy"
                 />
                 <span className="text-[#777777] font-extrabold">to</span>
                 <input
@@ -473,7 +391,6 @@ export default function CandidatesPage() {
                   value={toDate}
                   onChange={(e) => { setToDate(e.target.value); setActiveRange('custom'); }}
                   className="px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-white font-semibold outline-none text-xs"
-                  placeholder="dd-mm-yyyy"
                 />
               </div>
               {(fromDate || toDate || activeRange !== 'all') && (
@@ -486,6 +403,7 @@ export default function CandidatesPage() {
               )}
             </div>
           </div>
+
           {/* Status Pills Bar */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-bold scrollbar-none">
             {[
@@ -499,39 +417,38 @@ export default function CandidatesPage() {
               { key: 'Offer Sent', label: 'Offer Sent' },
               { key: 'Hold', label: 'On Hold' },
               { key: 'Rejected', label: 'Rejected' }
-            ].map(p => {
-              const count = p.key === 'all' ? candidates.length : candidates.filter(c => c.status === p.key).length;
+            ].map(tab => {
+              const cnt = tab.key === 'all' ? candidates.length : candidates.filter(c => c.status === tab.key).length;
               return (
                 <button
-                  key={p.key}
-                  onClick={() => setActiveStatus(p.key)}
-                  className={`
-                    px-3.5 py-1.5 rounded-full border whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shadow-xs
-                    ${activeStatus === p.key 
-                      ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm font-black' 
-                      : 'bg-white text-[#555555] border-[#e2dfd7] hover:bg-[#F9F7F4] hover:text-[#1E2D4E] font-semibold'}
-                  `}
+                  key={tab.key}
+                  onClick={() => setActiveStatus(tab.key)}
+                  className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-2 font-extrabold ${
+                    activeStatus === tab.key
+                      ? 'bg-[#1E2D4E] text-white shadow-sm ring-2 ring-[#C9952A]'
+                      : 'bg-white text-[#555555] border border-[#e2dfd7] hover:bg-[#F9F7F4]'
+                  }`}
                 >
-                  <span>{p.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeStatus === p.key ? 'bg-white/20 text-white' : 'bg-black/5 text-[#777777]'}`}>
-                    {count}
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeStatus === tab.key ? 'bg-white/20 text-white' : 'bg-[#e2dfd7] text-[#1E2D4E]'}`}>
+                    {cnt}
                   </span>
                 </button>
               );
             })}
           </div>
 
-          {/* Filter Toolbar */}
-          <div className="card-glass p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-3 flex-1">
-              <div className="relative min-w-[240px]">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#777777]" />
+          {/* Search & Filter Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex-1 flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[240px]">
+                <Search className="w-4 h-4 text-[#777777] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name, phone, app no..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] shadow-xs"
+                  placeholder="Search by Name, App No, Mobile, Role..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-semibold focus:outline-none focus:border-[#1E2D4E] shadow-2xs"
                 />
               </div>
 
@@ -541,9 +458,7 @@ export default function CandidatesPage() {
                 className="px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
               >
                 <option value="">All Designations</option>
-                {Array.from(new Set((candidates || []).map(c => c.desig).filter(Boolean))).map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
+                {(designations || []).map(d => <option key={d} value={d}>{d}</option>)}
               </select>
 
               <select
@@ -577,7 +492,7 @@ export default function CandidatesPage() {
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
                     <th className="py-3 px-3 text-center w-12">SL.NO</th>
                     <th className="py-3 px-4">App No</th>
-                    <th className="py-3 px-4">Candidate Name</th>
+                    <th className="py-3 px-4">Candidate Profile</th>
                     <th className="py-3 px-4">Phone Number</th>
                     <th className="py-3 px-4">Gender</th>
                     <th className="py-3 px-4">Designation</th>
@@ -598,9 +513,18 @@ export default function CandidatesPage() {
                             onClick={() => openDrawer(c)}
                             className="flex items-center gap-3 group text-left"
                           >
-                            <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
-                              {c.initials}
-                            </div>
+                            {fileUrl(c.photoUrl) ? (
+                              <img
+                                src={fileUrl(c.photoUrl)!}
+                                alt={c.name}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-[#C9952A] shadow-xs flex-shrink-0 bg-white"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
+                                {c.initials}
+                              </div>
+                            )}
                             <span className="font-extrabold text-[#1E2D4E] group-hover:underline">{formatName(c.name)}</span>
                           </button>
                         </td>
@@ -685,7 +609,7 @@ export default function CandidatesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-xs text-[#777777] font-semibold">
+                      <td colSpan={10} className="py-12 text-center text-xs text-[#777777] font-semibold">
                         No candidates found matching criteria.
                       </td>
                     </tr>
@@ -762,16 +686,21 @@ export default function CandidatesPage() {
           <div className="relative w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden border border-[#C9952A]/40">
             {/* Sticky Header */}
             <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-4 sm:gap-5">
                 {fileUrl(drawerCandidate.photoUrl) ? (
-                  <img
-                    src={fileUrl(drawerCandidate.photoUrl)!}
-                    alt={drawerCandidate.name}
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
+                  <div className="relative group flex-shrink-0 cursor-pointer" onClick={() => setExpandedPhotoUrl(fileUrl(drawerCandidate.photoUrl)!)} title="Click to view full enlarged photo">
+                    <img
+                      src={fileUrl(drawerCandidate.photoUrl)!}
+                      alt={drawerCandidate.name}
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-extrabold">
+                      🔍 Expand
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-xl flex items-center justify-center border-2 border-[#C9952A] shadow-md">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-2xl sm:text-3xl flex items-center justify-center border-3 border-[#C9952A] shadow-xl flex-shrink-0">
                     {drawerCandidate.initials}
                   </div>
                 )}
@@ -1042,11 +971,22 @@ export default function CandidatesPage() {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {fileUrl(drawerCandidate.photoUrl) ? (
-                      <a href={fileUrl(drawerCandidate.photoUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] hover:bg-[#1E2D4E] hover:text-white transition-all flex flex-col items-center gap-2 shadow-2xs group">
-                        <span className="text-2xl">📷</span>
-                        <span className="text-xs">Passport Photo</span>
-                        <span className="text-[10px] text-[#777777] group-hover:text-white/80 underline">View Document ↗</span>
-                      </a>
+                      <div className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] flex flex-col items-center gap-3 shadow-2xs">
+                        <img
+                          src={fileUrl(drawerCandidate.photoUrl)!}
+                          alt="Passport Photo"
+                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerCandidate.photoUrl)!)}
+                          className="w-36 h-36 object-cover rounded-2xl border-2 border-[#C9952A] shadow-md cursor-pointer hover:scale-105 transition-transform"
+                        />
+                        <span className="text-xs">Candidate Passport Photo</span>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerCandidate.photoUrl)!)}
+                          className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-[11px] font-extrabold hover:bg-[#162340] transition-colors"
+                        >
+                          🔍 Expand Photo
+                        </button>
+                      </div>
                     ) : <div className="p-4 text-center text-[#aaa] border rounded-2xl bg-[#F9F7F4] font-bold">No Photo Uploaded</div>}
 
                     {fileUrl(drawerCandidate.aadhaarUrl || drawerCandidate.aadharUrl) ? (

@@ -910,11 +910,11 @@ export default function OfferProcessPage() {
                   <img
                     src={fileUrl(candidateData?.photoUrl)!}
                     alt={profileOffer.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-[#C9952A] shadow-md bg-white p-0.5 flex-shrink-0"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
                     onError={() => setImgError(true)}
                   />
                 ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#A67820] flex items-center justify-center text-white font-black text-xl sm:text-2xl shadow-lg border-2 border-[#C9952A]/50 flex-shrink-0">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#A67820] flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-xl border-3 border-[#C9952A]/50 flex-shrink-0">
                     {profileOffer.initials || profileOffer.name?.substring(0, 2).toUpperCase()}
                   </div>
                 )}
