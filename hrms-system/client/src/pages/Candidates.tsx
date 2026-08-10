@@ -61,6 +61,7 @@ export default function CandidatesPage() {
   const [activeRange, setActiveRange] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom'>('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [enlargedPhotoUrl, setEnlargedPhotoUrl] = useState<string | null>(null);
 
   const loadCandidates = useCallback(async () => {
     try {
@@ -680,12 +681,23 @@ export default function CandidatesPage() {
                             className="flex items-center gap-3.5 group text-left"
                           >
                             {/* Profile Avatar / Photo */}
-                            <div className="relative flex-shrink-0">
+                            <div
+                              className="relative flex-shrink-0 cursor-pointer group/avatar"
+                              onClick={(e) => {
+                                if (fileUrl(c.photoUrl)) {
+                                  e.stopPropagation();
+                                  setEnlargedPhotoUrl(fileUrl(c.photoUrl));
+                                } else {
+                                  openDrawer(c);
+                                }
+                              }}
+                              title={fileUrl(c.photoUrl) ? "Click to view enlarged photo" : "Click to view profile"}
+                            >
                               {fileUrl(c.photoUrl) ? (
                                 <img
                                   src={fileUrl(c.photoUrl)!}
                                   alt={c.name}
-                                  className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200 bg-white"
+                                  className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover/avatar:scale-110 group-hover/avatar:shadow-xl group-hover/avatar:border-[#C9952A] transition-all duration-200 bg-white"
                                   onError={(e) => {
                                     (e.target as HTMLElement).style.display = 'none';
                                     const next = (e.target as HTMLElement).nextElementSibling;
@@ -693,7 +705,7 @@ export default function CandidatesPage() {
                                   }}
                                 />
                               ) : null}
-                              <div className={`w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] text-[#C9952A] font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200 ${fileUrl(c.photoUrl) ? 'hidden' : ''}`}>
+                              <div className={`w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] text-[#C9952A] font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md group-hover/avatar:scale-110 group-hover/avatar:shadow-xl transition-all duration-200 ${fileUrl(c.photoUrl) ? 'hidden' : ''}`}>
                                 {c.initials || (c.name ? c.name.substring(0, 2).toUpperCase() : 'CA')}
                               </div>
                             </div>
@@ -866,12 +878,22 @@ export default function CandidatesPage() {
             <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
               <div className="flex items-center gap-3.5">
                 {fileUrl(drawerCandidate.photoUrl) ? (
-                  <img
-                    src={fileUrl(drawerCandidate.photoUrl)!}
-                    alt={drawerCandidate.name}
-                    className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  />
+                  <div
+                    className="relative group flex-shrink-0 cursor-pointer"
+                    onClick={() => setEnlargedPhotoUrl(fileUrl(drawerCandidate.photoUrl))}
+                    title="Click to view enlarged full photo"
+                  >
+                    <img
+                      src={fileUrl(drawerCandidate.photoUrl)!}
+                      alt={drawerCandidate.name}
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-extrabold gap-1">
+                      <ImageIcon className="w-5 h-5 text-[#C9952A]" />
+                      <span>Click to Enlarge</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-2xl sm:text-3xl flex items-center justify-center border-3 border-[#C9952A] shadow-xl flex-shrink-0">
                     {drawerCandidate.initials}
@@ -1443,6 +1465,52 @@ export default function CandidatesPage() {
               </button>
               <button onClick={handleDirectOfferSubmit} disabled={actionLoading} className="btn-primary text-xs shadow-md disabled:opacity-50">
                 {actionLoading ? 'Processing...' : 'Send to Offer Desk'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Full-Screen Enlarged Profile Photo Overlay */}
+      {enlargedPhotoUrl && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setEnlargedPhotoUrl(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setEnlargedPhotoUrl(null)}
+              className="absolute -top-12 right-0 sm:-right-12 p-2.5 rounded-full bg-white/20 text-white hover:bg-white/40 transition-colors border border-white/30 shadow-lg"
+              title="Close Preview"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Enlarged Image */}
+            <img
+              src={enlargedPhotoUrl}
+              alt="Enlarged Candidate Profile Photo"
+              className="max-w-full max-h-[82vh] rounded-2xl border-4 border-[#C9952A] shadow-2xl object-contain bg-slate-900"
+            />
+
+            {/* Image Footer Actions */}
+            <div className="mt-4 flex items-center gap-3">
+              <a
+                href={enlargedPhotoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-5 py-2.5 rounded-xl bg-[#C9952A] text-white text-xs font-extrabold hover:bg-[#b07d20] transition-colors shadow-lg flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" /> Open Full Resolution Image
+              </a>
+              <button
+                onClick={() => setEnlargedPhotoUrl(null)}
+                className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-colors border border-white/20"
+              >
+                Close Preview
               </button>
             </div>
           </div>
