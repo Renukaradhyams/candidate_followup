@@ -5,13 +5,10 @@ import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import StatusBadge from '../components/ui/StatusBadge';
-import { getBusinessDate } from '../utils/dateUtils';
 import { formatName } from '../utils/formatName';
-import PageHeader from '../components/ui/PageHeader';
-import EmptyState from '../components/ui/EmptyState';
 import { 
-  Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase, 
-  FileText, CheckCircle, XCircle, Plus, Clock, ExternalLink, MessageSquare, ChevronRight, X, Trash2, Edit3, ShieldAlert, FileCheck, Image as ImageIcon, UserCheck, DollarSign, TrendingUp
+  Search, Phone, Calendar, MapPin, Briefcase, 
+  FileText, CheckCircle, XCircle, Plus, X, Trash2, Edit3, FileCheck, Image as ImageIcon, UserCheck, DollarSign, TrendingUp, MessageSquare
 } from 'lucide-react';
 
 export default function CandidatesPage() {
@@ -39,13 +36,8 @@ export default function CandidatesPage() {
   
   const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
   const [confirmStatusModal, setConfirmStatusModal] = useState<{ open: boolean; candidate: any | null; newStatus: string }>({ open: false, candidate: null, newStatus: '' });
-  const [highlightAppNo, setHighlightAppNo] = useState<string | null>(null);
   const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
-  
-  const [callModal, setCallModal] = useState<{ open: boolean; candidate: any | null; step: number; callStatus: any }>({ open: false, candidate: null, step: 1, callStatus: null });
-  const [callDate, setCallDate] = useState(new Date().toISOString().slice(0, 10));
-  const [callRemarks, setCallRemarks] = useState('');
 
   // Selected / Rejected Panel View
   const [selRejPanel, setSelRejPanel] = useState<'selected' | 'rejected' | null>(null);
@@ -542,9 +534,6 @@ export default function CandidatesPage() {
                               className={`text-[11px] font-bold rounded-lg border px-2.5 py-1.5 cursor-pointer outline-none transition-all shadow-xs focus:ring-2 ${
                                 c.status === 'New' ? 'bg-slate-100 text-slate-700 border-slate-200 focus:ring-slate-300' :
                                 c.status === 'Shortlisted' ? 'bg-blue-50 text-blue-700 border-blue-200 focus:ring-blue-300' :
-                                c.status === '1st Call' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 focus:ring-indigo-300' :
-                                c.status === 'Interview Scheduled' ? 'bg-violet-50 text-violet-700 border-violet-200 focus:ring-violet-300' :
-                                c.status === 'Interviewed' || c.status === 'Interview Completed' ? 'bg-purple-50 text-purple-700 border-purple-200 focus:ring-purple-300' :
                                 c.status === 'Selected' || c.status === 'Already Selected' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 focus:ring-emerald-300' :
                                 c.status === 'Offer Sent' ? 'bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-300' :
                                 c.status === 'Joined' || c.status === 'Offer Accepted' ? 'bg-teal-50 text-teal-700 border-teal-200 focus:ring-teal-300' :
@@ -573,7 +562,7 @@ export default function CandidatesPage() {
                                 Shortlist
                               </button>
                             )}
-                            {(c.status === 'Shortlisted' || c.status === '1st Call' || c.status === '2nd Call') && (
+                            {(c.status === 'Shortlisted') && (
                               <button
                                 onClick={() => handleStatusChange('schedule', c)}
                                 className="px-2.5 py-1 rounded-lg bg-[#1E2D4E] text-white font-bold hover:bg-[#162340] transition-all text-[11px] shadow-xs"
@@ -1063,6 +1052,84 @@ export default function CandidatesPage() {
                   Reject
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Status Update Modal */}
+      {confirmStatusModal.open && confirmStatusModal.candidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">Update Status?</h3>
+              <p className="text-xs text-[#666666] mt-1 font-medium">
+                Change status of <span className="font-bold text-[#1E2D4E]">{confirmStatusModal.candidate.name}</span> to <span className="font-extrabold text-blue-700">{confirmStatusModal.newStatus}</span>?
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setConfirmStatusModal({ open: false, candidate: null, newStatus: '' })}
+                className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs hover:bg-[#F9F7F4]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmStatusUpdate}
+                disabled={actionLoading}
+                className="btn-primary text-xs shadow-md disabled:opacity-50"
+              >
+                {actionLoading ? 'Updating...' : 'Confirm Status Update'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remark Action Modal (Shortlist / Hold / Reject) */}
+      {remarkModal.open && remarkModal.candidate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">
+                Mark Candidate as <span className="text-[#C9952A]">{remarkModal.action}</span>
+              </h3>
+              <button onClick={() => setRemarkModal({ open: false, action: '', candidate: null })} className="text-[#888888]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2 text-xs">
+              <p className="font-semibold text-[#555555]">
+                Candidate: <span className="font-bold text-[#1E2D4E]">{remarkModal.candidate.name}</span> ({remarkModal.candidate.appNo})
+              </p>
+              <div>
+                <label className="block font-bold text-[#1E2D4E] mb-1">Remarks / Internal Notes (Optional)</label>
+                <textarea
+                  rows={3}
+                  value={remarksText}
+                  onChange={(e) => setRemarksText(e.target.value)}
+                  placeholder="Add notes or reason for this status change..."
+                  className="input-modern"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#e2dfd7]">
+              <button
+                onClick={() => setRemarkModal({ open: false, action: '', candidate: null })}
+                className="px-4 py-2 rounded-xl border border-[#e2dfd7] font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitRemarkAction}
+                disabled={actionLoading}
+                className="btn-primary text-xs shadow-md disabled:opacity-50"
+              >
+                {actionLoading ? 'Saving...' : `Confirm ${remarkModal.action}`}
+              </button>
             </div>
           </div>
         </div>
