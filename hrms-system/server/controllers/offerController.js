@@ -2,6 +2,32 @@ const db = require('../config/db');
 const { successRes, errorRes } = require('../utils/response');
 const { logAction } = require('../utils/logger');
 
+const parseSqlDate = (d) => {
+  if (!d) return null;
+  if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+  const str = String(d).trim();
+  if (!str) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const dt = new Date(str);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  const parts = str.split(/[-/]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 2 && parts[2].length === 4) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const dt = new Date(year, month, day);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+
+  const dt = new Date(str);
+  return isNaN(dt.getTime()) ? null : dt;
+};
+
 const getOffers = async (req, res) => {
   try {
     // Auto-create selection_offers rows for candidates in Offer Sent, Shortlisted, Accepted, or Joined status
@@ -158,9 +184,10 @@ const updateOfferDetails = async (req, res) => {
 
     const updFields = ['updated_at = ?'];
     const params = [new Date()];
+    const parsedDoj = parseSqlDate(estDoj);
 
     if (noticePd) { updFields.push('notice_period = ?'); params.push(noticePd); }
-    if (estDoj) { updFields.push('est_doj = ?'); params.push(new Date(estDoj)); }
+    if (parsedDoj) { updFields.push('est_doj = ?'); params.push(parsedDoj); }
     if (finalDesignation) { updFields.push('designation = ?'); params.push(finalDesignation); }
     if (department) { updFields.push('department = ?'); params.push(department + (otherSection ? ` - ${otherSection}` : '')); }
     if (remarks !== undefined) { updFields.push('remarks = ?'); params.push(remarks); }
@@ -179,7 +206,7 @@ const updateOfferDetails = async (req, res) => {
           finalDesignation || c.designation || '',
           department || c.department || '',
           salaryOffered || c.salary || '',
-          estDoj ? new Date(estDoj) : (c.offered_doj || null),
+          parsedDoj || parseSqlDate(c.offered_doj),
           status || 'Pending Accept',
           remarks || ''
         ]
@@ -193,7 +220,7 @@ const updateOfferDetails = async (req, res) => {
     const candUpd = ['updated_at = ?'];
     const candParams = [new Date()];
     if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
-    if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
+    if (parsedDoj) { candUpd.push('offered_doj = ?'); candParams.push(parsedDoj); }
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
     if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
     if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
@@ -206,7 +233,8 @@ const updateOfferDetails = async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    return errorRes(res, 'Failed to update offer details', [err.message], 500);
+    console.error('[updateOfferDetails Error]', err);
+    return errorRes(res, 'Failed to update offer details: ' + err.message, [err.message], 500);
   }
 };
 
@@ -283,7 +311,7 @@ const createDirectOffer = async (req, res) => {
     if (!salaryOffered) return errorRes(res, 'Offered salary is mandatory', [], 400);
 
     const now = new Date();
-    const doj = estDoj ? new Date(estDoj) : null;
+    const doj = parseSqlDate(estDoj);
 
     const [existing] = await db.query(`SELECT id FROM selection_offers WHERE TRIM(app_no) = TRIM(?)`, [appNo]);
     if (existing.length > 0) {
@@ -320,7 +348,8 @@ const createDirectOffer = async (req, res) => {
 
     return res.json({ success: true });
   } catch (err) {
-    return errorRes(res, 'Failed to create direct offer', [err.message], 500);
+    console.error('[createDirectOffer Error]', err);
+    return errorRes(res, 'Failed to create direct offer: ' + err.message, [err.message], 500);
   }
 };
 
