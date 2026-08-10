@@ -419,6 +419,7 @@ async function autoInitializeDatabase(pool) {
       "ALTER TABLE selection_offers ADD COLUMN est_doj DATE NULL",
       "ALTER TABLE selection_offers ADD COLUMN actual_doj DATE NULL",
       "ALTER TABLE selection_offers ADD COLUMN updated_at DATETIME NULL",
+      "ALTER TABLE selection_offers ADD COLUMN salary VARCHAR(150) NULL",
       "ALTER TABLE candidates ADD COLUMN religion VARCHAR(100) NULL",
       "ALTER TABLE candidates ADD COLUMN caste VARCHAR(100) NULL",
       "ALTER TABLE candidates ADD COLUMN department VARCHAR(150) NULL",

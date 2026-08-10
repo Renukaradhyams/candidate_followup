@@ -55,7 +55,34 @@ const getOffers = async (req, res) => {
         WHERE so.id IS NULL 
           AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
       `);
+    } catch (e) {
+      try {
+        await db.query(`
+          INSERT INTO selection_offers (app_no, name, designation, department, est_doj, status, remarks, created_at, updated_at)
+          SELECT 
+            c.app_no,
+            c.name,
+            COALESCE(c.designation, ''),
+            COALESCE(c.department, ''),
+            c.offered_doj,
+            CASE 
+              WHEN LOWER(TRIM(c.status)) = 'joined' THEN 'Joined'
+              WHEN LOWER(TRIM(c.status)) IN ('accepted', 'offer accepted') THEN 'Accepted'
+              WHEN LOWER(TRIM(c.status)) IN ('offer rejected', 'declined') THEN 'Declined'
+              ELSE 'Pending Accept'
+            END,
+            COALESCE(c.remarks, 'Auto-synced from CRM shortlisting'),
+            NOW(),
+            NOW()
+          FROM candidates c
+          LEFT JOIN selection_offers so ON c.app_no = so.app_no
+          WHERE so.id IS NULL 
+            AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
+        `);
+      } catch (e2) {}
+    }
 
+    try {
       await db.query(`
         UPDATE selection_offers so
         JOIN candidates c ON so.app_no = c.app_no
@@ -182,9 +209,24 @@ const updateOfferDetails = async (req, res) => {
     const { appNo, noticePd, estDoj, salaryOffered, department, otherSection, finalDesignation, remarks, status } = req.body;
     if (!appNo) return errorRes(res, 'Application number is required', [], 400);
 
-    const updFields = ['updated_at = ?'];
-    const params = [new Date()];
+    const now = new Date();
     const parsedDoj = parseSqlDate(estDoj);
+
+    // Sync with candidates table
+    const candUpd = ['updated_at = ?'];
+    const candParams = [now];
+    if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
+    if (parsedDoj) { candUpd.push('offered_doj = ?'); candParams.push(parsedDoj); }
+    if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
+    if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
+    if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
+    if (remarks !== undefined) { candUpd.push('remarks = ?'); candParams.push(remarks); }
+    if (status) { candUpd.push('status = ?'); candParams.push(status); }
+    candParams.push(appNo);
+    await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
+
+    const updFields = ['updated_at = ?'];
+    const params = [now];
 
     if (noticePd) { updFields.push('notice_period = ?'); params.push(noticePd); }
     if (parsedDoj) { updFields.push('est_doj = ?'); params.push(parsedDoj); }
@@ -197,37 +239,48 @@ const updateOfferDetails = async (req, res) => {
     if (existingOffer.length === 0) {
       const [candRows] = await db.query(`SELECT name, designation, department, salary, offered_doj FROM candidates WHERE app_no = ?`, [appNo]);
       const c = candRows[0] || {};
-      await db.query(
-        `INSERT INTO selection_offers (app_no, name, designation, department, salary, est_doj, status, remarks, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-        [
-          appNo,
-          c.name || 'Candidate',
-          finalDesignation || c.designation || '',
-          department || c.department || '',
-          salaryOffered || c.salary || '',
-          parsedDoj || parseSqlDate(c.offered_doj),
-          status || 'Pending Accept',
-          remarks || ''
-        ]
-      );
+      try {
+        await db.query(
+          `INSERT INTO selection_offers (app_no, name, designation, department, salary, est_doj, status, remarks, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            appNo,
+            c.name || 'Candidate',
+            finalDesignation || c.designation || '',
+            department || c.department || '',
+            salaryOffered || c.salary || '',
+            parsedDoj || parseSqlDate(c.offered_doj),
+            status || 'Pending Accept',
+            remarks || ''
+          ]
+        );
+      } catch (e) {
+        await db.query(
+          `INSERT INTO selection_offers (app_no, name, designation, department, est_doj, status, remarks, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [
+            appNo,
+            c.name || 'Candidate',
+            finalDesignation || c.designation || '',
+            department || c.department || '',
+            parsedDoj || parseSqlDate(c.offered_doj),
+            status || 'Pending Accept',
+            remarks || ''
+          ]
+        );
+      }
     } else {
-      params.push(appNo);
-      await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
+      try {
+        const updWithSal = [...updFields];
+        const paramsWithSal = [...params];
+        if (salaryOffered) { updWithSal.push('salary = ?'); paramsWithSal.push(salaryOffered); }
+        paramsWithSal.push(appNo);
+        await db.query(`UPDATE selection_offers SET ${updWithSal.join(', ')} WHERE app_no = ?`, paramsWithSal);
+      } catch (e) {
+        params.push(appNo);
+        await db.query(`UPDATE selection_offers SET ${updFields.join(', ')} WHERE app_no = ?`, params);
+      }
     }
-
-    // Sync with candidates table
-    const candUpd = ['updated_at = ?'];
-    const candParams = [new Date()];
-    if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
-    if (parsedDoj) { candUpd.push('offered_doj = ?'); candParams.push(parsedDoj); }
-    if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
-    if (finalDesignation) { candUpd.push('designation = ?'); candParams.push(finalDesignation); }
-    if (department) { candUpd.push('department = ?'); candParams.push(department + (otherSection ? ` - ${otherSection}` : '')); }
-    if (remarks !== undefined) { candUpd.push('remarks = ?'); candParams.push(remarks); }
-    if (status) { candUpd.push('status = ?'); candParams.push(status); }
-    candParams.push(appNo);
-    await db.query(`UPDATE candidates SET ${candUpd.join(', ')} WHERE app_no = ?`, candParams);
 
     await logAction(req.user ? req.user.username : 'HR', 'UPDATE_OFFER_DETAILS', 'OFFER', { appNo, noticePd, estDoj, salaryOffered, status });
 
@@ -313,16 +366,26 @@ const createDirectOffer = async (req, res) => {
     const now = new Date();
     const doj = parseSqlDate(estDoj);
 
+    // 1. Always update candidates table first
+    await db.query(
+      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
+      [salaryOffered, designation || '', department || '', doj, remarks || null, now, appNo]
+    );
+
+    // 2. Insert or update selection_offers
     const [existing] = await db.query(`SELECT id FROM selection_offers WHERE TRIM(app_no) = TRIM(?)`, [appNo]);
     if (existing.length > 0) {
-      await db.query(
-        `UPDATE selection_offers SET designation = ?, department = ?, salary = ?, est_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
-        [designation || '', department || '', salaryOffered, doj, remarks || null, now, appNo]
-      );
-      await db.query(
-        `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
-        [salaryOffered, designation || '', department || '', doj, remarks || null, now, appNo]
-      );
+      try {
+        await db.query(
+          `UPDATE selection_offers SET designation = ?, department = ?, salary = ?, est_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
+          [designation || '', department || '', salaryOffered, doj, remarks || null, now, appNo]
+        );
+      } catch (e) {
+        await db.query(
+          `UPDATE selection_offers SET designation = ?, department = ?, est_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
+          [designation || '', department || '', doj, remarks || null, now, appNo]
+        );
+      }
       await logAction(req.user ? req.user.username : 'HR', 'DIRECT_OFFER_UPDATE', 'OFFER', { appNo, salaryOffered, estDoj });
       return res.json({ success: true });
     }
@@ -334,15 +397,17 @@ const createDirectOffer = async (req, res) => {
     const finalDesig = designation || c.designation || '';
     const finalDept = department || c.department || '';
 
-    await db.query(
-      `INSERT INTO selection_offers (app_no, name, designation, department, salary, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [appNo, c.name, finalDesig, finalDept, salaryOffered, null, doj, 'Pending Accept', now, now, remarks || null]
-    );
-
-    await db.query(
-      `UPDATE candidates SET status = 'Offer Sent', salary = ?, designation = ?, department = ?, offered_doj = ?, remarks = COALESCE(?, remarks), updated_at = ? WHERE TRIM(app_no) = TRIM(?)`,
-      [salaryOffered, finalDesig, finalDept, doj, remarks || null, now, appNo]
-    );
+    try {
+      await db.query(
+        `INSERT INTO selection_offers (app_no, name, designation, department, salary, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [appNo, c.name, finalDesig, finalDept, salaryOffered, null, doj, 'Pending Accept', now, now, remarks || null]
+      );
+    } catch (e) {
+      await db.query(
+        `INSERT INTO selection_offers (app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [appNo, c.name, finalDesig, finalDept, null, doj, 'Pending Accept', now, now, remarks || null]
+      );
+    }
 
     await logAction(req.user ? req.user.username : 'HR', 'DIRECT_OFFER', 'OFFER', { appNo, salaryOffered, estDoj });
 
