@@ -39,7 +39,7 @@ export default function CandidatesPage() {
   const [directOfferModal, setDirectOfferModal] = useState<{ open: boolean; candidate: any | null }>({ open: false, candidate: null });
   const [confirmStatusModal, setConfirmStatusModal] = useState<{ open: boolean; candidate: any | null; newStatus: string }>({ open: false, candidate: null, newStatus: '' });
   const [highlightAppNo, setHighlightAppNo] = useState<string | null>(null);
-  const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "", desig: "", department: "", remarks: "" });
+  const [offerForm, setOfferForm] = useState({ salary: "", incentive: "", doj: "2026-09-01", desig: "", department: "", remarks: "" });
   const [designations, setDesignations] = useState<string[]>([]);
   
   // Shortlist Modal & Questions State
@@ -268,7 +268,7 @@ export default function CandidatesPage() {
   };
 
   const openShortlistModal = (candidate: any) => {
-    const defaultDoj = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    const defaultDoj = '2026-09-01';
     setShortlistModal({ open: true, candidate });
     setOfferForm({
       salary: candidate.expectedSalary || candidate.previousSalary || candidate.currentSalary || "",
