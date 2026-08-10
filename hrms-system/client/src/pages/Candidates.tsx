@@ -410,9 +410,6 @@ export default function CandidatesPage() {
               { key: 'all', label: 'All Candidates' },
               { key: 'New', label: 'New Applicants' },
               { key: 'Shortlisted', label: 'Shortlisted' },
-              { key: '1st Call', label: '1st Call Logged' },
-              { key: 'Interview Scheduled', label: 'Interview Scheduled' },
-              { key: 'Interviewed', label: 'Interview Completed' },
               { key: 'Selected', label: 'Selected' },
               { key: 'Offer Sent', label: 'Offer Sent' },
               { key: 'Hold', label: 'On Hold' },
@@ -558,9 +555,6 @@ export default function CandidatesPage() {
                             >
                               <option value="New">🔵 New</option>
                               <option value="Shortlisted">📋 Shortlisted</option>
-                              <option value="1st Call">📞 1st Call Logged</option>
-                              <option value="Interview Scheduled">📅 Interview Scheduled</option>
-                              <option value="Interviewed">🎯 Interview Completed</option>
                               <option value="Selected">✅ Selected</option>
                               <option value="Already Selected">🎉 Already Selected</option>
                               <option value="Offer Sent">📄 Offer Sent</option>
