@@ -492,7 +492,7 @@ export default function CandidatesPage() {
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
                     <th className="py-3 px-3 text-center w-12">SL.NO</th>
                     <th className="py-3 px-4">App No</th>
-                    <th className="py-3 px-4">Candidate Profile</th>
+                    <th className="py-3 px-4">Candidate Name</th>
                     <th className="py-3 px-4">Phone Number</th>
                     <th className="py-3 px-4">Gender</th>
                     <th className="py-3 px-4">Designation</th>
