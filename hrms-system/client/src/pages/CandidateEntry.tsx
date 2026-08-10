@@ -549,8 +549,12 @@ export default function CandidateEntryPage() {
       showToast('You must agree to the declaration', 'error');
       return;
     }
-    if (!editAppNo && (!resumeFile || !photoFile || !aadhaarFile)) {
-      showToast('Please upload all mandatory documents', 'error');
+
+    const hasPhoto = Boolean(photoFile || existingPhoto);
+    const hasAadhaar = Boolean(aadhaarFile || existingAadhaar);
+
+    if (!hasPhoto || !hasAadhaar) {
+      showToast('Please upload Candidate Photo and Aadhaar Document (*)', 'error');
       return;
     }
 
@@ -1320,7 +1324,7 @@ export default function CandidateEntryPage() {
                   <FileText className="w-10 h-10 text-[#C9952A] mx-auto" />
                   
                   <div>
-                    <div className="font-extrabold text-xs text-[#1E2D4E]">Resume / CV Document *</div>
+                    <div className="font-extrabold text-xs text-[#1E2D4E]">Resume / CV Document (Optional)</div>
                     <div className="text-[10px] text-[#777777] font-semibold mt-0.5">PDF, DOC, DOCX up to 1000 KB</div>
                   </div>
 
