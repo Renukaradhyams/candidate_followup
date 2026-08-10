@@ -58,6 +58,31 @@ app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// ── Favicon & Public Icon Route Handler (Early execution to prevent 403 / 404 / 503 errors) ──
+app.get(['/favicon.ico', '/favicon.png', '/logo.png'], (req, res) => {
+  const iconName = path.basename(req.path);
+  const possiblePaths = [
+    path.join(APP_ROOT, 'dist', iconName),
+    path.join(APP_ROOT, 'client', 'dist', iconName),
+    path.join(APP_ROOT, 'client', 'public', iconName),
+    path.join(APP_ROOT, 'client', 'public', 'favicon.ico'),
+    path.join(APP_ROOT, 'client', 'public', 'logo.png'),
+    path.join(APP_ROOT, 'Main_logo.png')
+  ];
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        const ext = path.extname(p).toLowerCase();
+        if (ext === '.ico') res.setHeader('Content-Type', 'image/x-icon');
+        else if (ext === '.png') res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.sendFile(p);
+      }
+    } catch (e) {}
+  }
+  return res.status(204).end();
+});
+
 // ── Static Uploads ────────────────────────────────────────────────────────────
 const primaryUploadsDir = process.env.UPLOAD_DIR || path.join(APP_ROOT, 'uploads');
 const parentUploadsDir = path.join(APP_ROOT, '..', 'uploads');
@@ -248,22 +273,6 @@ app.use('/api', legacyRoutes);
 
 // ── Frontend SPA ──────────────────────────────────────────────────────────────
 const distDir = path.join(APP_ROOT, 'dist');
-// Favicon & Icon static route handler (prevents 503 / 404 errors on live server)
-app.get(['/favicon.ico', '/favicon.png', '/logo.png'], (req, res) => {
-  const iconName = path.basename(req.path);
-  const possiblePaths = [
-    path.join(distDir, iconName),
-    path.join(APP_ROOT, 'client', 'public', iconName),
-    path.join(APP_ROOT, 'client', 'public', 'favicon.ico'),
-    path.join(APP_ROOT, 'client', 'public', 'logo.png')
-  ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-      return res.sendFile(p);
-    }
-  }
-  return res.status(204).end();
-});
 
 if (fs.existsSync(distDir)) {
   console.log(`[Boot] Serving frontend from: ${distDir}`);
