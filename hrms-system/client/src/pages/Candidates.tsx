@@ -656,41 +656,65 @@ export default function CandidatesPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777777] tracking-wider bg-[#F9F7F4]/60">
-                    <th className="py-3 px-3 text-center w-12">SL.NO</th>
-                    <th className="py-3 px-4">App No</th>
-                    <th className="py-3 px-4">Candidate Name</th>
-                    <th className="py-3 px-4">Phone Number</th>
-                    <th className="py-3 px-4">Gender</th>
-                    <th className="py-3 px-4">Designation</th>
-                    <th className="py-3 px-4">Source</th>
-                    <th className="py-3 px-4">Applied Date</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-3.5 px-3 text-center w-12">SL.NO</th>
+                    <th className="py-3.5 px-4">App No</th>
+                    <th className="py-3.5 px-4">Candidate Profile &amp; Name</th>
+                    <th className="py-3.5 px-4">Phone Number</th>
+                    <th className="py-3.5 px-4">Gender</th>
+                    <th className="py-3.5 px-4">Designation</th>
+                    <th className="py-3.5 px-4">Source</th>
+                    <th className="py-3.5 px-4">Applied Date</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e2dfd7]/60">
                   {filtered.length > 0 ? (
                     (filtered || []).map((c, idx) => (
-                      <tr key={c.appNo} className="hover:bg-black/5 transition-colors font-medium">
-                        <td className="py-3.5 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
-                        <td className="py-3.5 px-4">
+                      <tr key={c.appNo} className="hover:bg-[#1E2D4E]/[0.02] hover:shadow-2xs transition-all duration-200 font-medium">
+                        <td className="py-4 px-3 text-center font-bold text-[#666666]">{idx + 1}</td>
+                        <td className="py-4 px-4 font-mono text-[11px] text-[#555555] font-bold">{c.appNo}</td>
+                        <td className="py-4 px-4">
                           <button
                             onClick={() => openDrawer(c)}
-                            className="flex items-center gap-3 group text-left"
+                            className="flex items-center gap-3.5 group text-left"
                           >
-                            <div className="w-8 h-8 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs">
-                              {c.initials}
+                            {/* Profile Avatar / Photo */}
+                            <div className="relative flex-shrink-0">
+                              {fileUrl(c.photoUrl) ? (
+                                <img
+                                  src={fileUrl(c.photoUrl)!}
+                                  alt={c.name}
+                                  className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200 bg-white"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                    const next = (e.target as HTMLElement).nextElementSibling;
+                                    if (next) next.classList.remove('hidden');
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] text-[#C9952A] font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200 ${fileUrl(c.photoUrl) ? 'hidden' : ''}`}>
+                                {c.initials || (c.name ? c.name.substring(0, 2).toUpperCase() : 'CA')}
+                              </div>
                             </div>
-                            <span className="font-extrabold text-[#1E2D4E] group-hover:underline">{formatName(c.name)}</span>
+
+                            {/* Candidate Identity Block */}
+                            <div className="min-w-0">
+                              <span className="font-extrabold text-sm text-[#1E2D4E] group-hover:text-[#C9952A] transition-colors leading-tight block truncate">
+                                {formatName(c.name)}
+                              </span>
+                              <div className="text-[10.5px] text-[#777777] font-semibold mt-0.5 flex items-center gap-1.5">
+                                <span>Applied: {c.date}</span>
+                              </div>
+                            </div>
                           </button>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[#555555]">{maskPhone(c.phone)}</td>
-                        <td className="py-3.5 px-4 text-[#555555] font-semibold">{c.gender || '—'}</td>
-                        <td className="py-3.5 px-4 text-[#1E2D4E] font-extrabold">{c.desig}</td>
-                        <td className="py-3.5 px-4 text-[#555555] font-medium">{c.source}</td>
-                        <td className="py-3.5 px-4 text-[#666666] whitespace-nowrap font-medium">{c.date}</td>
-                        <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-4 px-4 font-mono text-[#555555]">{maskPhone(c.phone)}</td>
+                        <td className="py-4 px-4 text-[#555555] font-semibold">{c.gender || '—'}</td>
+                        <td className="py-4 px-4 text-[#1E2D4E] font-extrabold">{c.desig}</td>
+                        <td className="py-4 px-4 text-[#555555] font-medium">{c.source}</td>
+                        <td className="py-4 px-4 text-[#666666] whitespace-nowrap font-medium">{c.date}</td>
+                        <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
                           {(c.status === 'Already Selected' || c.status === 'Joined') ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs shadow-2xs">
                               🎉 Already Selected
@@ -723,7 +747,7 @@ export default function CandidatesPage() {
                             </select>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {c.status === 'New' && (
                               <button
@@ -763,7 +787,7 @@ export default function CandidatesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-xs text-[#777777] font-semibold">
+                      <td colSpan={10} className="py-12 text-center text-xs text-[#777777] font-semibold">
                         No candidates found matching criteria.
                       </td>
                     </tr>
