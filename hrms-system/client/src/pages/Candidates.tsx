@@ -273,7 +273,7 @@ export default function CandidatesPage() {
     setOfferForm({
       salary: candidate.expectedSalary || candidate.previousSalary || candidate.currentSalary || "",
       incentive: "",
-      doj: candidate.offeredDoj || defaultDoj,
+      doj: defaultDoj,
       desig: candidate.desig || "",
       department: candidate.department || "",
       remarks: ""
@@ -1400,7 +1400,7 @@ export default function CandidatesPage() {
                       <label className="block font-bold text-[#1E2D4E] mb-1">Est. Date of Joining *</label>
                       <input
                         type="date"
-                        value={offerForm.doj}
+                        value={offerForm.doj || '2026-09-01'}
                         onChange={(e) => setOfferForm({ ...offerForm, doj: e.target.value })}
                         className="w-full p-2 rounded-xl border border-[#e2dfd7] bg-white font-bold text-amber-800 focus:outline-none focus:border-[#1E2D4E]"
                       />
