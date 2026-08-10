@@ -406,7 +406,7 @@ export default function SettingsPage() {
                   {questions.map((q) => (
                     <div key={q.id} className="p-3.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-extrabold text-[#1E2D4E]">{q.question}</div>
+                        <div className="font-extrabold text-[#1E2D4E]">{typeof q === 'string' ? q : (q?.text || q?.question || '')}</div>
                         <div className="text-[10px] text-[#777777] font-semibold">{q.designation} · {q.round} · Max Score: {q.max_score || 10}</div>
                       </div>
                       <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50">

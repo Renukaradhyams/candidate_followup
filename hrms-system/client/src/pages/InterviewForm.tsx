@@ -135,9 +135,11 @@ function InterviewFormContent() {
           </div>
 
           <div className="space-y-4 pt-2">
-            {(data.questions || []).map((q: string, idx: number) => (
+            {(data.questions || []).map((q: any, idx: number) => (
               <div key={idx} className="p-4 rounded-xl bg-[#F9F7F4] border border-[#e0ddd8] space-y-2">
-                <div className="font-bold text-[#1E2D4E]">{idx + 1}. {q}</div>
+                <div className="font-bold text-[#1E2D4E]">
+                  {idx + 1}. {typeof q === 'string' ? q : (q?.text || q?.question || '')}
+                </div>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {[0, 3, 6, 9, 12, 15].map(val => (
                     <button

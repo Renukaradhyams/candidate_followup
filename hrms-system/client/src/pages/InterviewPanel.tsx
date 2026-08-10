@@ -460,8 +460,8 @@ export default function InterviewPanelPage() {
                   <h4 className="font-extrabold text-[#1E2D4E] text-xs uppercase tracking-wider mb-3">HR Round 1 Evaluation Summary</h4>
                   <div className="space-y-2 mb-3">
                     {scorePanel.hrQuestions.map((hq: any, idx: number) => (
-                      <div key={hq.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#e2dfd7]">
-                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{hq.text}</span>
+                      <div key={hq.id || idx} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#e2dfd7]">
+                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{typeof hq === 'string' ? hq : (hq?.text || hq?.question || '')}</span>
                         <span className="font-black text-xs text-[#C9952A]">
                           {scorePanel.interview.hrScore.scores?.[idx] || 0} / {hq.max || 10}
                         </span>
@@ -486,7 +486,7 @@ export default function InterviewPanelPage() {
                 {scorePanel.questions.map((q, idx) => (
                   <div key={idx} className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-3">
                     <div className="flex items-start justify-between gap-3 font-bold text-[#1E2D4E]">
-                      <span className="text-xs sm:text-sm font-extrabold leading-snug">{idx + 1}. {q.question}</span>
+                      <span className="text-xs sm:text-sm font-extrabold leading-snug">{idx + 1}. {typeof q === 'string' ? q : (q?.text || q?.question || '')}</span>
                       <span className="px-2.5 py-1 rounded-lg bg-[#1E2D4E]/10 text-[#1E2D4E] font-mono text-[11px] font-black flex-shrink-0">
                         Max: {q.max || 10}
                       </span>
@@ -747,8 +747,8 @@ export default function InterviewPanelPage() {
                   </div>
                   <div className="space-y-2 mb-4">
                     {viewScorecardModal.hrQuestions.map((hq: any, idx: number) => (
-                      <div key={hq.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#e2dfd7]">
-                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{hq.text}</span>
+                      <div key={hq.id || idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#e2dfd7]">
+                        <span className="font-bold text-[#1E2D4E] text-[11px] max-w-[80%]">{typeof hq === 'string' ? hq : (hq?.text || hq?.question || '')}</span>
                         <span className="font-black text-xs text-[#C9952A]">
                           {viewScorecardModal.interview.hrScore.scores?.[idx] || 0} / {hq.max || 10}
                         </span>
@@ -776,8 +776,8 @@ export default function InterviewPanelPage() {
                   </div>
                   <div className="space-y-2 mb-4">
                     {viewScorecardModal.r2Questions.map((rq: any, idx: number) => (
-                      <div key={rq.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-blue-100">
-                        <span className="font-bold text-blue-900 text-[11px] max-w-[80%]">{rq.text}</span>
+                      <div key={rq.id || idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-blue-100">
+                        <span className="font-bold text-blue-900 text-[11px] max-w-[80%]">{typeof rq === 'string' ? rq : (rq?.text || rq?.question || '')}</span>
                         <span className="font-black text-xs text-blue-700">
                           {viewScorecardModal.interview.assignedScore.scores?.[idx] || 0} / {rq.max || 10}
                         </span>
