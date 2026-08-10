@@ -910,8 +910,8 @@ export default function OfferProcessPage() {
                   <img
                     src={fileUrl(candidateData?.photoUrl)!}
                     alt={profileOffer.name}
-                    loading="lazy"
-                    decoding="async"
+                    width={112}
+                    height={112}
                     className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 flex-shrink-0 cursor-pointer hover:scale-105 transition-transform"
                     onError={() => setImgError(true)}
                   />

@@ -207,6 +207,53 @@ export default function CandidatesPage() {
     return `/uploads/misc/${filename}`;
   };
 
+  const CandidateAvatar = React.memo(({
+    photoUrl,
+    name,
+    initials,
+    onClick
+  }: {
+    photoUrl: string | null | undefined;
+    name: string;
+    initials?: string;
+    onClick?: (e: React.MouseEvent) => void;
+  }) => {
+    const [imgError, setImgError] = useState(false);
+    const src = photoUrl ? fileUrl(photoUrl) : null;
+    const initStr = initials || (name ? name.substring(0, 2).toUpperCase() : 'CA');
+
+    if (src && !imgError) {
+      return (
+        <div
+          className="relative flex-shrink-0 cursor-pointer group/avatar"
+          onClick={onClick}
+          title="Click to view enlarged photo"
+        >
+          <img
+            src={src}
+            alt={name}
+            width={48}
+            height={48}
+            className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover/avatar:scale-105 group-hover/avatar:shadow-xl group-hover/avatar:border-[#C9952A] transition-transform bg-white"
+            onError={() => setImgError(true)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className="relative flex-shrink-0 cursor-pointer group/avatar"
+        onClick={onClick}
+        title="Click to view profile"
+      >
+        <div className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] text-[#C9952A] font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md group-hover/avatar:scale-105 group-hover/avatar:shadow-xl transition-transform">
+          {initStr}
+        </div>
+      </div>
+    );
+  });
+
   const openDrawer = async (c: any) => {
     setDrawerCandidate(c);
     setDrawerTab('overview');
@@ -681,8 +728,10 @@ export default function CandidatesPage() {
                             className="flex items-center gap-3.5 group text-left"
                           >
                             {/* Profile Avatar / Photo */}
-                            <div
-                              className="relative flex-shrink-0 cursor-pointer group/avatar"
+                            <CandidateAvatar
+                              photoUrl={c.photoUrl}
+                              name={c.name}
+                              initials={c.initials}
                               onClick={(e) => {
                                 if (fileUrl(c.photoUrl)) {
                                   e.stopPropagation();
@@ -691,26 +740,7 @@ export default function CandidatesPage() {
                                   openDrawer(c);
                                 }
                               }}
-                              title={fileUrl(c.photoUrl) ? "Click to view enlarged photo" : "Click to view profile"}
-                            >
-                              {fileUrl(c.photoUrl) ? (
-                                <img
-                                  src={fileUrl(c.photoUrl)!}
-                                  alt={c.name}
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full object-cover border-2 border-white shadow-md group-hover/avatar:scale-110 group-hover/avatar:shadow-xl group-hover/avatar:border-[#C9952A] transition-all duration-200 bg-white"
-                                  onError={(e) => {
-                                    (e.target as HTMLElement).style.display = 'none';
-                                    const next = (e.target as HTMLElement).nextElementSibling;
-                                    if (next) next.classList.remove('hidden');
-                                  }}
-                                />
-                              ) : null}
-                              <div className={`w-10 h-10 sm:w-[44px] sm:h-[44px] lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] text-[#C9952A] font-black text-xs sm:text-sm flex items-center justify-center border-2 border-white shadow-md group-hover/avatar:scale-110 group-hover/avatar:shadow-xl transition-all duration-200 ${fileUrl(c.photoUrl) ? 'hidden' : ''}`}>
-                                {c.initials || (c.name ? c.name.substring(0, 2).toUpperCase() : 'CA')}
-                              </div>
-                            </div>
+                            />
 
                             {/* Candidate Identity Block */}
                             <div className="min-w-0">
@@ -888,8 +918,8 @@ export default function CandidatesPage() {
                     <img
                       src={fileUrl(drawerCandidate.photoUrl)!}
                       alt={drawerCandidate.name}
-                      loading="lazy"
-                      decoding="async"
+                      width={128}
+                      height={128}
                       className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
