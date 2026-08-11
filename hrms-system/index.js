@@ -123,9 +123,11 @@ const subdirs = [
 [primaryUploadsDir, parentUploadsDir, grandParentUploadsDir].forEach((baseDir) => {
   try {
     if (fs.existsSync(baseDir)) {
+      try { fs.chmodSync(baseDir, 0o755); } catch(e) {}
       subdirs.forEach((sub) => {
         const subPath = path.join(baseDir, sub);
-        if (!fs.existsSync(subPath)) fs.mkdirSync(subPath, { recursive: true });
+        if (!fs.existsSync(subPath)) fs.mkdirSync(subPath, { recursive: true, mode: 0o755 });
+        try { fs.chmodSync(subPath, 0o755); } catch(e) {}
       });
     }
   } catch (e) {}
@@ -167,6 +169,7 @@ app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee
 
   for (const p of possiblePaths) {
     if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+      try { fs.chmodSync(p, 0o644); } catch(e) {}
       return res.sendFile(p);
     }
   }
@@ -177,6 +180,45 @@ app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee
 // ── Health / Diagnostics ──────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'UP', port: PORT, ts: new Date().toISOString() });
+});
+
+app.get(['/api/diagnostics/audit-403', '/api/v1/diagnostics/audit-403'], (req, res) => {
+  const { get403Logs } = require('./server/middleware/auth');
+  const limit = parseInt(req.query.limit || '50', 10);
+  const auditLogs = get403Logs(limit);
+
+  const uploadDirChecks = {};
+  [primaryUploadsDir, parentUploadsDir].forEach(dir => {
+    try {
+      if (fs.existsSync(dir)) {
+        const stat = fs.statSync(dir);
+        uploadDirChecks[dir] = {
+          exists: true,
+          mode: (stat.mode & 0o777).toString(8),
+          readable: true
+        };
+      } else {
+        uploadDirChecks[dir] = { exists: false };
+      }
+    } catch(e) {
+      uploadDirChecks[dir] = { exists: false, error: e.message };
+    }
+  });
+
+  res.json({
+    status: 'SUCCESS',
+    timestamp: new Date().toISOString(),
+    serverInfo: {
+      port: PORT,
+      nodeVersion: process.version,
+      platform: process.platform,
+      uptimeSeconds: Math.floor(process.uptime()),
+      memoryUsage: process.memoryUsage()
+    },
+    uploadDirChecks,
+    auditLogsCount: auditLogs.length,
+    auditLogs
+  });
 });
 
 app.get(['/db-status', '/api/db-status'], async (req, res) => {

@@ -22,20 +22,25 @@
     PassengerEnabled on
 </IfModule>
 
-# Options & Security Settings
-Options -Indexes +FollowSymLinks
+# Options & Security Settings (Avoid hardcoded +FollowSymLinks to prevent Hostinger 403 override blocks)
+<IfModule mod_version.c>
+    Options -Indexes +SymLinksIfOwnerMatch
+</IfModule>
 
-# Allow Static Upload File Access (Photos, Resumes, Documents)
+# Explicitly Allow All Access (Prevents Apache 2.4 default 'Require all denied' 403 errors)
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# Allow Static Upload & Asset Access (Photos, Resumes, Documents, JS, CSS)
 <IfModule mod_headers.c>
-    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|doc|docx)$">
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|doc|docx|js|css|woff2?|ico)$">
         Header set Access-Control-Allow-Origin "*"
         Header set Cache-Control "public, max-age=86400, must-revalidate"
     </FilesMatch>
-</IfModule>
-
-# Security Headers to Prevent Clickjacking and XSS
-<IfModule mod_headers.c>
+    # Security Headers
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
+

@@ -87,7 +87,13 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       const errorData = await res.json().catch(() => ({}));
       const errorMsg = errorData.message || `HTTP ${res.status}`;
       if (res.status === 403) {
-        console.error(`[403 FORBIDDEN ERROR] Access denied for URL: ${url}`, errorData);
+        console.error(`[403 FORBIDDEN ERROR] Access denied for URL: ${url}`, {
+          url,
+          status: res.status,
+          user: session ? { username: session.username, role: session.role } : 'Guest',
+          timestamp: new Date().toISOString(),
+          errorData
+        });
       } else if (res.status === 401 && !endpoint.includes('/auth/login')) {
         console.warn(`[401 UNAUTHORIZED] Token expired or invalid for URL: ${url}`);
       }

@@ -34,6 +34,19 @@ const helperMkdir = (dirPath) => {
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true, mode: 0o755 });
     }
+    fs.chmodSync(dirPath, 0o755);
+  } catch (e) {}
+};
+
+const ensureFilePermissions = (filePath) => {
+  try {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.chmodSync(filePath, 0o644);
+      const parentDir = path.dirname(filePath);
+      if (fs.existsSync(parentDir)) {
+        fs.chmodSync(parentDir, 0o755);
+      }
+    }
   } catch (e) {}
 };
 
@@ -133,10 +146,42 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({
+const rawUpload = multer({
   storage,
   fileFilter,
   limits: { fileSize: 1000 * 1024 } // 1000KB (1MB) max document limit strictly enforced
 });
 
+// Middleware wrapper enforcing Apache web-server readable file permissions (0o644 / 0o755)
+const wrapWithPermissions = (multerMiddleware) => {
+  return (req, res, next) => {
+    multerMiddleware(req, res, (err) => {
+      if (!err) {
+        if (req.file) ensureFilePermissions(req.file.path);
+        if (req.files) {
+          if (Array.isArray(req.files)) {
+            req.files.forEach(f => ensureFilePermissions(f.path));
+          } else {
+            Object.values(req.files).forEach(fileArr => {
+              if (Array.isArray(fileArr)) {
+                fileArr.forEach(f => ensureFilePermissions(f.path));
+              }
+            });
+          }
+        }
+      }
+      next(err);
+    });
+  };
+};
+
+const upload = {
+  single: (fieldname) => wrapWithPermissions(rawUpload.single(fieldname)),
+  array: (fieldname, maxCount) => wrapWithPermissions(rawUpload.array(fieldname, maxCount)),
+  fields: (fields) => wrapWithPermissions(rawUpload.fields(fields)),
+  any: () => wrapWithPermissions(rawUpload.any()),
+  ensureFilePermissions
+};
+
 module.exports = upload;
+

@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 const { errorRes } = require('../utils/response');
 
+// Rolling memory log buffer for 403 audit logs (max 200 entries)
+const auditLogBuffer = [];
+const MAX_AUDIT_LOGS = 200;
+
 function parseUserAgent(ua = '') {
   let browser = 'Unknown Browser';
   let os = 'Unknown OS';
@@ -21,30 +25,41 @@ function parseUserAgent(ua = '') {
 }
 
 function log403(req, reason, details = {}) {
-  const ua = parseUserAgent(req.headers['user-agent'] || '');
-  const ip = req.ip || req.headers['x-forwarded-for'] || (req.connection && req.connection.remoteAddress) || 'Unknown IP';
+  const ua = parseUserAgent(req ? (req.headers ? req.headers['user-agent'] : '') : '');
+  const ip = req ? (req.ip || (req.headers ? req.headers['x-forwarded-for'] : null) || (req.connection && req.connection.remoteAddress) || 'Unknown IP') : 'Unknown IP';
   const timestamp = new Date().toISOString();
 
   const auditEntry = {
+    id: `403-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     event: '403_FORBIDDEN_DENIED',
     timestamp,
-    userId: req.user ? req.user.id : null,
-    username: req.user ? req.user.username : null,
-    role: req.user ? req.user.role : 'Unauthenticated / Guest',
+    userId: req && req.user ? req.user.id : null,
+    username: req && req.user ? req.user.username : null,
+    role: req && req.user ? req.user.role : 'Unauthenticated / Guest',
     ip,
     browser: ua.browser,
     os: ua.os,
     userAgent: ua.raw,
-    requestedUrl: req.originalUrl || req.url,
-    apiEndpoint: (req.baseUrl || '') + (req.path || ''),
-    method: req.method,
-    authStatus: req.user ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
-    permissionCheck: details.requiredRoles ? `Required: [${details.requiredRoles.join(', ')}], Given: '${req.user ? req.user.role : 'None'}'` : 'N/A',
-    serverReason: reason
+    requestedUrl: req ? (req.originalUrl || req.url) : 'N/A',
+    apiEndpoint: req ? ((req.baseUrl || '') + (req.path || '')) : 'N/A',
+    method: req ? req.method : 'N/A',
+    authStatus: req && req.user ? 'AUTHENTICATED' : 'UNAUTHENTICATED',
+    permissionCheck: details.requiredRoles ? `Required: [${details.requiredRoles.join(', ')}], Given: '${req && req.user ? req.user.role : 'None'}'` : 'N/A',
+    serverReason: reason,
+    extraDetails: details
   };
+
+  auditLogBuffer.unshift(auditEntry);
+  if (auditLogBuffer.length > MAX_AUDIT_LOGS) {
+    auditLogBuffer.pop();
+  }
 
   console.error('[SECURITY AUDIT 403 REJECTION]', JSON.stringify(auditEntry, null, 2));
   return auditEntry;
+}
+
+function get403Logs(limit = 50) {
+  return auditLogBuffer.slice(0, limit);
 }
 
 const normalizeRole = (role) => {
@@ -61,9 +76,9 @@ const normalizeRole = (role) => {
 const authenticate = (req, res, next) => {
   try {
     let token = null;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    if (req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
-    } else if (req.headers['x-auth-token']) {
+    } else if (req.headers && req.headers['x-auth-token']) {
       token = req.headers['x-auth-token'];
     } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
@@ -112,6 +127,8 @@ const authorize = (...roles) => {
 module.exports = {
   authenticate,
   authorize,
-  log403
+  log403,
+  get403Logs
 };
+
 
