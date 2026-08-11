@@ -54,7 +54,19 @@ console.log(`[Boot] PORT=${PORT} | DB=${process.env.DB_NAME} | ENV=${process.env
 
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
-app.use(cors({ origin: '*', credentials: true }));
+
+// Dynamic CORS configuration compliant with W3C specs for credentials
+app.use(cors({
+  origin: (origin, callback) => {
+    // Reflect request origin to allow credentials safely, or allow server-to-server/mobile requests
+    if (!origin) return callback(null, true);
+    return callback(null, origin);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'x-candidate-name', 'x-app-no', 'Accept', 'Origin', 'X-Requested-With']
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -313,10 +325,15 @@ if (fs.existsSync(distDir)) {
 app.use('/api/*', (req, res) => errorRes(res, `Not found: ${req.originalUrl}`, [], 404));
 app.use((err, req, res, next) => {
   console.error('[Error]', err.message);
+  const status = err.status || err.statusCode || 500;
+  if (status === 403) {
+    const { log403 } = require('./server/middleware/auth');
+    log403(req, err.message || 'Forbidden access request', { stack: err.stack });
+  }
   if (err.code === 'LIMIT_FILE_SIZE') {
     return errorRes(res, 'File exceeds the maximum allowed size of 1000 KB.', [], 400);
   }
-  errorRes(res, err.message || 'Internal Server Error', [], err.status || 500);
+  errorRes(res, err.message || 'Internal Server Error', [], status);
 });
 
 // ── DB Init ───────────────────────────────────────────────────────────────────

@@ -1,0 +1,41 @@
+# ==============================================================================
+# BSC Enterprise HRMS - Hostinger Apache & Passenger Configuration (.htaccess)
+# ==============================================================================
+
+# Enable CGI Authorization Pass-Through (Fixes Apache stripping Authorization header)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.*)
+    RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+</IfModule>
+
+<IfModule mod_env.c>
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+    CGIPassAuth On
+</IfModule>
+
+# Passenger Configuration for Hostinger
+<IfModule mod_passenger.c>
+    PassengerAppRoot "/home/public_html/hrms-system"
+    PassengerStartupFile index.js
+    PassengerAppType node
+    PassengerEnabled on
+</IfModule>
+
+# Options & Security Settings
+Options -Indexes +FollowSymLinks
+
+# Allow Static Upload File Access (Photos, Resumes, Documents)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|doc|docx)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Cache-Control "public, max-age=86400, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# Security Headers to Prevent Clickjacking and XSS
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>

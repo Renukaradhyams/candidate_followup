@@ -29,11 +29,16 @@ const subdirs = [
   'misc'
 ];
 
+const helperMkdir = (dirPath) => {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true, mode: 0o755 });
+    }
+  } catch (e) {}
+};
+
 subdirs.forEach((dir) => {
-  const fullPath = path.join(uploadDir, dir);
-  if (!fs.existsSync(fullPath)) {
-    fs.mkdirSync(fullPath, { recursive: true });
-  }
+  helperMkdir(path.join(uploadDir, dir));
 });
 
 const storage = multer.diskStorage({
@@ -44,9 +49,7 @@ const storage = multer.diskStorage({
     if (appNo) {
       // New structure: /uploads/applicants/BSC-2026-0001
       const applicantDir = path.join(uploadDir, 'applicants', appNo);
-      if (!fs.existsSync(applicantDir)) {
-        fs.mkdirSync(applicantDir, { recursive: true });
-      }
+      helperMkdir(applicantDir);
       cb(null, applicantDir);
     } else {
       // Backward compatibility / Misc uploads if no appNo
@@ -57,7 +60,9 @@ const storage = multer.diskStorage({
       else if (file.fieldname === 'offerLetter') dest = 'offer-letters';
       else if (file.fieldname === 'relievingLetter') dest = 'relieving-letters';
       else if (file.fieldname === 'experienceCert') dest = 'experience-certificates';
-      cb(null, path.join(uploadDir, dest));
+      const targetPath = path.join(uploadDir, dest);
+      helperMkdir(targetPath);
+      cb(null, targetPath);
     }
   },
   filename: (req, file, cb) => {
