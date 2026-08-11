@@ -108,7 +108,9 @@ const getOffers = async (req, res) => {
           c.department as cand_department,
           c.status as cand_status,
           c.name as cand_name,
-          c.designation as cand_designation
+          c.designation as cand_designation,
+          c.offered_doj as cand_offered_doj,
+          c.notice_period as cand_notice_period
         FROM selection_offers so
         LEFT JOIN hr_evaluations he ON TRIM(so.app_no) = TRIM(he.app_no)
         LEFT JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
@@ -130,6 +132,7 @@ const getOffers = async (req, res) => {
             c.department,
             c.salary,
             c.offered_doj as est_doj,
+            c.notice_period,
             c.status,
             c.remarks,
             c.created_at
@@ -176,8 +179,8 @@ const getOffers = async (req, res) => {
         initials,
         color: colors[colorIndex],
         desig: r.designation || r.cand_designation || '',
-        noticePd: r.notice_period || '',
-        estDoj: iso(r.est_doj),
+        noticePd: r.notice_period || r.cand_notice_period || '',
+        estDoj: iso(r.est_doj || r.cand_offered_doj),
         actualDoj: iso(r.actual_doj),
         call1: fmt(r.call1_date),
         call1Remarks: r.call1_remarks || '',
@@ -188,7 +191,7 @@ const getOffers = async (req, res) => {
         status,
         salary: r.salary || r.cand_salary || '',
         remarks: r.remarks || '',
-        department: r.cand_department || r.department || '',
+        department: r.department || r.cand_department || '',
         hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
         assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null,
         createdAt: r.created_at || null,

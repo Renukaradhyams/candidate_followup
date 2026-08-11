@@ -27,6 +27,7 @@ export default function EmployeesPage() {
   const [desigFilter, setDesigFilter] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
+  const [genderFilter, setGenderFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
   // Recruitment Analytics & Pipeline Date Range Filter State
@@ -127,6 +128,20 @@ export default function EmployeesPage() {
     if (desigFilter) {
       list = list.filter(e => e.desig === desigFilter);
     }
+
+    if (genderFilter) {
+      list = list.filter(e => {
+        const g = (e.gender || '').toLowerCase().trim();
+        if (genderFilter === 'Male') {
+          return g === 'male' || g === 'm' || g === 'boy' || g === 'boys';
+        }
+        if (genderFilter === 'Female') {
+          return g === 'female' || g === 'f' || g === 'girl' || g === 'girls';
+        }
+        return g === genderFilter.toLowerCase();
+      });
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(e =>
@@ -151,7 +166,7 @@ export default function EmployeesPage() {
     }
 
     setFiltered(list);
-  }, [employees, deptFilter, sectionFilter, desigFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
+  }, [employees, deptFilter, sectionFilter, desigFilter, genderFilter, searchQuery, sortBy, activeRange, fromDate, toDate]);
 
   const fileUrl = (url: string | null | undefined): string | null => {
     if (!url) return null;
@@ -483,6 +498,16 @@ export default function EmployeesPage() {
                 {uniqueDesigs.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
+              </select>
+
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
+              >
+                <option value="">All Genders (Boys & Girls)</option>
+                <option value="Male">Boys (Male)</option>
+                <option value="Female">Girls (Female)</option>
               </select>
 
               <select

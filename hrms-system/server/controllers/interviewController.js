@@ -396,6 +396,32 @@ const submitInterviewScore = async (req, res) => {
   }
 };
 
+const parseSqlDate = (d) => {
+  if (!d) return null;
+  if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+  const str = String(d).trim();
+  if (!str) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const dt = new Date(str);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  const parts = str.split(/[-/]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 2 && parts[2].length === 4) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const dt = new Date(year, month, day);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+
+  const dt = new Date(str);
+  return isNaN(dt.getTime()) ? null : dt;
+};
+
 const approveSelection = async (req, res) => {
   try {
     const { appNo, candidate, desig, remarks, probation, doneBy, salaryOffered, estDoj, finalDesignation, department, noticePd } = req.body;
@@ -406,13 +432,14 @@ const approveSelection = async (req, res) => {
     const cand = cRows[0];
     
     const useDesig = finalDesignation || desig || cand.designation;
+    const parsedDoj = parseSqlDate(estDoj);
 
     const now = new Date();
     
     const candUpd = ['status = ?', 'updated_at = ?'];
     const candParams = ['Selected', now];
     if (salaryOffered) { candUpd.push('salary = ?'); candParams.push(salaryOffered); }
-    if (estDoj) { candUpd.push('offered_doj = ?'); candParams.push(new Date(estDoj)); }
+    if (parsedDoj) { candUpd.push('offered_doj = ?'); candParams.push(parsedDoj); }
     if (useDesig) { candUpd.push('designation = ?'); candParams.push(useDesig); }
     if (department) { candUpd.push('department = ?'); candParams.push(department); }
     if (noticePd) { candUpd.push('notice_period = ?'); candParams.push(noticePd); }
@@ -439,18 +466,34 @@ const approveSelection = async (req, res) => {
 
     const [offRows] = await db.query(`SELECT id FROM selection_offers WHERE app_no = ?`, [appNo]);
     if (offRows.length === 0) {
-      await db.query(
-        `INSERT INTO selection_offers (candidate_id, app_no, name, designation, department, notice_period, est_doj, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cand.id, appNo, candidate || cand.name, useDesig, department || null, noticePd || null, estDoj ? new Date(estDoj) : null, 'Pending Accept']
-      );
+      try {
+        await db.query(
+          `INSERT INTO selection_offers (candidate_id, app_no, name, designation, department, notice_period, est_doj, salary, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [cand.id, appNo, candidate || cand.name, useDesig, department || null, noticePd || null, parsedDoj, salaryOffered || cand.salary || null, 'Pending Accept']
+        );
+      } catch (e) {
+        await db.query(
+          `INSERT INTO selection_offers (candidate_id, app_no, name, designation, department, notice_period, est_doj, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+          [cand.id, appNo, candidate || cand.name, useDesig, department || null, noticePd || null, parsedDoj, 'Pending Accept']
+        );
+      }
     } else {
-      const offUpd = [];
+      const offUpd = ['updated_at = NOW()'];
       const offParams = [];
       if (useDesig) { offUpd.push('designation = ?'); offParams.push(useDesig); }
       if (department) { offUpd.push('department = ?'); offParams.push(department); }
       if (noticePd) { offUpd.push('notice_period = ?'); offParams.push(noticePd); }
-      if (estDoj) { offUpd.push('est_doj = ?'); offParams.push(new Date(estDoj)); }
-      if (offUpd.length > 0) {
+      if (parsedDoj) { offUpd.push('est_doj = ?'); offParams.push(parsedDoj); }
+      if (salaryOffered) {
+        try {
+          const offUpdSal = [...offUpd, 'salary = ?'];
+          const offParamsSal = [...offParams, salaryOffered, appNo];
+          await db.query(`UPDATE selection_offers SET ${offUpdSal.join(', ')} WHERE app_no = ?`, offParamsSal);
+        } catch (e) {
+          offParams.push(appNo);
+          await db.query(`UPDATE selection_offers SET ${offUpd.join(', ')} WHERE app_no = ?`, offParams);
+        }
+      } else {
         offParams.push(appNo);
         await db.query(`UPDATE selection_offers SET ${offUpd.join(', ')} WHERE app_no = ?`, offParams);
       }

@@ -387,11 +387,20 @@ class CandidateService {
     }
 
     // Also sync selection_offers table if existing
-    if (data.department || data.desig || data.status || data.remarks) {
-      await pool.query(
-        `UPDATE selection_offers SET department = COALESCE(?, department), designation = COALESCE(?, designation), status = COALESCE(?, status), remarks = COALESCE(?, remarks), updated_at = NOW() WHERE app_no = ?`,
-        [data.department || null, data.desig || null, data.status || null, data.remarks || null, appNo]
-      );
+    if (data.department || data.desig || data.status || data.remarks || data.offeredDoj || data.salary || data.noticePeriod) {
+      try {
+        await pool.query(
+          `UPDATE selection_offers SET department = COALESCE(?, department), designation = COALESCE(?, designation), status = COALESCE(?, status), remarks = COALESCE(?, remarks), est_doj = COALESCE(?, est_doj), salary = COALESCE(?, salary), notice_period = COALESCE(?, notice_period), updated_at = NOW() WHERE app_no = ?`,
+          [data.department || null, data.desig || null, data.status || null, data.remarks || null, data.offeredDoj || null, data.salary || null, data.noticePeriod || null, appNo]
+        );
+      } catch (e) {
+        try {
+          await pool.query(
+            `UPDATE selection_offers SET department = COALESCE(?, department), designation = COALESCE(?, designation), status = COALESCE(?, status), remarks = COALESCE(?, remarks), est_doj = COALESCE(?, est_doj), updated_at = NOW() WHERE app_no = ?`,
+            [data.department || null, data.desig || null, data.status || null, data.remarks || null, data.offeredDoj || null, appNo]
+          );
+        } catch (e2) {}
+      }
     }
 
     return { success: true };
