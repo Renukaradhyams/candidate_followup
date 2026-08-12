@@ -329,6 +329,19 @@ app.use('/api', legacyRoutes);
 const distDir = path.join(APP_ROOT, 'dist');
 
 if (fs.existsSync(distDir)) {
+  try {
+    fs.chmodSync(distDir, 0o755);
+    const indexPath = path.join(distDir, 'index.html');
+    if (fs.existsSync(indexPath)) fs.chmodSync(indexPath, 0o644);
+    const assetsDir = path.join(distDir, 'assets');
+    if (fs.existsSync(assetsDir)) {
+      fs.chmodSync(assetsDir, 0o755);
+      fs.readdirSync(assetsDir).forEach(file => {
+        try { fs.chmodSync(path.join(assetsDir, file), 0o644); } catch(e) {}
+      });
+    }
+  } catch (e) {}
+
   console.log(`[Boot] Serving frontend from: ${distDir}`);
   app.use(express.static(distDir));
 
@@ -336,6 +349,7 @@ if (fs.existsSync(distDir)) {
   app.get('/assets/*', (req, res, next) => {
     const assetPath = path.join(distDir, req.path);
     if (fs.existsSync(assetPath) && fs.statSync(assetPath).isFile()) {
+      try { fs.chmodSync(assetPath, 0o644); } catch(e) {}
       return res.sendFile(assetPath);
     }
     const ext = path.extname(req.path).toLowerCase();
@@ -344,7 +358,9 @@ if (fs.existsSync(distDir)) {
       const files = fs.readdirSync(assetsFolder);
       const match = files.find(f => path.extname(f).toLowerCase() === ext);
       if (match) {
-        return res.sendFile(path.join(assetsFolder, match));
+        const fullMatchPath = path.join(assetsFolder, match);
+        try { fs.chmodSync(fullMatchPath, 0o644); } catch(e) {}
+        return res.sendFile(fullMatchPath);
       }
     }
     return res.status(404).send('Asset file not found');
@@ -356,7 +372,10 @@ if (fs.existsSync(distDir)) {
         req.path === '/health' || req.path === '/db-status') return next();
     
     const fallback = path.join(distDir, 'index.html');
-    if (fs.existsSync(fallback)) return res.sendFile(fallback);
+    if (fs.existsSync(fallback)) {
+      try { fs.chmodSync(fallback, 0o644); } catch(e) {}
+      return res.sendFile(fallback);
+    }
     return next();
   });
 } else {

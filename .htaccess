@@ -1,5 +1,5 @@
 # ==============================================================================
-# BSC Enterprise HRMS - Hostinger Apache & Passenger Configuration (.htaccess)
+# BSC Enterprise HRMS - Root Hostinger Apache Configuration (.htaccess)
 # ==============================================================================
 
 # Explicitly set Directory Index files so Apache never attempts directory listing 403s
@@ -17,7 +17,7 @@ Options -Indexes +SymLinksIfOwnerMatch
     Allow from all
 </IfModule>
 
-# Enable CGI Authorization Pass-Through (Fixes Hostinger Apache stripping Authorization header)
+# Enable CGI Authorization Pass-Through
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} ^(.*)
@@ -47,5 +47,3 @@ Options -Indexes +SymLinksIfOwnerMatch
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
-
-
