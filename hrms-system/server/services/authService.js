@@ -1,5 +1,6 @@
 const pool = require('../config/db');
-const bcrypt = require('bcrypt');
+let bcrypt;
+try { bcrypt = require('bcryptjs'); } catch(e) { bcrypt = require('bcrypt'); }
 const jwt = require('jsonwebtoken');
 
 class AuthService {

@@ -1,5 +1,6 @@
 const db = require('../config/db');
-const bcrypt = require('bcrypt');
+let bcrypt;
+try { bcrypt = require('bcryptjs'); } catch(e) { bcrypt = require('bcrypt'); }
 const { successRes, errorRes } = require('../utils/response');
 const { logAction } = require('../utils/logger');
 

@@ -1,5 +1,6 @@
 const db = require('../config/db');
-const bcrypt = require('bcrypt');
+let bcrypt;
+try { bcrypt = require('bcryptjs'); } catch(e) { bcrypt = require('bcrypt'); }
 
 async function seed() {
   console.log('Seeding BSC HRMS Database...');
