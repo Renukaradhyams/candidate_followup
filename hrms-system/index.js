@@ -52,11 +52,11 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 console.log(`[Boot] PORT=${PORT} | DB=${process.env.DB_NAME} | ENV=${process.env.NODE_ENV}`);
 
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 
 // Dynamic CORS configuration compliant with W3C specs for credentials
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Reflect request origin to allow credentials safely, or allow server-to-server/mobile requests
     if (!origin) return callback(null, true);
@@ -65,7 +65,10 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'x-candidate-name', 'x-app-no', 'Accept', 'Origin', 'X-Requested-With']
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
