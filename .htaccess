@@ -31,11 +31,23 @@ Options -Indexes +SymLinksIfOwnerMatch
     CacheLookup off
 </IfModule>
 
-# Enable CGI Authorization Pass-Through
+# Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+    # Serve existing physical files or folders directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Exclude API, Uploads, Assets, and static files from SPA rewrite
+    RewriteCond %{REQUEST_URI} !^/(api|uploads|assets|health|db-status) [NC]
+    RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|pdf|doc|docx|woff|woff2)$ [NC]
+
+    # Fallback all client SPA routes (e.g. /login, /candidates, /candidate-entry) to index.html
+    RewriteRule ^ index.html [L]
 </IfModule>
 
 <IfModule mod_env.c>

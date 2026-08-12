@@ -329,7 +329,10 @@ app.use('/api/v1', v1Routes);
 app.use('/api', legacyRoutes);
 
 // ── Frontend SPA ──────────────────────────────────────────────────────────────
-const distDir = path.join(APP_ROOT, 'dist');
+let distDir = path.join(APP_ROOT, 'dist');
+if (!fs.existsSync(distDir) && fs.existsSync(path.join(APP_ROOT, 'client', 'dist'))) {
+  distDir = path.join(APP_ROOT, 'client', 'dist');
+}
 
 if (fs.existsSync(distDir)) {
   try {
