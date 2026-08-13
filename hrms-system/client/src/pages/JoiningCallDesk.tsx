@@ -19,6 +19,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 type CallStatus = 'Pending' | 'Call done' | 'Call not received' | 'Wrong number' | 'Rescheduled';
 type DojConf    = 'Pending confirmation' | 'Confirmed' | 'Not confirmed';
+type QuickFilterType = 'all' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'confirmed' | 'pending' | 'no_answer';
 
 interface Employee {
   appNo: string;
@@ -171,7 +172,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 // ─── SVG Progress Ring ────────────────────────────────────────────────────────
-function ProgressRing({ pct, size = 56, stroke = 5, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
+function ProgressRing({ pct, size = 52, stroke = 5, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
@@ -184,7 +185,7 @@ function ProgressRing({ pct, size = 56, stroke = 5, color = '#C9952A' }: { pct: 
   );
 }
 
-// ─── Telecaller Call Interaction & Profile Slide-over Panel ───────────────────
+// ─── Telecaller Call Interaction Slide-over Panel ─────────────────────────────
 function TelecallerPanel({
   emp, session, onClose, onUpdate, onLogSessionActivity, matchingList, onNavigate
 }: {
@@ -259,7 +260,6 @@ function TelecallerPanel({
         updatedAt: new Date().toISOString()
       });
 
-      // Log Session Activity for Real-time Today's Operations Tracker & Live Feed
       if (callStatus !== emp.callStatus) {
         onLogSessionActivity({
           empName: emp.name,
@@ -358,8 +358,8 @@ function TelecallerPanel({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-[540px] bg-white shadow-2xl flex flex-col border-l border-[#e2dfd7] animate-slide-left">
-      {/* Header */}
+    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] md:w-[520px] bg-white shadow-2xl flex flex-col border-l border-[#e2dfd7] animate-slide-left">
+      {/* Panel Header */}
       <div className="bg-gradient-to-r from-[#1E2D4E] to-[#2a3f6e] p-4 text-white flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -393,29 +393,29 @@ function TelecallerPanel({
 
         <div className="flex items-center gap-3 mt-2">
           {photo ? (
-            <img src={photo} alt={emp.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30 shadow-md flex-shrink-0"
+            <img src={photo} alt={emp.name} loading="lazy" className="w-13 h-13 rounded-xl object-cover border-2 border-white/30 shadow-md flex-shrink-0"
               onError={e => { (e.target as any).style.display = 'none'; }} />
           ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#a3761c] text-white flex items-center justify-center font-black text-xl shadow-md flex-shrink-0 border-2 border-white/30">
+            <div className="w-13 h-13 rounded-xl bg-gradient-to-br from-[#C9952A] to-[#a3761c] text-white flex items-center justify-center font-black text-lg shadow-md flex-shrink-0 border-2 border-white/30">
               {emp.name.charAt(0)}
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="font-black text-lg text-white truncate leading-tight">{emp.name}</h3>
+            <h3 className="font-black text-base text-white truncate leading-tight">{emp.name}</h3>
             <div className="flex items-center gap-2 mt-0.5 text-xs text-white/80 flex-wrap">
-              <span className="font-mono bg-white/15 px-1.5 py-0.5 rounded text-[10px]">App: {emp.appNo}</span>
+              <span className="font-mono bg-white/15 px-1.5 py-0.5 rounded text-[9.5px]">App: {emp.appNo}</span>
               <span className="font-semibold">{emp.gender}</span>
               <span>·</span>
               <span className="font-bold text-[#C9952A]">{emp.designation}</span>
             </div>
-            <div className="text-[11px] text-white/70 font-medium truncate mt-0.5">
+            <div className="text-[10.5px] text-white/70 font-medium truncate mt-0.5">
               {[emp.department, emp.section].filter(Boolean).join(' · ')}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Body Form */}
+      {/* Form Controls */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbf9f6]">
         {/* Quick Phone Actions Row */}
         <div className="card-glass p-3 rounded-2xl border border-[#e2dfd7] bg-white flex items-center justify-between gap-2 shadow-xs">
@@ -425,11 +425,11 @@ function TelecallerPanel({
           </div>
           <div className="flex items-center gap-1.5">
             <a href={`tel:${emp.phone}`}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors flex items-center gap-1 shadow-sm">
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors flex items-center gap-1 shadow-xs">
               <PhoneCall className="w-3.5 h-3.5" />Call
             </a>
             <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black transition-colors flex items-center gap-1 shadow-sm">
+              className="px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black transition-colors flex items-center gap-1 shadow-xs">
               <PhoneOutgoing className="w-3.5 h-3.5" />WhatsApp
             </a>
             <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
@@ -445,7 +445,7 @@ function TelecallerPanel({
           <div className="grid grid-cols-2 gap-2">
             {(['Pending', 'Call done', 'Call not received', 'Wrong number', 'Rescheduled'] as CallStatus[]).map(st => (
               <button key={st} type="button" onClick={() => setCallStatus(st)}
-                className={`px-3 py-2.5 rounded-xl text-xs font-black border transition-all text-left flex items-center gap-2 ${callStatus === st ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-md ring-2 ring-[#1E2D4E]/20' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
+                className={`px-3 py-2 rounded-xl text-xs font-black border transition-all text-left flex items-center gap-2 ${callStatus === st ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-md ring-2 ring-[#1E2D4E]/20' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
                 <span>{callStatusEmoji(st)}</span>
                 <span className="truncate">{st}</span>
               </button>
@@ -459,7 +459,7 @@ function TelecallerPanel({
           <div className="grid grid-cols-3 gap-2">
             {(['Confirmed', 'Not confirmed', 'Pending confirmation'] as DojConf[]).map(conf => (
               <button key={conf} type="button" onClick={() => setDojConf(conf)}
-                className={`px-2.5 py-2.5 rounded-xl text-xs font-black border transition-all text-center ${dojConf === conf ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-md' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#C9952A]'}`}>
+                className={`px-2 py-2 rounded-xl text-xs font-black border transition-all text-center ${dojConf === conf ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-md' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#C9952A]'}`}>
                 {conf === 'Confirmed' ? '✅ Confirmed' : conf === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pending'}
               </button>
             ))}
@@ -568,7 +568,7 @@ function TelecallerPanel({
   );
 }
 
-// ─── Redesigned Premium Employee Glass Card ───────────────────────────────────
+// ─── Compact Enterprise High-Density Employee Card (40% Reduced Height) ───────
 const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOpen, searchQuery, onSelect, onOpenPanel }: {
   emp: Employee; selected: boolean; isPanelOpen: boolean; searchQuery: string;
   onSelect: (checked: boolean) => void;
@@ -580,111 +580,111 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
 
   return (
     <div onClick={onOpenPanel}
-      className={`card-glass p-4 rounded-3xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group bg-white ${isPanelOpen ? 'ring-2 ring-[#C9952A] shadow-xl' : 'border-[#e2dfd7]'} ${urgencyBorderColor(urgency)} space-y-3`}>
-      {/* Top Row: Checkbox + Photo + Name + AppNo + Urgency Chip */}
-      <div className="flex items-center gap-3">
-        <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
-          onClick={e => e.stopPropagation()}
-          className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer flex-shrink-0" />
-        {photo ? (
-          <img src={photo} alt={emp.name} className="w-13 h-13 rounded-2xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-xs" onError={e => { (e.target as any).style.display = 'none'; }} />
-        ) : (
-          <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-xs flex-shrink-0">
-            {emp.name.charAt(0).toUpperCase()}
+      className={`card-glass p-3 rounded-2xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group bg-white ${isPanelOpen ? 'ring-2 ring-[#C9952A] shadow-md' : 'border-[#e2dfd7]'} ${urgencyBorderColor(urgency)} flex flex-col justify-between space-y-2.5`}>
+      
+      {/* Compact Main Layout Grid */}
+      <div className="grid grid-cols-12 gap-2 items-center">
+        {/* Left Section (4 cols): Checkbox + Photo (72px) + Name & AppNo */}
+        <div className="col-span-12 sm:col-span-5 flex items-center gap-2.5 min-w-0">
+          <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
+            onClick={e => e.stopPropagation()}
+            className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer flex-shrink-0" />
+          {photo ? (
+            <img src={photo} alt={emp.name} loading="lazy" className="w-14 h-14 rounded-xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-2xs" onError={e => { (e.target as any).style.display = 'none'; }} />
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-2xs flex-shrink-0">
+              {emp.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1">
+              <h4 className="font-black text-[#1E2D4E] text-xs leading-tight truncate">
+                <HighlightMatch text={emp.name} query={searchQuery} />
+              </h4>
+              <span className={`px-1 py-0.2 rounded text-[8.5px] font-black border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                {emp.gender || 'M'}
+              </span>
+            </div>
+            <div className="text-[9.5px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.2 rounded w-max mt-0.5">
+              <HighlightMatch text={emp.appNo} query={searchQuery} />
+            </div>
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-1">
-            <h4 className="font-black text-[#1E2D4E] text-xs leading-tight truncate">
-              <HighlightMatch text={emp.name} query={searchQuery} />
-            </h4>
-            <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-black border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-              {emp.gender || 'M'}
-            </span>
+        </div>
+
+        {/* Center Section (4 cols): Dept, Section, Designation, Phone */}
+        <div className="col-span-12 sm:col-span-4 text-[10.5px] text-[#555] space-y-0.5 border-t sm:border-t-0 sm:border-l border-slate-100 pt-1 sm:pt-0 sm:pl-2 min-w-0">
+          <div className="font-bold text-[#1E2D4E] truncate">
+            <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
+          </div>
+          <div className="font-semibold text-[#C9952A] truncate">
+            <HighlightMatch text={emp.designation} query={searchQuery} />
+          </div>
+          <div className="font-mono font-semibold text-[#666] flex items-center gap-1">
+            <Phone className="w-2.5 h-2.5 text-[#C9952A]" />
+            <HighlightMatch text={emp.phone} query={searchQuery} />
+          </div>
+        </div>
+
+        {/* Right Section (3 cols): Offered DOJ, Days Rem, Badges */}
+        <div className="col-span-12 sm:col-span-3 sm:text-right space-y-1 border-t sm:border-t-0 sm:border-l border-slate-100 pt-1 sm:pt-0 sm:pl-2">
+          <div className="flex items-center sm:justify-end gap-1">
+            <Calendar className="w-3 h-3 text-[#C9952A]" />
+            <span className="font-mono font-black text-xs text-[#1E2D4E]">{fmtDate(emp.offeredDoj)}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span className="text-[9px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.5 rounded">
-              <HighlightMatch text={emp.appNo} query={searchQuery} />
-            </span>
+          <div className="flex items-center sm:justify-end gap-1 flex-wrap">
             {daysRem !== null && (
-              <span className={`text-[9.5px] font-black px-2 py-0.5 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
-                {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Joining Today' : daysRem === 1 ? 'Joining Tomorrow' : `In ${daysRem} days`}
+              <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+                {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Today' : daysRem === 1 ? 'Tomorrow' : `In ${daysRem}d`}
               </span>
             )}
+            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-bold border ${callStatusCls(emp.callStatus)}`}>
+              {callStatusEmoji(emp.callStatus)} {emp.callStatus}
+            </span>
+            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-bold border ${dojConfCls(emp.dojConfirmation)}`}>
+              {emp.dojConfirmation === 'Confirmed' ? '✅ Conf' : emp.dojConfirmation === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pend'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Row 2: Dept / Section / Designation */}
-      <div className="grid grid-cols-2 gap-2 text-[10.5px] text-[#666] bg-[#F9F7F4] p-2 rounded-xl border border-[#e2dfd7]/60">
-        <div>
-          <span className="text-[9px] font-black uppercase text-[#888] block">Dept & Section</span>
-          <span className="font-bold text-[#1E2D4E] truncate block">
-            <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
-          </span>
+      {/* Bottom Section: Thin 4-stage Pipeline Progress Timeline & Action Pills */}
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+        {/* Thin 4-stage Pipeline Progress */}
+        <div className="flex items-center gap-1 flex-1 min-w-[140px]">
+          <span className="text-[8px] font-black uppercase text-[#888] mr-1">Pipeline:</span>
+          <div className="flex-1 grid grid-cols-4 gap-1 items-center">
+            <div className="h-1 rounded-full bg-emerald-500" title="1. Call Pending" />
+            <div className={`h-1 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Completed" />
+            <div className={`h-1 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmed" />
+            <div className={`h-1 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : 'bg-slate-200'}`} title="4. Joining Completed" />
+          </div>
         </div>
-        <div>
-          <span className="text-[9px] font-black uppercase text-[#888] block">Designation</span>
-          <span className="font-bold text-[#C9952A] truncate block">
-            <HighlightMatch text={emp.designation} query={searchQuery} />
-          </span>
+
+        {/* Compact Action Pills */}
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <button onClick={onOpenPanel}
+            className="px-2 py-1 rounded-lg bg-[#C9952A] hover:bg-[#b38222] text-white text-[10px] font-black transition-all flex items-center gap-0.5 shadow-2xs">
+            <Eye className="w-2.5 h-2.5" />View
+          </button>
+          <a href={`tel:${emp.phone}`} className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-0.5">
+            <PhoneCall className="w-2.5 h-2.5" />Call
+          </a>
+          <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+            className="px-2 py-1 rounded-lg bg-[#e8fde8] border border-[#c3f0c3] text-[10px] font-bold text-[#1a8a4a] hover:bg-[#d0f7d0] transition-colors flex items-center gap-0.5">
+            <PhoneOutgoing className="w-2.5 h-2.5" />WA
+          </a>
+          <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
+            className="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">
+            <Copy className="w-2.5 h-2.5" />
+          </button>
         </div>
       </div>
-
-      {/* Row 3: Joining Process Visual Step Timeline */}
-      <div className="pt-1">
-        <div className="flex items-center justify-between text-[9px] font-black text-[#888] mb-1">
-          <span>JOINING PROCESS TIMELINE</span>
-          <span className="text-[#1E2D4E] font-mono">{fmtDate(emp.offeredDoj)}</span>
-        </div>
-        <div className="grid grid-cols-4 gap-1">
-          <div className="h-1.5 rounded-full bg-emerald-500" title="1. Candidate Registered" />
-          <div className={`h-1.5 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Outcome" />
-          <div className={`h-1.5 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmation" />
-          <div className={`h-1.5 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : 'bg-slate-200'}`} title="4. Onboarding Ready" />
-        </div>
-      </div>
-
-      {/* Row 4: Status Chips */}
-      <div className="flex items-center justify-between gap-1.5 flex-wrap">
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${callStatusCls(emp.callStatus)}`}>
-          {callStatusEmoji(emp.callStatus)} {emp.callStatus}
-        </span>
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${dojConfCls(emp.dojConfirmation)}`}>
-          {emp.dojConfirmation === 'Confirmed' ? '✅ Confirmed' : emp.dojConfirmation === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pending'}
-        </span>
-      </div>
-
-      {/* Row 5: Quick Actions Bar */}
-      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
-        <button onClick={onOpenPanel}
-          className="px-2.5 py-1.5 rounded-xl bg-[#C9952A] hover:bg-[#b38222] text-white text-[10.5px] font-black transition-colors flex items-center gap-1 shadow-xs">
-          <Eye className="w-3 h-3" />View Profile
-        </button>
-        <a href={`tel:${emp.phone}`} className="px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10.5px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1">
-          <PhoneCall className="w-3 h-3" />Call
-        </a>
-        <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-          className="px-2.5 py-1.5 rounded-xl bg-[#e8fde8] border border-[#c3f0c3] text-[10.5px] font-bold text-[#1a8a4a] hover:bg-[#d0f7d0] transition-colors flex items-center gap-1">
-          <PhoneOutgoing className="w-3 h-3" />WA
-        </a>
-        <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
-          className="p-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[#555] hover:bg-slate-200 ml-auto">
-          <Copy className="w-3 h-3" />
-        </button>
-      </div>
-
-      {emp.notes && (
-        <div className="pt-1.5 border-t border-dashed border-purple-200">
-          <p className="text-[10px] text-purple-700 font-semibold truncate">📝 {emp.notes}</p>
-        </div>
-      )}
     </div>
   );
 });
 
-// ─── Designation Accordion Group ──────────────────────────────────────────────
+// ─── Designation Accordion Group Card ─────────────────────────────────────────
 function DesigGroupCard({ designation, employees, totalCount, selectedIds, panelEmpNo, searchQuery, defaultExpanded, onSelect, onOpenPanel }: {
   designation: string;
   employees: Employee[];
@@ -715,7 +715,7 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
       <button onClick={() => setExpanded(e => !e)}
         className="w-full p-4 flex items-center gap-3.5 hover:bg-slate-50/80 transition-colors text-left">
         <div className="relative flex-shrink-0">
-          <ProgressRing pct={pct} size={56} stroke={5} color={ringColor} />
+          <ProgressRing pct={pct} size={52} stroke={5} color={ringColor} />
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-[11px] font-black text-[#1E2D4E]">{pct}%</span>
           </div>
@@ -740,8 +740,8 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
       </button>
 
       {expanded && (
-        <div className="border-t border-[#e2dfd7] p-4 bg-[#F9F7F4]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="border-t border-[#e2dfd7] p-3.5 bg-[#F9F7F4]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {employees.map(emp => (
               <EmployeeCard key={emp.appNo} emp={emp} selected={selectedIds.has(emp.appNo)}
                 isPanelOpen={panelEmpNo === emp.appNo} searchQuery={searchQuery}
@@ -755,7 +755,7 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
   );
 }
 
-// ─── Priority Call Queue (4 Distinct Color-Coded Lanes) ──────────────────────
+// ─── Priority Call Queue ──────────────────────────────────────────────────────
 function PriorityBoard({ priorityData, onOpenPanel }: {
   priorityData: {
     joiningToday: Employee[];
@@ -1034,7 +1034,7 @@ export default function JoiningCallDeskPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Filters
-  const [quickFilter, setQuickFilter] = useState<'all' | 'overdue' | 'today' | 'tomorrow'>('all');
+  const [quickFilter, setQuickFilter] = useState<QuickFilterType>('all');
   const [filterDesig, setFilterDesig] = useState('');
   const [filterCallStatus, setFilterCallStatus] = useState('');
   const [filterDojConf, setFilterDojConf] = useState('');
@@ -1234,13 +1234,24 @@ export default function JoiningCallDeskPage() {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
-    // Quick Toggles
+    // Quick Segmented Toggles
     if (quickFilter === 'overdue') {
       list = list.filter(e => e.offeredDoj && e.offeredDoj < todayStr && e.callStatus !== 'Call done');
     } else if (quickFilter === 'today') {
       list = list.filter(e => e.offeredDoj === todayStr);
     } else if (quickFilter === 'tomorrow') {
       list = list.filter(e => e.offeredDoj === tomorrowStr);
+    } else if (quickFilter === 'week') {
+      list = list.filter(e => {
+        const u = urgencyOf(e.offeredDoj);
+        return u === 'today' || u === 'tomorrow' || u === 'soon' || u === 'week';
+      });
+    } else if (quickFilter === 'confirmed') {
+      list = list.filter(e => e.dojConfirmation === 'Confirmed');
+    } else if (quickFilter === 'pending') {
+      list = list.filter(e => e.callStatus === 'Pending');
+    } else if (quickFilter === 'no_answer') {
+      list = list.filter(e => e.callStatus === 'Call not received');
     }
 
     // Search query match (exact & partial across name, appNo, phone, dept, section, desig, notes)
@@ -1397,11 +1408,11 @@ export default function JoiningCallDeskPage() {
       <ToastContainer />
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isPanelOpen ? 'lg:pr-[540px]' : ''} lg:pl-64`}>
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isPanelOpen ? 'lg:pr-[520px]' : ''} lg:pl-64`}>
         <Topbar title="Joining Call Desk" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Joining Call Desk' }]}
           session={session} onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Sticky Operations Search & Filter Bar */}
+        {/* Sticky Enterprise Operations Search & Segmented Filter Bar */}
         <div className="sticky top-16 z-30 bg-[#F4F1EA]/95 backdrop-blur-md border-b border-[#e2dfd7] px-4 py-3 shadow-xs">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Command Search Bar */}
@@ -1412,7 +1423,7 @@ export default function JoiningCallDeskPage() {
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Enterprise Search (Name, App No, Phone, ID, Dept, Section)..."
-                className="w-full pl-10 pr-20 py-2.5 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] focus:ring-2 focus:ring-[#1E2D4E]/10 shadow-xs transition-all"
+                className="w-full pl-10 pr-20 py-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] focus:ring-2 focus:ring-[#1E2D4E]/10 shadow-xs transition-all"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {searchInput ? (
@@ -1427,29 +1438,30 @@ export default function JoiningCallDeskPage() {
               </div>
             </div>
 
-            {/* Quick Filter Toggles */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-[#e2dfd7] shadow-xs">
-              <button onClick={() => setQuickFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'all' ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
-                All
-              </button>
-              <button onClick={() => setQuickFilter('overdue')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'overdue' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}>
-                Overdue
-              </button>
-              <button onClick={() => setQuickFilter('today')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}>
-                Today
-              </button>
-              <button onClick={() => setQuickFilter('tomorrow')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'tomorrow' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-700 hover:bg-blue-50'}`}>
-                Tomorrow
-              </button>
+            {/* Quick Segmented Controls */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-[#e2dfd7] shadow-xs overflow-x-auto scrollbar-none">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'overdue', label: 'Overdue' },
+                { key: 'today', label: 'Today' },
+                { key: 'tomorrow', label: 'Tomorrow' },
+                { key: 'week', label: 'This Week' },
+                { key: 'confirmed', label: 'Confirmed' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'no_answer', label: 'No Answer' }
+              ].map(seg => (
+                <button
+                  key={seg.key}
+                  onClick={() => setQuickFilter(seg.key as QuickFilterType)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex-shrink-0 ${quickFilter === seg.key ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
+                  {seg.label}
+                </button>
+              ))}
             </div>
 
             {/* Sort Dropdown */}
             <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-              className="px-3 py-2.5 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none shadow-xs">
+              className="px-3 py-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none shadow-xs">
               <option value="doj_nearest">DOJ Nearest</option>
               <option value="recently_updated">Recently Updated</option>
               <option value="pending_first">Pending First</option>
@@ -1459,18 +1471,18 @@ export default function JoiningCallDeskPage() {
 
             {/* Filter Toggle */}
             <button onClick={() => setShowFilters(f => !f)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black transition-all shadow-xs ${showFilters || hasFilters ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-xs font-black transition-all shadow-xs ${showFilters || hasFilters ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
               <SlidersHorizontal className="w-3.5 h-3.5" />Filters{hasFilters ? ' ●' : ''}
             </button>
 
             <button onClick={loadData} title="Refresh Data"
-              className="p-2.5 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#1E2D4E] transition-all shadow-xs">
+              className="p-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#1E2D4E] transition-all shadow-xs">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
             {hasFilters && (
               <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
-                className="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
+                className="flex items-center gap-1 px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
                 <X className="w-3.5 h-3.5" />Clear
               </button>
             )}
@@ -1576,7 +1588,7 @@ export default function JoiningCallDeskPage() {
                 Joining Confirmation Call Desk
               </h1>
               <p className="text-xs text-[#777] font-semibold mt-1">
-                Real-time employee confirmation calls · Updates sync across Employee Directory & Offer Desk
+                High-density telecalling dashboard · Updates sync across Employee Directory & Offer Desk
               </p>
             </div>
 
