@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { errorRes } = require('../utils/response');
+const { normalizeDepartment, normalizeDesignation, normalizeSection } = require('../utils/normalization');
 
 const fmtDate = (d) => {
   if (!d) return '';
@@ -35,20 +36,39 @@ class WorkforceAnalyticsController {
         ORDER BY c.name ASC
       `);
 
+      // Track Data Quality Audit variations
+      const deptAuditMap = new Map();  // Normalized Dept -> Set of raw variations
+      const desigAuditMap = new Map(); // Normalized Desig -> Set of raw variations
+
       const employees = empRows.map(r => {
         const rawGender = (r.gender || '').trim().toLowerCase();
         let gender = 'Male';
         if (rawGender.startsWith('f') || rawGender.includes('female')) gender = 'Female';
         else if (rawGender.startsWith('m') || rawGender.includes('male')) gender = 'Male';
-        else gender = 'Male'; // default fallback for clean 2-way ratio or other
+        else gender = 'Male';
+
+        const rawDept = r.department || 'Unassigned';
+        const rawDesig = r.designation || 'Unassigned';
+        const rawSec = r.section || 'General';
+
+        const normDept = normalizeDepartment(rawDept);
+        const normDesig = normalizeDesignation(rawDesig);
+        const normSec = normalizeSection(rawSec);
+
+        // Audit collection
+        if (!deptAuditMap.has(normDept)) deptAuditMap.set(normDept, new Set());
+        deptAuditMap.get(normDept).add(rawDept);
+
+        if (!desigAuditMap.has(normDesig)) desigAuditMap.set(normDesig, new Set());
+        desigAuditMap.get(normDesig).add(rawDesig);
 
         return {
           appNo: r.app_no,
           name: r.name || 'Unnamed',
           gender,
-          department: (r.department || 'Unassigned').trim() || 'Unassigned',
-          section: (r.section || 'General').trim() || 'General',
-          designation: (r.designation || 'Unassigned').trim() || 'Unassigned',
+          department: normDept,
+          section: normSec,
+          designation: normDesig,
           doj: fmtDate(r.doj),
         };
       });
@@ -257,6 +277,17 @@ class WorkforceAnalyticsController {
         insights.push(`Top hiring period was **${topTrend.label}** with **${topTrend.total}** joins.`);
       }
 
+      const dataQualityAudit = {
+        departmentVariations: Array.from(deptAuditMap.entries()).map(([canonical, variations]) => ({
+          canonical,
+          variations: Array.from(variations),
+        })),
+        designationVariations: Array.from(desigAuditMap.entries()).map(([canonical, variations]) => ({
+          canonical,
+          variations: Array.from(variations),
+        })),
+      };
+
       return res.json({
         success: true,
         overview: {
@@ -277,6 +308,7 @@ class WorkforceAnalyticsController {
         hiringTrends,
         workforceComposition,
         executiveInsights: insights,
+        dataQualityAudit,
         rawEmployees: employees,
       });
 

@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 const { formatISTDate, getISTDateRange, isDateInRange, getBusinessDate } = require('../utils/dateUtils');
+const { normalizeDepartment, normalizeDesignation } = require('../utils/normalization');
 
 class CandidateService {
   async generateCandidateCode() {
@@ -234,6 +235,9 @@ class CandidateService {
   }
 
   async addCandidate(data) {
+    if (data.department) data.department = normalizeDepartment(data.department);
+    if (data.designation) data.designation = normalizeDesignation(data.designation);
+    if (data.desig) data.desig = normalizeDesignation(data.desig);
     let appNo = data.appNo;
     if (!appNo) {
       const codes = await this.generateCandidateCode();

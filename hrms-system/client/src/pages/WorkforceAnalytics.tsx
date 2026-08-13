@@ -149,6 +149,8 @@ export default function WorkforceAnalytics() {
   const [hiringTrends, setHiringTrends] = useState<HiringTrend[]>([]);
   const [composition, setComposition] = useState<CompCategory[]>([]);
   const [insights, setInsights] = useState<string[]>([]);
+  const [dataAudit, setDataAudit] = useState<{ departmentVariations: { canonical: string; variations: string[] }[]; designationVariations: { canonical: string; variations: string[] }[] } | null>(null);
+  const [showAuditPanel, setShowAuditPanel] = useState(false);
   const [rawEmployees, setRawEmployees] = useState<EmployeeRecord[]>([]);
 
   // Main Segmented View Control
@@ -182,6 +184,7 @@ export default function WorkforceAnalytics() {
         setHiringTrends(res.hiringTrends || []);
         setComposition(res.workforceComposition || []);
         setInsights(res.executiveInsights || []);
+        setDataAudit(res.dataQualityAudit || null);
         setRawEmployees(res.rawEmployees || []);
       }
     } catch (err: any) {
@@ -569,9 +572,19 @@ export default function WorkforceAnalytics() {
               {/* Executive Insights Box */}
               {insights.length > 0 && (
                 <div className="card-glass p-4 rounded-2xl border-l-4 border-l-[#C9952A] bg-gradient-to-r from-amber-500/5 to-transparent">
-                  <h3 className="font-black text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-[#C9952A]" /> Executive Insights Summary
-                  </h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-black text-[#1E2D4E] text-xs uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#C9952A]" /> Executive Insights Summary
+                    </h3>
+                    {dataAudit && (
+                      <button
+                        onClick={() => setShowAuditPanel(v => !v)}
+                        className="text-[10.5px] font-black text-[#1E2D4E] bg-white border border-[#e2dfd7] px-2.5 py-1 rounded-lg hover:border-[#C9952A] transition-all"
+                      >
+                        {showAuditPanel ? 'Hide Data Audit' : '📋 View Data Quality Audit'}
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                     {insights.map((insight, idx) => (
                       <div key={idx} className="flex items-start gap-2 bg-white/80 p-2.5 rounded-xl border border-[#e2dfd7] text-xs text-[#333]">
@@ -579,6 +592,55 @@ export default function WorkforceAnalytics() {
                         <span dangerouslySetInnerHTML={{ __html: insight.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Data Quality Normalization Audit Panel */}
+              {showAuditPanel && dataAudit && (
+                <div className="card-glass p-5 rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-black text-[#1E2D4E] text-sm flex items-center gap-2">
+                        <Award className="w-4 h-4 text-indigo-600" /> Internal Data Quality Normalization Audit
+                      </h3>
+                      <p className="text-xs text-[#666] font-medium mt-0.5">
+                        Raw database string variations automatically consolidated into canonical Title Case standards without altering historical rows.
+                      </p>
+                    </div>
+                    <button onClick={() => setShowAuditPanel(false)} className="text-xs font-bold text-[#888] hover:text-[#1E2D4E]">Close</button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Department Audit */}
+                    <div className="bg-white p-4 rounded-xl border border-indigo-100 space-y-2">
+                      <span className="text-xs font-black text-indigo-900 uppercase tracking-wider block">Department Variations Consolidated</span>
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {dataAudit.departmentVariations.map(d => (
+                          <div key={d.canonical} className="text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
+                            <span className="font-black text-[#1E2D4E] block">Standardized: {d.canonical}</span>
+                            <span className="text-[10px] text-[#777] font-medium block mt-0.5">
+                              Raw DB Variations ({d.variations.length}): {d.variations.map(v => `"${v}"`).join(', ')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Designation Audit */}
+                    <div className="bg-white p-4 rounded-xl border border-indigo-100 space-y-2">
+                      <span className="text-xs font-black text-indigo-900 uppercase tracking-wider block">Designation Variations Consolidated</span>
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {dataAudit.designationVariations.map(d => (
+                          <div key={d.canonical} className="text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
+                            <span className="font-black text-[#1E2D4E] block">Standardized: {d.canonical}</span>
+                            <span className="text-[10px] text-[#777] font-medium block mt-0.5">
+                              Raw DB Variations ({d.variations.length}): {d.variations.map(v => `"${v}"`).join(', ')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

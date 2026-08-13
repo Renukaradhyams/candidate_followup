@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { errorRes } = require('../utils/response');
+const { normalizeDepartment, normalizeDesignation, normalizeSection } = require('../utils/normalization');
 
 // ── Auto-create & migrate tables ─────────────────────────────────────────────
 async function ensureTables() {
@@ -69,15 +70,13 @@ const TERMINAL_STATUSES = ['Call done', 'Call not received', 'Wrong number', 'Re
 class JoiningCallDeskController {
 
   // ─── GET /api/joining-call-desk/summary ────────────────────────────────────
-  // Returns designation-level summaries only (no individual employee data)
-  // This is the fast initial load endpoint
   async getSummary(req, res) {
     try {
       await ensureTables();
 
       const [rows] = await pool.query(`
         SELECT
-          COALESCE(c.designation, 'Unassigned') AS designation,
+          c.designation,
           COUNT(DISTINCT c.app_no) AS total,
           SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call done'         THEN 1 ELSE 0 END) AS call_done,
           SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending'            THEN 1 ELSE 0 END) AS pending,
@@ -92,20 +91,37 @@ class JoiningCallDeskController {
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.designation
-        ORDER BY c.designation ASC
       `);
 
-      const summaries = rows.map(r => ({
-        designation:    r.designation || 'Unassigned',
-        total:          Number(r.total),
-        callDone:       Number(r.call_done),
-        pending:        Number(r.pending),
-        notReceived:    Number(r.not_received),
-        wrongNumber:    Number(r.wrong_number),
-        rescheduled:    Number(r.rescheduled),
-        dojConfirmed:   Number(r.doj_confirmed),
-        dojNotConfirmed:Number(r.doj_not_confirmed),
-      }));
+      // Merge raw DB variations into normalized designation keys
+      const sumMap = new Map();
+      rows.forEach(r => {
+        const normDesig = normalizeDesignation(r.designation);
+        if (!sumMap.has(normDesig)) {
+          sumMap.set(normDesig, {
+            designation: normDesig,
+            total: 0,
+            callDone: 0,
+            pending: 0,
+            notReceived: 0,
+            wrongNumber: 0,
+            rescheduled: 0,
+            dojConfirmed: 0,
+            dojNotConfirmed: 0,
+          });
+        }
+        const obj = sumMap.get(normDesig);
+        obj.total += Number(r.total);
+        obj.callDone += Number(r.call_done);
+        obj.pending += Number(r.pending);
+        obj.notReceived += Number(r.not_received);
+        obj.wrongNumber += Number(r.wrong_number);
+        obj.rescheduled += Number(r.rescheduled);
+        obj.dojConfirmed += Number(r.doj_confirmed);
+        obj.dojNotConfirmed += Number(r.doj_not_confirmed);
+      });
+
+      const summaries = Array.from(sumMap.values()).sort((a, b) => a.designation.localeCompare(b.designation));
 
       return res.json({ success: true, summaries, total: summaries.reduce((a, s) => a + s.total, 0) });
     } catch (err) {
@@ -115,13 +131,14 @@ class JoiningCallDeskController {
   }
 
   // ─── GET /api/joining-call-desk/by-designation/:designation ───────────────
-  // Returns full employee objects for one designation (lazy-loaded on expand)
   async getByDesignation(req, res) {
     try {
       await ensureTables();
       const { designation } = req.params;
       const desig = decodeURIComponent(designation || '');
       if (!desig) return errorRes(res, 'designation is required', [], 400);
+
+      const targetNorm = normalizeDesignation(desig);
 
       const [empRows] = await pool.query(`
         SELECT c.*,
@@ -135,30 +152,31 @@ class JoiningCallDeskController {
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
-          AND COALESCE(c.designation,'Unassigned') = ?
         GROUP BY c.app_no
         ORDER BY c.name ASC
-      `, [desig]);
+      `);
 
-      const employees = empRows.map(r => ({
-        appNo:           r.app_no,
-        name:            r.name || '',
-        phone:           r.phone || '',
-        email:           r.email || '',
-        gender:          r.gender || '',
-        department:      r.department || '',
-        section:         r.section || '',
-        designation:     r.designation || '',
-        offeredDoj:      fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj),
-        photoUrl:        r.photo_url || '',
-        callStatus:      r.call_status || 'Pending',
-        dojConfirmation: r.doj_confirmation || 'Pending confirmation',
-        notes:           r.notes || '',
-        followUpDate:    fmtDate(r.follow_up_date),
-        lastCallDate:    fmtDate(r.last_call_date),
-        updatedBy:       r.updated_by || '',
-        updatedAt:       r.desk_updated_at || null,
-      }));
+      const employees = empRows
+        .filter(r => normalizeDesignation(r.designation) === targetNorm)
+        .map(r => ({
+          appNo:           r.app_no,
+          name:            r.name || '',
+          phone:           r.phone || '',
+          email:           r.email || '',
+          gender:          r.gender || '',
+          department:      normalizeDepartment(r.department),
+          section:         normalizeSection(r.section),
+          designation:     normalizeDesignation(r.designation),
+          offeredDoj:      fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj),
+          photoUrl:        r.photo_url || '',
+          callStatus:      r.call_status || 'Pending',
+          dojConfirmation: r.doj_confirmation || 'Pending confirmation',
+          notes:           r.notes || '',
+          followUpDate:    fmtDate(r.follow_up_date),
+          lastCallDate:    fmtDate(r.last_call_date),
+          updatedBy:       r.updated_by || '',
+          updatedAt:       r.desk_updated_at || null,
+        }));
 
       return res.json({ success: true, employees });
     } catch (err) {
