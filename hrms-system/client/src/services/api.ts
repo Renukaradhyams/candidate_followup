@@ -356,6 +356,21 @@ export const API = {
     return apiFetch('/dept-hiring/sections/delete', { method: 'POST', body: JSON.stringify(bodyObj) }); 
   },
 
+  // Joining Confirmation Call Desk
+  async getJoiningCallDesk(filters: any = {}) {
+    const query = new URLSearchParams(filters).toString();
+    return apiFetch(`/joining-call-desk${query ? '?' + query : ''}`);
+  },
+  async updateCallDeskStatus(payload: { appNo: string; callStatus?: string; dojConfirmation?: string; notes?: string; followUpDate?: string; doneBy?: string }) {
+    return apiFetch('/joining-call-desk/update-status', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  async getCallDeskHistory(appNo: string) {
+    return apiFetch(`/joining-call-desk/history/${encodeURIComponent(appNo)}`);
+  },
+  async updateCallDeskDOJ(payload: { appNo: string; newDoj: string; doneBy?: string }) {
+    return apiFetch('/joining-call-desk/update-doj', { method: 'POST', body: JSON.stringify(payload) });
+  },
+
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {
     if (!url) return null;

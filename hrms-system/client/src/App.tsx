@@ -17,6 +17,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const BroadcastCenter = lazy(() => import('./pages/BroadcastCenter'));
 const DepartmentHiring = lazy(() => import('./pages/DepartmentHiring'));
 const SectionAllocation = lazy(() => import('./pages/SectionAllocation'));
+const JoiningCallDesk = lazy(() => import('./pages/JoiningCallDesk'));
 import QuickActionCenter from './components/ui/QuickActionCenter';
 
 function PageFallback() {
@@ -60,6 +61,8 @@ export default function App() {
           <Route path="/section-allocation.html" element={<Navigate to="/section-allocation" replace />} />
           <Route path="/employee-exit" element={<EmployeeExit />} />
           <Route path="/employee-exit.html" element={<Navigate to="/employee-exit" replace />} />
+          <Route path="/joining-call-desk" element={<JoiningCallDesk />} />
+          <Route path="/joining-call-desk.html" element={<Navigate to="/joining-call-desk" replace />} />
           <Route path="/openings" element={<Openings />} />
           <Route path="/openings.html" element={<Navigate to="/openings" replace />} />
           <Route path="/broadcast-center" element={<BroadcastCenter />} />
