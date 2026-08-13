@@ -12,7 +12,7 @@ import {
   Copy, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft,
   Star, Download, SlidersHorizontal, BadgeCheck, Ban, Sparkles,
   Command, Tag, CheckSquare, Square, CornerDownLeft, Eye, ShieldCheck,
-  FileSpreadsheet
+  FileSpreadsheet, Activity, Flame, CheckCircle2
 } from 'lucide-react';
 
 
@@ -51,7 +51,6 @@ interface Analytics {
   dojNotConfirmed: number;
   joiningThisWeek: number;
   overdueFollowUps: number;
-  today: { callsDone: number; dojConfirmed: number; dojChanged: number; notesAdded: number };
 }
 
 interface HistoryEntry {
@@ -63,6 +62,16 @@ interface HistoryEntry {
   notes: string;
   done_by: string;
   created_at: string;
+}
+
+interface SessionActivityLog {
+  id: string;
+  time: string;
+  empName: string;
+  appNo: string;
+  actionType: 'call_status' | 'doj_confirmed' | 'doj_not_confirmed' | 'doj_changed' | 'note_added' | 'followup_scheduled';
+  description: string;
+  doneBy: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,9 +110,9 @@ const urgencyOf = (doj?: string) => {
 const urgencyBorderColor = (u: string | null) => {
   if (u === 'overdue')  return 'border-l-rose-500';
   if (u === 'today')    return 'border-l-amber-400';
-  if (u === 'tomorrow') return 'border-l-orange-400';
+  if (u === 'tomorrow') return 'border-l-blue-400';
   if (u === 'soon')     return 'border-l-yellow-400';
-  if (u === 'week')     return 'border-l-blue-400';
+  if (u === 'week')     return 'border-l-emerald-400';
   return 'border-l-[#1E2D4E]/20';
 };
 
@@ -162,7 +171,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 // ─── SVG Progress Ring ────────────────────────────────────────────────────────
-function ProgressRing({ pct, size = 52, stroke = 5, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
+function ProgressRing({ pct, size = 56, stroke = 5, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
@@ -175,14 +184,15 @@ function ProgressRing({ pct, size = 52, stroke = 5, color = '#C9952A' }: { pct: 
   );
 }
 
-// ─── Telecaller Call Interaction & Profile Slide-over Drawer ──────────────────
+// ─── Telecaller Call Interaction & Profile Slide-over Panel ───────────────────
 function TelecallerPanel({
-  emp, session, onClose, onUpdate, matchingList, onNavigate
+  emp, session, onClose, onUpdate, onLogSessionActivity, matchingList, onNavigate
 }: {
   emp: Employee;
   session: UserSession | null;
   onClose: () => void;
   onUpdate: (appNo: string, updates: Partial<Employee>) => void;
+  onLogSessionActivity: (entry: Omit<SessionActivityLog, 'id' | 'time'>) => void;
   matchingList?: Employee[];
   onNavigate?: (emp: Employee) => void;
 }) {
@@ -208,7 +218,6 @@ function TelecallerPanel({
     setShowHistory(false);
   }, [emp]);
 
-  // Index navigation within matching search results
   const currentIndex = matchingList ? matchingList.findIndex(e => e.appNo === emp.appNo) : -1;
   const hasPrev = currentIndex > 0;
   const hasNext = matchingList && currentIndex >= 0 && currentIndex < matchingList.length - 1;
@@ -230,13 +239,14 @@ function TelecallerPanel({
   const handleSave = async () => {
     setSaving(true);
     try {
+      const doneByUser = session?.username || 'HR';
       await API.updateCallDeskStatus({
         appNo: emp.appNo,
         callStatus,
         dojConfirmation: dojConf,
         notes,
         followUpDate,
-        doneBy: session?.username || 'HR'
+        doneBy: doneByUser
       });
 
       onUpdate(emp.appNo, {
@@ -245,9 +255,47 @@ function TelecallerPanel({
         notes,
         followUpDate,
         lastCallDate: new Date().toISOString().slice(0, 10),
-        updatedBy: session?.username || 'HR',
+        updatedBy: doneByUser,
         updatedAt: new Date().toISOString()
       });
+
+      // Log Session Activity for Real-time Today's Operations Tracker & Live Feed
+      if (callStatus !== emp.callStatus) {
+        onLogSessionActivity({
+          empName: emp.name,
+          appNo: emp.appNo,
+          actionType: 'call_status',
+          description: `Call outcome set to "${callStatus}"`,
+          doneBy: doneByUser
+        });
+      }
+      if (dojConf !== emp.dojConfirmation) {
+        onLogSessionActivity({
+          empName: emp.name,
+          appNo: emp.appNo,
+          actionType: dojConf === 'Confirmed' ? 'doj_confirmed' : 'doj_not_confirmed',
+          description: `DOJ confirmation updated to "${dojConf}"`,
+          doneBy: doneByUser
+        });
+      }
+      if (notes && notes !== emp.notes) {
+        onLogSessionActivity({
+          empName: emp.name,
+          appNo: emp.appNo,
+          actionType: 'note_added',
+          description: `Added note: "${notes.slice(0, 30)}${notes.length > 30 ? '...' : ''}"`,
+          doneBy: doneByUser
+        });
+      }
+      if (followUpDate && followUpDate !== emp.followUpDate) {
+        onLogSessionActivity({
+          empName: emp.name,
+          appNo: emp.appNo,
+          actionType: 'followup_scheduled',
+          description: `Follow-up date scheduled for ${fmtDate(followUpDate)}`,
+          doneBy: doneByUser
+        });
+      }
 
       showToast(`Updated status for ${emp.name}!`, 'success');
       if (hasNext && matchingList && onNavigate) {
@@ -264,15 +312,25 @@ function TelecallerPanel({
     if (!newDoj) { showToast('Please select a valid date', 'error'); return; }
     setSavingDoj(true);
     try {
+      const doneByUser = session?.username || 'HR';
       await API.updateCallDeskDOJ({
         appNo: emp.appNo,
         newDoj: newDoj,
         offeredDoj: newDoj,
-        doneBy: session?.username || 'HR'
+        doneBy: doneByUser
       });
 
       onUpdate(emp.appNo, { offeredDoj: newDoj });
       setEditDoj(false);
+
+      onLogSessionActivity({
+        empName: emp.name,
+        appNo: emp.appNo,
+        actionType: 'doj_changed',
+        description: `DOJ rescheduled to ${fmtDate(newDoj)}`,
+        doneBy: doneByUser
+      });
+
       showToast(`DOJ updated to ${fmtDate(newDoj)}`, 'success');
     } catch (e: any) {
       showToast('Failed to update DOJ: ' + e.message, 'error');
@@ -357,7 +415,7 @@ function TelecallerPanel({
         </div>
       </div>
 
-      {/* Body: Form */}
+      {/* Body Form */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbf9f6]">
         {/* Quick Phone Actions Row */}
         <div className="card-glass p-3 rounded-2xl border border-[#e2dfd7] bg-white flex items-center justify-between gap-2 shadow-xs">
@@ -465,7 +523,7 @@ function TelecallerPanel({
           Save Outcome & Continue {hasNext ? '→' : ''}
         </button>
 
-        {/* History Accordion */}
+        {/* Audit History Accordion */}
         <div>
           <button onClick={loadHistory}
             className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#C9952A] hover:text-[#1E2D4E] transition-all shadow-xs">
@@ -518,19 +576,20 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
 }) {
   const urgency = urgencyOf(emp.offeredDoj);
   const photo = fileUrl(emp.photoUrl);
+  const daysRem = daysUntil(emp.offeredDoj);
 
   return (
     <div onClick={onOpenPanel}
-      className={`card-glass p-3.5 rounded-2xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group bg-white ${isPanelOpen ? 'ring-2 ring-[#C9952A] shadow-xl' : 'border-[#e2dfd7]'} ${urgencyBorderColor(urgency)}`}>
-      {/* Top Row: Checkbox + Photo + Name + AppNo */}
+      className={`card-glass p-4 rounded-3xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group bg-white ${isPanelOpen ? 'ring-2 ring-[#C9952A] shadow-xl' : 'border-[#e2dfd7]'} ${urgencyBorderColor(urgency)} space-y-3`}>
+      {/* Top Row: Checkbox + Photo + Name + AppNo + Urgency Chip */}
       <div className="flex items-center gap-3">
         <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
           onClick={e => e.stopPropagation()}
           className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer flex-shrink-0" />
         {photo ? (
-          <img src={photo} alt={emp.name} className="w-12 h-12 rounded-xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-xs" onError={e => { (e.target as any).style.display = 'none'; }} />
+          <img src={photo} alt={emp.name} className="w-13 h-13 rounded-2xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-xs" onError={e => { (e.target as any).style.display = 'none'; }} />
         ) : (
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-xs flex-shrink-0">
+          <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-xs flex-shrink-0">
             {emp.name.charAt(0).toUpperCase()}
           </div>
         )}
@@ -544,29 +603,51 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[9px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.2 rounded">
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span className="text-[9px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.5 rounded">
               <HighlightMatch text={emp.appNo} query={searchQuery} />
             </span>
-            <span className="text-[10.5px] text-[#555] font-semibold truncate">
-              <HighlightMatch text={emp.phone} query={searchQuery} />
-            </span>
+            {daysRem !== null && (
+              <span className={`text-[9.5px] font-black px-2 py-0.5 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+                {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Joining Today' : daysRem === 1 ? 'Joining Tomorrow' : `In ${daysRem} days`}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Row 2: Dept / Section / DOJ */}
-      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[10.5px] text-[#666]">
-        <span className="font-semibold truncate flex-1 text-[#555]">
-          <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
-        </span>
-        <span className="font-bold text-[#1E2D4E] flex-shrink-0 flex items-center gap-1 bg-[#F9F7F4] px-2 py-0.5 rounded-lg border border-[#e2dfd7]">
-          <Calendar className="w-3 h-3 text-[#C9952A]" />{fmtDate(emp.offeredDoj)}
-        </span>
+      {/* Row 2: Dept / Section / Designation */}
+      <div className="grid grid-cols-2 gap-2 text-[10.5px] text-[#666] bg-[#F9F7F4] p-2 rounded-xl border border-[#e2dfd7]/60">
+        <div>
+          <span className="text-[9px] font-black uppercase text-[#888] block">Dept & Section</span>
+          <span className="font-bold text-[#1E2D4E] truncate block">
+            <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
+          </span>
+        </div>
+        <div>
+          <span className="text-[9px] font-black uppercase text-[#888] block">Designation</span>
+          <span className="font-bold text-[#C9952A] truncate block">
+            <HighlightMatch text={emp.designation} query={searchQuery} />
+          </span>
+        </div>
       </div>
 
-      {/* Row 3: Call & DOJ Status Chips */}
-      <div className="flex items-center justify-between gap-1.5 mt-2 flex-wrap">
+      {/* Row 3: Joining Process Visual Step Timeline */}
+      <div className="pt-1">
+        <div className="flex items-center justify-between text-[9px] font-black text-[#888] mb-1">
+          <span>JOINING PROCESS TIMELINE</span>
+          <span className="text-[#1E2D4E] font-mono">{fmtDate(emp.offeredDoj)}</span>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          <div className="h-1.5 rounded-full bg-emerald-500" title="1. Candidate Registered" />
+          <div className={`h-1.5 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Outcome" />
+          <div className={`h-1.5 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmation" />
+          <div className={`h-1.5 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : 'bg-slate-200'}`} title="4. Onboarding Ready" />
+        </div>
+      </div>
+
+      {/* Row 4: Status Chips */}
+      <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${callStatusCls(emp.callStatus)}`}>
           {callStatusEmoji(emp.callStatus)} {emp.callStatus}
         </span>
@@ -575,27 +656,27 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
         </span>
       </div>
 
-      {/* Row 4: Quick Actions Bar (Call, WA, Copy, View Profile) */}
-      <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+      {/* Row 5: Quick Actions Bar */}
+      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
         <button onClick={onOpenPanel}
-          className="px-2.5 py-1 rounded-xl bg-[#C9952A] hover:bg-[#b38222] text-white text-[10px] font-black transition-colors flex items-center gap-1 shadow-xs">
+          className="px-2.5 py-1.5 rounded-xl bg-[#C9952A] hover:bg-[#b38222] text-white text-[10.5px] font-black transition-colors flex items-center gap-1 shadow-xs">
           <Eye className="w-3 h-3" />View Profile
         </button>
-        <a href={`tel:${emp.phone}`} className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1">
+        <a href={`tel:${emp.phone}`} className="px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10.5px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1">
           <PhoneCall className="w-3 h-3" />Call
         </a>
         <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-          className="px-2.5 py-1 rounded-xl bg-[#e8fde8] border border-[#c3f0c3] text-[10px] font-bold text-[#1a8a4a] hover:bg-[#d0f7d0] transition-colors flex items-center gap-1">
+          className="px-2.5 py-1.5 rounded-xl bg-[#e8fde8] border border-[#c3f0c3] text-[10.5px] font-bold text-[#1a8a4a] hover:bg-[#d0f7d0] transition-colors flex items-center gap-1">
           <PhoneOutgoing className="w-3 h-3" />WA
         </a>
         <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
-          className="p-1 rounded-xl bg-slate-100 border border-slate-200 text-[#555] hover:bg-slate-200 ml-auto">
+          className="p-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[#555] hover:bg-slate-200 ml-auto">
           <Copy className="w-3 h-3" />
         </button>
       </div>
 
       {emp.notes && (
-        <div className="mt-2 pt-1.5 border-t border-dashed border-purple-200">
+        <div className="pt-1.5 border-t border-dashed border-purple-200">
           <p className="text-[10px] text-purple-700 font-semibold truncate">📝 {emp.notes}</p>
         </div>
       )}
@@ -674,7 +755,7 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
   );
 }
 
-// ─── Dynamic Priority Follow-up Queue Board ───────────────────────────────────
+// ─── Priority Call Queue (4 Distinct Color-Coded Lanes) ──────────────────────
 function PriorityBoard({ priorityData, onOpenPanel }: {
   priorityData: {
     joiningToday: Employee[];
@@ -685,10 +766,10 @@ function PriorityBoard({ priorityData, onOpenPanel }: {
   onOpenPanel: (emp: Employee) => void;
 }) {
   const lanes = [
-    { key: 'today',    label: 'Joining Today',    color: 'border-amber-400 bg-amber-50/80', badge: 'bg-amber-500', emps: priorityData.joiningToday },
-    { key: 'tomorrow', label: 'Joining Tomorrow',  color: 'border-orange-400 bg-orange-50/80', badge: 'bg-orange-500', emps: priorityData.joiningTomorrow },
-    { key: 'overdue',  label: 'Overdue (Past DOJ)', color: 'border-rose-400 bg-rose-50/80', badge: 'bg-rose-500', emps: priorityData.overdue },
-    { key: 'unconf',   label: 'DOJ Not Confirmed',  color: 'border-orange-300 bg-orange-50/40', badge: 'bg-orange-400', emps: priorityData.unconfirmed },
+    { key: 'today',    label: 'Joining Today',    color: 'border-emerald-400 bg-emerald-50/70', badge: 'bg-emerald-600', emps: priorityData.joiningToday },
+    { key: 'tomorrow', label: 'Joining Tomorrow',  color: 'border-blue-400 bg-blue-50/70', badge: 'bg-blue-600', emps: priorityData.joiningTomorrow },
+    { key: 'overdue',  label: 'Overdue (Past DOJ)', color: 'border-rose-400 bg-rose-50/70', badge: 'bg-rose-600', emps: priorityData.overdue },
+    { key: 'unconf',   label: 'DOJ Not Confirmed',  color: 'border-amber-400 bg-amber-50/70', badge: 'bg-amber-600', emps: priorityData.unconfirmed },
   ];
 
   const nonEmpty = lanes.filter(l => l.emps.length > 0);
@@ -699,40 +780,151 @@ function PriorityBoard({ priorityData, onOpenPanel }: {
       <div className="flex items-center justify-between">
         <h3 className="font-black text-[#1E2D4E] text-sm uppercase tracking-wider flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          Priority Call Queue
+          Priority Call Queue (Auto-Classified)
         </h3>
-        <span className="text-xs font-bold text-[#888]">Auto-classified by Offered DOJ & Confirmation</span>
+        <span className="text-xs font-bold text-[#888]">Real-time Offered DOJ & Confirmation Status</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {nonEmpty.map(lane => (
-          <div key={lane.key} className={`rounded-2xl border-2 ${lane.color} p-3 space-y-2`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-[#1E2D4E]">{lane.label}</span>
-              <span className={`w-5 h-5 rounded-full ${lane.badge} flex items-center justify-center text-white text-[10px] font-black`}>
-                {lane.emps.length}
-              </span>
-            </div>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {lane.emps.slice(0, 8).map(emp => (
-                <button key={emp.appNo} onClick={() => onOpenPanel(emp)}
-                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-white text-left transition-all hover:shadow-xs">
-                  <div className="w-7 h-7 rounded-lg bg-[#1E2D4E] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
-                    {emp.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-black text-[#1E2D4E] truncate">{emp.name}</div>
-                    <div className="text-[10px] text-[#777] font-semibold">{fmtDate(emp.offeredDoj)}</div>
-                  </div>
-                  <a href={`tel:${emp.phone}`} onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 flex-shrink-0">
-                    <PhoneCall className="w-3.5 h-3.5" />
-                  </a>
-                </button>
-              ))}
+          <div key={lane.key} className={`rounded-2xl border-2 ${lane.color} p-3 space-y-2 flex flex-col justify-between`}>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-black text-[#1E2D4E]">{lane.label}</span>
+                <span className={`w-5 h-5 rounded-full ${lane.badge} flex items-center justify-center text-white text-[10px] font-black`}>
+                  {lane.emps.length}
+                </span>
+              </div>
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {lane.emps.slice(0, 8).map(emp => (
+                  <button key={emp.appNo} onClick={() => onOpenPanel(emp)}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-white text-left transition-all hover:shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-[#1E2D4E] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
+                      {emp.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-black text-[#1E2D4E] truncate">{emp.name}</div>
+                      <div className="text-[10px] text-[#777] font-semibold">{fmtDate(emp.offeredDoj)}</div>
+                    </div>
+                    <a href={`tel:${emp.phone}`} onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 flex-shrink-0">
+                      <PhoneCall className="w-3.5 h-3.5" />
+                    </a>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Today's Operations Panel & Live Recent Activity Feed ──────────────────────
+function TodaysOperationsPanel({
+  todayStats,
+  sessionLog,
+  lastUpdatedTime
+}: {
+  todayStats: {
+    callsCompleted: number;
+    notReceived: number;
+    pendingFollowups: number;
+    dojConfirmed: number;
+    dojNotConfirmed: number;
+    dojChanged: number;
+    notesAdded: number;
+    followupsScheduled: number;
+  };
+  sessionLog: SessionActivityLog[];
+  lastUpdatedTime: string;
+}) {
+  const [showFeed, setShowFeed] = useState(true);
+
+  const trackerCards = [
+    { label: 'Calls Completed', value: todayStats.callsCompleted, icon: CheckCircle, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+    { label: 'DOJ Confirmed',   value: todayStats.dojConfirmed,   icon: CalendarCheck, color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-200' },
+    { label: 'DOJ Rescheduled', value: todayStats.dojChanged,     icon: Edit3,         color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+    { label: 'Call Not Received',value: todayStats.notReceived,    icon: PhoneOff,      color: 'text-rose-700',    bg: 'bg-rose-50 border-rose-200' },
+    { label: 'DOJ Not Confirmed',value: todayStats.dojNotConfirmed,icon: CalendarX,     color: 'text-orange-700',  bg: 'bg-orange-50 border-orange-200' },
+    { label: 'Pending Follow-ups',value: todayStats.pendingFollowups,icon: Clock,       color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200' },
+    { label: 'Notes Added',     value: todayStats.notesAdded,      icon: MessageSquare, color: 'text-indigo-700',  bg: 'bg-indigo-50 border-indigo-200' },
+    { label: 'Follow-ups Set',  value: todayStats.followupsScheduled,icon: Calendar,  color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200' },
+  ];
+
+  return (
+    <div className="card-glass p-5 bg-white rounded-3xl border border-[#e2dfd7] shadow-xs space-y-4">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e2dfd7] pb-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+          <h3 className="font-black text-[#1E2D4E] text-base flex items-center gap-2">
+            <Activity className="w-5 h-5 text-emerald-600" />
+            Today's Telecalling Operations Panel
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-3 text-xs font-bold">
+          <span className="text-[#888] font-mono">Last updated: {lastUpdatedTime}</span>
+          <button
+            onClick={() => setShowFeed(f => !f)}
+            className="px-3 py-1 rounded-xl bg-[#1E2D4E] text-white text-xs font-black flex items-center gap-1.5">
+            <History className="w-3.5 h-3.5" />
+            {showFeed ? 'Hide Live Feed' : `View Live Feed (${sessionLog.length})`}
+          </button>
+        </div>
+      </div>
+
+      {/* 8 Operational Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        {trackerCards.map(c => {
+          const Icon = c.icon;
+          return (
+            <div key={c.label} className={`p-3 rounded-2xl border ${c.bg} shadow-2xs`}>
+              <div className="flex items-center justify-between">
+                <Icon className={`w-4 h-4 ${c.color}`} />
+              </div>
+              <div className={`text-2xl font-black ${c.color} mt-1`}>{c.value}</div>
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#777] mt-0.5 truncate">{c.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Live Recent Activity Feed (Latest 10 Updates) */}
+      {showFeed && (
+        <div className="mt-3 pt-3 border-t border-[#e2dfd7] space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between text-xs font-black text-[#1E2D4E]">
+            <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10.5px] text-[#777]">
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
+              Live Activity Stream (Today's Actions)
+            </span>
+            <span className="text-[#888] font-semibold">{sessionLog.length} recent events logged</span>
+          </div>
+
+          {sessionLog.length === 0 ? (
+            <div className="p-4 text-center text-xs font-bold text-[#888] bg-[#F9F7F4] rounded-2xl border border-[#e2dfd7]">
+              No actions logged yet in this session today. Updating any employee status, DOJ, or note will stream live updates here!
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {sessionLog.slice(0, 10).map(log => (
+                <div key={log.id} className="card-glass px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-between text-xs gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-[10px] font-bold text-[#888] px-1.5 py-0.5 rounded bg-white border border-[#e2dfd7] flex-shrink-0">
+                      {log.time}
+                    </span>
+                    <span className="font-black text-[#1E2D4E] truncate">{log.empName}</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#888]">({log.appNo})</span>
+                    <span className="text-xs text-[#555] font-semibold truncate">· {log.description}</span>
+                  </div>
+                  <span className="text-[9.5px] font-bold text-[#888] flex-shrink-0">by {log.doneBy}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -755,29 +947,19 @@ function AnalyticsHeader({ analytics, loading }: { analytics: Analytics | null; 
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {cards.map(c => {
-          const Icon = c.icon;
-          return (
-            <div key={c.label} className={`card-glass rounded-3xl p-4 border border-[#e2dfd7] ${c.bg} shadow-xs`}>
-              <div className="flex items-center justify-between">
-                <Icon className={`w-5 h-5 ${c.color}`} />
-              </div>
-              <div className={`text-3xl font-black ${c.color} tracking-tight mt-1`}>{c.value}</div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-[#888] mt-1 truncate">{c.label}</div>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {cards.map(c => {
+        const Icon = c.icon;
+        return (
+          <div key={c.label} className={`card-glass rounded-3xl p-4 border border-[#e2dfd7] ${c.bg} shadow-xs hover:-translate-y-0.5 transition-all`}>
+            <div className="flex items-center justify-between">
+              <Icon className={`w-5 h-5 ${c.color}`} />
             </div>
-          );
-        })}
-      </div>
-
-      <div className="card-glass rounded-2xl px-5 py-3 bg-white border border-[#e2dfd7] flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
-        <span className="font-black text-[#777] uppercase tracking-wider text-[11px]">Today's Activity Tracker:</span>
-        <div className="flex items-center gap-4 flex-wrap font-bold">
-          <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">✅ {analytics.today.callsDone} calls done today</span>
-          <span className="text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">📅 {analytics.today.dojConfirmed} DOJ confirmed today</span>
-        </div>
-      </div>
+            <div className={`text-3xl font-black ${c.color} tracking-tight mt-1`}>{c.value}</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-[#888] mt-1 truncate">{c.label}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -833,6 +1015,12 @@ export default function JoiningCallDeskPage() {
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // In-session Activity Log & Last Updated Time
+  const [sessionLog, setSessionLog] = useState<SessionActivityLog[]>([]);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string>(
+    new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  );
+
   // Telecaller Right Panel
   const [panelEmp, setPanelEmp] = useState<Employee | null>(null);
 
@@ -846,6 +1034,7 @@ export default function JoiningCallDeskPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Filters
+  const [quickFilter, setQuickFilter] = useState<'all' | 'overdue' | 'today' | 'tomorrow'>('all');
   const [filterDesig, setFilterDesig] = useState('');
   const [filterCallStatus, setFilterCallStatus] = useState('');
   const [filterDojConf, setFilterDojConf] = useState('');
@@ -854,7 +1043,7 @@ export default function JoiningCallDeskPage() {
   const [filterGender, setFilterGender] = useState('');
   const [dojFrom, setDojFrom] = useState('');
   const [dojTo, setDojTo] = useState('');
-  const [sortBy, setSortBy] = useState<'doj_nearest' | 'name' | 'pending_first' | 'overdue_first'>('doj_nearest');
+  const [sortBy, setSortBy] = useState<'doj_nearest' | 'recently_updated' | 'pending_first' | 'overdue_first' | 'name'>('doj_nearest');
   const [showFilters, setShowFilters] = useState(false);
 
   // Debounce search input (150ms)
@@ -873,6 +1062,21 @@ export default function JoiningCallDeskPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Log session activity entry
+  const handleLogSessionActivity = useCallback((entry: Omit<SessionActivityLog, 'id' | 'time'>) => {
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const fullTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setSessionLog(prev => [
+      {
+        id: Math.random().toString(36).substring(2, 9),
+        time: timeStr,
+        ...entry
+      },
+      ...prev
+    ]);
+    setLastUpdatedTime(fullTimeStr);
   }, []);
 
   // Fetch full employee directory dataset for instant client search & single source of truth
@@ -919,9 +1123,6 @@ export default function JoiningCallDeskPage() {
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().slice(0, 10);
 
-    let todayCallsDone = 0;
-    let todayDojConfirmed = 0;
-
     allEmployees.forEach(e => {
       if (e.callStatus === 'Call done') callDone++;
       else if (e.callStatus === 'Call not received') notReceived++;
@@ -942,11 +1143,6 @@ export default function JoiningCallDeskPage() {
       if (e.followUpDate && e.followUpDate <= todayStr && e.callStatus !== 'Call done') {
         overdueFollowUps++;
       }
-
-      if (e.updatedAt && e.updatedAt.slice(0, 10) === todayStr) {
-        if (e.callStatus === 'Call done') todayCallsDone++;
-        if (e.dojConfirmation === 'Confirmed') todayDojConfirmed++;
-      }
     });
 
     return {
@@ -960,14 +1156,55 @@ export default function JoiningCallDeskPage() {
       dojNotConfirmed,
       joiningThisWeek,
       overdueFollowUps,
-      today: {
-        callsDone: todayCallsDone,
-        dojConfirmed: todayDojConfirmed,
-        dojChanged: 0,
-        notesAdded: 0,
-      },
     };
   }, [allEmployees]);
+
+  // Today's Operations Stats Calculation (DB + Real-time Session Log)
+  const todayStats = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let callsCompleted = 0;
+    let notReceived = 0;
+    let pendingFollowups = 0;
+    let dojConfirmed = 0;
+    let dojNotConfirmed = 0;
+    let dojChanged = 0;
+    let notesAdded = 0;
+    let followupsScheduled = 0;
+
+    allEmployees.forEach(e => {
+      const isTodayUpdate = e.updatedAt && e.updatedAt.slice(0, 10) === todayStr;
+      if (isTodayUpdate) {
+        if (e.callStatus === 'Call done') callsCompleted++;
+        if (e.callStatus === 'Call not received') notReceived++;
+        if (e.callStatus === 'Pending') pendingFollowups++;
+        if (e.dojConfirmation === 'Confirmed') dojConfirmed++;
+        if (e.dojConfirmation === 'Not confirmed') dojNotConfirmed++;
+        if (e.notes) notesAdded++;
+        if (e.followUpDate) followupsScheduled++;
+      }
+    });
+
+    sessionLog.forEach(log => {
+      if (log.actionType === 'call_status' && log.description.includes('Call done')) callsCompleted++;
+      if (log.actionType === 'call_status' && log.description.includes('Call not received')) notReceived++;
+      if (log.actionType === 'doj_confirmed') dojConfirmed++;
+      if (log.actionType === 'doj_not_confirmed') dojNotConfirmed++;
+      if (log.actionType === 'doj_changed') dojChanged++;
+      if (log.actionType === 'note_added') notesAdded++;
+      if (log.actionType === 'followup_scheduled') followupsScheduled++;
+    });
+
+    return {
+      callsCompleted,
+      notReceived,
+      pendingFollowups,
+      dojConfirmed,
+      dojNotConfirmed,
+      dojChanged,
+      notesAdded,
+      followupsScheduled,
+    };
+  }, [allEmployees, sessionLog]);
 
   // Priority Queue Data Calculation
   const priorityQueueData = useMemo(() => {
@@ -990,9 +1227,21 @@ export default function JoiningCallDeskPage() {
     };
   }, [allEmployees]);
 
-  // Filtered employees list based on multi-field search and filters
+  // Filtered employees list based on multi-field search, quick filter toggles, and filters
   const filteredEmployees = useMemo(() => {
     let list = [...allEmployees];
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    // Quick Toggles
+    if (quickFilter === 'overdue') {
+      list = list.filter(e => e.offeredDoj && e.offeredDoj < todayStr && e.callStatus !== 'Call done');
+    } else if (quickFilter === 'today') {
+      list = list.filter(e => e.offeredDoj === todayStr);
+    } else if (quickFilter === 'tomorrow') {
+      list = list.filter(e => e.offeredDoj === tomorrowStr);
+    }
 
     // Search query match (exact & partial across name, appNo, phone, dept, section, desig, notes)
     if (debouncedSearch.trim()) {
@@ -1018,13 +1267,20 @@ export default function JoiningCallDeskPage() {
     if (dojTo)            list = list.filter(e => e.offeredDoj <= dojTo);
 
     // Sorting
-    if (sortBy === 'doj_nearest')      list.sort((a, b) => a.offeredDoj.localeCompare(b.offeredDoj));
-    else if (sortBy === 'pending_first') list.sort((a, b) => (a.callStatus === 'Pending' ? -1 : 1));
-    else if (sortBy === 'overdue_first') list.sort((a, b) => a.offeredDoj.localeCompare(b.offeredDoj));
-    else list.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'doj_nearest') {
+      list.sort((a, b) => a.offeredDoj.localeCompare(b.offeredDoj));
+    } else if (sortBy === 'recently_updated') {
+      list.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+    } else if (sortBy === 'pending_first') {
+      list.sort((a, b) => (a.callStatus === 'Pending' ? -1 : 1));
+    } else if (sortBy === 'overdue_first') {
+      list.sort((a, b) => a.offeredDoj.localeCompare(b.offeredDoj));
+    } else {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     return list;
-  }, [allEmployees, debouncedSearch, filterDesig, filterCallStatus, filterDojConf, filterDept, filterSection, filterGender, dojFrom, dojTo, sortBy]);
+  }, [allEmployees, quickFilter, debouncedSearch, filterDesig, filterCallStatus, filterDojConf, filterDept, filterSection, filterGender, dojFrom, dojTo, sortBy]);
 
   // Group filtered employees by Designation
   const designationGroups = useMemo(() => {
@@ -1068,13 +1324,14 @@ export default function JoiningCallDeskPage() {
     if (selectedIds.size === 0) return;
     setBulkSaving(true);
     try {
+      const doneByUser = session?.username || 'HR';
       await Promise.all([...selectedIds].map(appNo =>
         API.updateCallDeskStatus({
           appNo,
           ...(callStatus ? { callStatus } : {}),
           ...(dojConf ? { dojConfirmation: dojConf } : {}),
           ...(followUpDate ? { followUpDate } : {}),
-          doneBy: session?.username || 'HR'
+          doneBy: doneByUser
         })
       ));
       selectedIds.forEach(appNo => {
@@ -1084,6 +1341,15 @@ export default function JoiningCallDeskPage() {
         if (followUpDate) updates.followUpDate = followUpDate;
         handleEmployeeUpdate(appNo, updates);
       });
+
+      handleLogSessionActivity({
+        empName: `${selectedIds.size} Selected Employees`,
+        appNo: 'BULK',
+        actionType: callStatus === 'Call done' ? 'call_status' : 'doj_confirmed',
+        description: `Bulk update applied: ${[callStatus, dojConf, followUpDate ? `FU: ${fmtDate(followUpDate)}` : ''].filter(Boolean).join(' · ')}`,
+        doneBy: doneByUser
+      });
+
       showToast(`Bulk updated ${selectedIds.size} employee records`, 'success');
       setSelectedIds(new Set());
     } catch (e: any) {
@@ -1123,7 +1389,7 @@ export default function JoiningCallDeskPage() {
     showToast(`Exported ${listToExport.length} employee records to CSV`, 'success');
   };
 
-  const hasFilters = searchInput || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
+  const hasFilters = searchInput || quickFilter !== 'all' || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
   const isPanelOpen = !!panelEmp;
 
   return (
@@ -1161,13 +1427,34 @@ export default function JoiningCallDeskPage() {
               </div>
             </div>
 
+            {/* Quick Filter Toggles */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-[#e2dfd7] shadow-xs">
+              <button onClick={() => setQuickFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'all' ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
+                All
+              </button>
+              <button onClick={() => setQuickFilter('overdue')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'overdue' ? 'bg-rose-600 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'}`}>
+                Overdue
+              </button>
+              <button onClick={() => setQuickFilter('today')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'today' ? 'bg-emerald-600 text-white shadow-xs' : 'text-emerald-700 hover:bg-emerald-50'}`}>
+                Today
+              </button>
+              <button onClick={() => setQuickFilter('tomorrow')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${quickFilter === 'tomorrow' ? 'bg-blue-600 text-white shadow-xs' : 'text-blue-700 hover:bg-blue-50'}`}>
+                Tomorrow
+              </button>
+            </div>
+
             {/* Sort Dropdown */}
             <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
               className="px-3 py-2.5 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none shadow-xs">
               <option value="doj_nearest">DOJ Nearest</option>
-              <option value="name">Name (A–Z)</option>
+              <option value="recently_updated">Recently Updated</option>
               <option value="pending_first">Pending First</option>
               <option value="overdue_first">Overdue First</option>
+              <option value="name">Name (A–Z)</option>
             </select>
 
             {/* Filter Toggle */}
@@ -1182,7 +1469,7 @@ export default function JoiningCallDeskPage() {
             </button>
 
             {hasFilters && (
-              <button onClick={() => { setSearchInput(''); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
+              <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
                 className="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
                 <X className="w-3.5 h-3.5" />Clear
               </button>
@@ -1193,6 +1480,11 @@ export default function JoiningCallDeskPage() {
           {hasFilters && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap pt-2 border-t border-[#e2dfd7]">
               <span className="text-[10px] font-black uppercase text-[#777] mr-1">Active Filters:</span>
+              {quickFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E2D4E] text-white text-[10.5px] font-bold">
+                  ⚡ {quickFilter.toUpperCase()} ONLY <X className="w-3 h-3 cursor-pointer" onClick={() => setQuickFilter('all')} />
+                </span>
+              )}
               {debouncedSearch && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10.5px] font-bold">
                   🔍 "{debouncedSearch}" <X className="w-3 h-3 cursor-pointer" onClick={() => setSearchInput('')} />
@@ -1271,7 +1563,7 @@ export default function JoiningCallDeskPage() {
         </div>
 
         {/* Main Body Content */}
-        <main className={`p-4 lg:p-6 space-y-5 flex-1 overflow-y-auto ${selectedIds.size > 0 ? 'pb-24' : ''}`}>
+        <main className={`p-4 lg:p-6 space-y-6 flex-1 overflow-y-auto ${selectedIds.size > 0 ? 'pb-24' : ''}`}>
 
           {/* Banner Header */}
           <div className="card-glass p-5 rounded-3xl bg-white border border-[#e2dfd7] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1298,6 +1590,13 @@ export default function JoiningCallDeskPage() {
 
           {/* Synchronized Analytics KPI Header */}
           <AnalyticsHeader analytics={analytics} loading={loading} />
+
+          {/* Today's Operations Panel & Live Recent Activity Feed */}
+          <TodaysOperationsPanel
+            todayStats={todayStats}
+            sessionLog={sessionLog}
+            lastUpdatedTime={lastUpdatedTime}
+          />
 
           {/* Dynamic Priority Follow-up Queue */}
           <PriorityBoard priorityData={priorityQueueData} onOpenPanel={setPanelEmp} />
@@ -1336,7 +1635,7 @@ export default function JoiningCallDeskPage() {
                 </p>
               </div>
               {hasFilters && (
-                <button onClick={() => { setSearchInput(''); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
+                <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
                   className="mt-2 px-4 py-2.5 rounded-2xl bg-[#1E2D4E] text-white text-xs font-black hover:bg-[#162340] shadow-md">
                   Clear All Filters
                 </button>
@@ -1377,6 +1676,7 @@ export default function JoiningCallDeskPage() {
             session={session}
             onClose={() => setPanelEmp(null)}
             onUpdate={handleEmployeeUpdate}
+            onLogSessionActivity={handleLogSessionActivity}
             matchingList={filteredEmployees}
             onNavigate={setPanelEmp}
           />
