@@ -15,11 +15,15 @@ class WorkforceAnalyticsController {
   // GET /api/workforce-analytics
   async getAnalytics(req, res) {
     try {
+      const { APPROVED_DEPARTMENTS } = require('../utils/normalization');
+
       // 1. Fetch all employees in Employee Directory (Joined/Hired)
       const [empRows] = await pool.query(`
         SELECT 
           c.app_no,
           c.name,
+          c.phone,
+          c.photo_url,
           c.gender,
           c.department,
           COALESCE(sa.section, 'General') AS section,
@@ -36,11 +40,11 @@ class WorkforceAnalyticsController {
         ORDER BY c.name ASC
       `);
 
-      // Track Data Quality Audit variations
-      const deptAuditMap = new Map();  // Normalized Dept -> Set of raw variations
-      const desigAuditMap = new Map(); // Normalized Desig -> Set of raw variations
+      // Audit maps
+      const deptAuditMap = new Map();
+      const desigAuditMap = new Map();
 
-      const employees = empRows.map(r => {
+      const allEmployees = empRows.map(r => {
         const rawGender = (r.gender || '').trim().toLowerCase();
         let gender = 'Male';
         if (rawGender.startsWith('f') || rawGender.includes('female')) gender = 'Female';
@@ -55,7 +59,6 @@ class WorkforceAnalyticsController {
         const normDesig = normalizeDesignation(rawDesig);
         const normSec = normalizeSection(rawSec);
 
-        // Audit collection
         if (!deptAuditMap.has(normDept)) deptAuditMap.set(normDept, new Set());
         deptAuditMap.get(normDept).add(rawDept);
 
@@ -64,21 +67,30 @@ class WorkforceAnalyticsController {
 
         return {
           appNo: r.app_no,
+          empId: r.app_no,
           name: r.name || 'Unnamed',
+          phone: r.phone || '',
+          photoUrl: r.photo_url || '',
           gender,
           department: normDept,
+          rawDepartment: rawDept,
           section: normSec,
           designation: normDesig,
           doj: fmtDate(r.doj),
+          status: r.status || 'Joined',
         };
       });
 
-      const totalEmployees = employees.length;
+      // Filter into Approved workforce vs Unverified data
+      const approvedEmployees = allEmployees.filter(e => APPROVED_DEPARTMENTS.includes(e.department));
+      const unverifiedEmployees = allEmployees.filter(e => !APPROVED_DEPARTMENTS.includes(e.department) || e.department === 'Unassigned');
 
-      // 2. Gender totals
+      const totalEmployees = approvedEmployees.length;
+
+      // 2. Gender totals (Approved workforce)
       let maleCount = 0;
       let femaleCount = 0;
-      employees.forEach(e => {
+      approvedEmployees.forEach(e => {
         if (e.gender === 'Female') femaleCount++;
         else maleCount++;
       });
@@ -86,8 +98,12 @@ class WorkforceAnalyticsController {
       const malePct = totalEmployees > 0 ? Math.round((maleCount / totalEmployees) * 1000) / 10 : 0;
       const femalePct = totalEmployees > 0 ? Math.round((femaleCount / totalEmployees) * 1000) / 10 : 0;
 
-      // 3. Department aggregation
+      // 3. Department aggregation (Approved taxonomy)
       const deptMap = new Map();
+      APPROVED_DEPARTMENTS.forEach(dept => {
+        deptMap.set(dept, { department: dept, total: 0, male: 0, female: 0, dojs: [] });
+      });
+
       // Designation aggregation
       const desigMap = new Map();
       // Dept -> Designation tree map
@@ -95,16 +111,7 @@ class WorkforceAnalyticsController {
       // Hiring trends timeline map (YYYY-MM)
       const trendMap = new Map();
 
-      // Sort employees by DOJ for newest employee calculations
-      const sortedByDoj = [...employees].sort((a, b) => (b.doj || '').localeCompare(a.doj || ''));
-      const lastJoinedEmployee = sortedByDoj[0] || null;
-
-      let newestDeptHiring = 'N/A';
-      if (lastJoinedEmployee && lastJoinedEmployee.department) {
-        newestDeptHiring = lastJoinedEmployee.department;
-      }
-
-      employees.forEach(e => {
+      approvedEmployees.forEach(e => {
         // Department map
         if (!deptMap.has(e.department)) {
           deptMap.set(e.department, { department: e.department, total: 0, male: 0, female: 0, dojs: [] });
@@ -140,7 +147,7 @@ class WorkforceAnalyticsController {
 
         // Timeline (YYYY-MM)
         if (e.doj) {
-          const ym = e.doj.slice(0, 7); // e.g. "2026-07"
+          const ym = e.doj.slice(0, 7);
           if (!trendMap.has(ym)) {
             trendMap.set(ym, { ym, total: 0, male: 0, female: 0 });
           }
@@ -152,20 +159,38 @@ class WorkforceAnalyticsController {
       });
 
       // Format Department Analytics
-      const departmentAnalytics = Array.from(deptMap.values()).map(d => {
-        const mPct = d.total > 0 ? Math.round((d.male / d.total) * 1000) / 10 : 0;
-        const fPct = d.total > 0 ? Math.round((d.female / d.total) * 1000) / 10 : 0;
-        const wfPct = totalEmployees > 0 ? Math.round((d.total / totalEmployees) * 1000) / 10 : 0;
-        return {
-          department: d.department,
-          total: d.total,
-          male: d.male,
-          female: d.female,
-          malePct: mPct,
-          femalePct: fPct,
-          companyWorkforcePct: wfPct,
-        };
-      }).sort((a, b) => b.total - a.total);
+      const departmentAnalytics = Array.from(deptMap.values())
+        .map(d => {
+          const mPct = d.total > 0 ? Math.round((d.male / d.total) * 1000) / 10 : 0;
+          const fPct = d.total > 0 ? Math.round((d.female / d.total) * 1000) / 10 : 0;
+          const wfPct = totalEmployees > 0 ? Math.round((d.total / totalEmployees) * 1000) / 10 : 0;
+          return {
+            department: d.department,
+            total: d.total,
+            male: d.male,
+            female: d.female,
+            malePct: mPct,
+            femalePct: fPct,
+            companyWorkforcePct: wfPct,
+          };
+        })
+        .sort((a, b) => b.total - a.total);
+
+      // Active approved depts count (depts with > 0 employees)
+      const activeDepts = departmentAnalytics.filter(d => d.total > 0);
+      const totalDepartments = activeDepts.length;
+
+      // Avg employees per department
+      const avgEmployeesPerDept = totalDepartments > 0 ? Math.round((totalEmployees / totalDepartments) * 10) / 10 : 0;
+
+      // Largest Department
+      const largestDeptObj = departmentAnalytics[0] || { department: 'N/A', total: 0, male: 0, female: 0 };
+      const largestDept = {
+        name: largestDeptObj.department,
+        total: largestDeptObj.total,
+        male: largestDeptObj.male,
+        female: largestDeptObj.female,
+      };
 
       // Format Designation Analytics
       const designationAnalytics = Array.from(desigMap.values()).map(des => {
@@ -185,6 +210,13 @@ class WorkforceAnalyticsController {
         };
       }).sort((a, b) => b.total - a.total);
 
+      const totalDesignations = designationAnalytics.length;
+      const largestDesigObj = designationAnalytics[0] || { designation: 'N/A', total: 0 };
+      const largestDesignation = {
+        name: largestDesigObj.designation,
+        total: largestDesigObj.total,
+      };
+
       // Format Tree View
       const treeView = Array.from(treeMap.entries()).map(([dept, desigMapVal]) => {
         const desigs = Array.from(desigMapVal.values()).sort((a, b) => b.total - a.total);
@@ -200,81 +232,19 @@ class WorkforceAnalyticsController {
         };
       }).sort((a, b) => b.total - a.total);
 
-      // Format Heatmap Matrix
-      const departmentHeatmap = departmentAnalytics.map(d => ({
-        department: d.department,
-        male: d.male,
-        female: d.female,
-        total: d.total,
-      }));
-
-      // Format Hiring Trends Timeline
-      const hiringTrends = Array.from(trendMap.values()).sort((a, b) => a.ym.localeCompare(b.ym)).map(t => {
-        let label = t.ym;
-        try {
-          const [yr, mo] = t.ym.split('-');
-          const dt = new Date(parseInt(yr), parseInt(mo) - 1, 1);
-          label = dt.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-        } catch { }
-        return {
-          ym: t.ym,
-          label,
-          total: t.total,
-          male: t.male,
-          female: t.female,
-        };
-      });
-
-      // Format Workforce Composition Categories
-      const compMap = new Map();
-      employees.forEach(e => {
-        const deptLower = e.department.toLowerCase();
-        const desigLower = e.designation.toLowerCase();
-        let cat = 'Others';
-        if (deptLower.includes('sale') || desigLower.includes('sales') || desigLower.includes('executive') || desigLower.includes('greeter')) cat = 'Sales & Frontline';
-        else if (deptLower.includes('support') || desigLower.includes('cashier') || desigLower.includes('billing')) cat = 'Billing & Operations';
-        else if (deptLower.includes('account') || desigLower.includes('account')) cat = 'Accounts & Finance';
-        else if (deptLower.includes('hr') || desigLower.includes('hr') || desigLower.includes('recruiter')) cat = 'Human Resources';
-        else if (desigLower.includes('manager') || desigLower.includes('supervisor') || desigLower.includes('lead')) cat = 'Management & Leads';
-        else if (deptLower.includes('mens') || deptLower.includes('womens') || deptLower.includes('kids') || deptLower.includes('sarees')) cat = 'Retail Sections';
-
-        compMap.set(cat, (compMap.get(cat) || 0) + 1);
-      });
-
-      const workforceComposition = Array.from(compMap.entries()).map(([category, count]) => ({
-        category,
-        count,
-        pct: totalEmployees > 0 ? Math.round((count / totalEmployees) * 1000) / 10 : 0,
-      })).sort((a, b) => b.count - a.count);
-
       // Executive Insights
       const insights = [];
-
-      if (departmentAnalytics.length > 0) {
-        const topDept = departmentAnalytics[0];
-        insights.push(`Largest department is **${topDept.department}** with **${topDept.total}** employees (${topDept.companyWorkforcePct}% of company).`);
+      if (departmentAnalytics.length > 0 && departmentAnalytics[0].total > 0) {
+        insights.push(`Largest department is **${largestDept.name}** with **${largestDept.total}** employees (${departmentAnalytics[0].companyWorkforcePct}% of workforce).`);
       }
-
       if (designationAnalytics.length > 0) {
-        const topDesig = designationAnalytics[0];
-        insights.push(`Largest designation is **${topDesig.designation}** with **${topDesig.total}** employees.`);
+        insights.push(`Largest designation is **${largestDesignation.name}** with **${largestDesignation.total}** employees.`);
       }
-
-      const femaleMajDept = departmentAnalytics.find(d => d.femalePct > 55 && d.total >= 5);
-      if (femaleMajDept) {
-        insights.push(`Female majority department: **${femaleMajDept.department}** (${femaleMajDept.femalePct}% female).`);
-      }
-
-      const maleMajDept = departmentAnalytics.find(d => d.malePct > 55 && d.total >= 5);
-      if (maleMajDept) {
-        insights.push(`Male majority department: **${maleMajDept.department}** (${maleMajDept.malePct}% male).`);
-      }
-
-      insights.push(`Overall company gender ratio: **${malePct}% male / ${femalePct}% female** (${maleCount} M / ${femaleCount} F).`);
-
-      if (hiringTrends.length > 0) {
-        const topTrend = [...hiringTrends].sort((a, b) => b.total - a.total)[0];
-        insights.push(`Top hiring period was **${topTrend.label}** with **${topTrend.total}** joins.`);
+      insights.push(`Overall gender balance: **${malePct}% Male** (${maleCount}) / **${femalePct}% Female** (${femaleCount}).`);
+      if (unverifiedEmployees.length > 0) {
+        insights.push(`⚠ **${unverifiedEmployees.length}** records require department verification in the Data Verification Panel.`);
+      } else {
+        insights.push(`✅ 100% of workforce assigned to approved departments.`);
       }
 
       const dataQualityAudit = {
@@ -292,24 +262,29 @@ class WorkforceAnalyticsController {
         success: true,
         overview: {
           totalEmployees,
-          totalDepartments: deptMap.size,
-          totalDesignations: desigMap.size,
+          totalDepartments,
+          totalDesignations,
           totalMale: maleCount,
           totalFemale: femaleCount,
           malePct,
           femalePct,
-          newestDeptHiring,
-          lastJoinedEmployee,
+          avgEmployeesPerDept,
+          largestDepartment: largestDept,
+          largestDesignation,
+          allRecordsCount: allEmployees.length,
+          unverifiedCount: unverifiedEmployees.length,
         },
         departmentAnalytics,
         designationAnalytics,
         treeView,
-        departmentHeatmap,
-        hiringTrends,
-        workforceComposition,
         executiveInsights: insights,
         dataQualityAudit,
-        rawEmployees: employees,
+        rawEmployees: approvedEmployees,
+        unverifiedEmployees,
+        dataVerificationSummary: {
+          totalUnverified: unverifiedEmployees.length,
+          unverifiedEmployees,
+        },
       });
 
     } catch (err) {
@@ -320,3 +295,4 @@ class WorkforceAnalyticsController {
 }
 
 module.exports = new WorkforceAnalyticsController();
+

@@ -3,6 +3,17 @@
  * Standardizes Department and Designation strings without altering historical DB rows.
  */
 
+const APPROVED_DEPARTMENTS = [
+  'Mens',
+  'Ladies',
+  'Kids',
+  'Ground Floor Saree',
+  'First Floor Saree',
+  'Art & Raw Silk Saree',
+  'Home Furnishing',
+  'Others',
+];
+
 // Explicit Department Mapping dictionary
 const DEPT_MAP = new Map([
   ['mens', 'Mens'],
@@ -16,9 +27,9 @@ const DEPT_MAP = new Map([
   ['kids', 'Kids'],
   ['kid', 'Kids'],
   ['children', 'Kids'],
-  ['saare', 'Saree'],
-  ['saree', 'Saree'],
-  ['sarees', 'Saree'],
+  ['saare', 'Ground Floor Saree'],
+  ['saree', 'Ground Floor Saree'],
+  ['sarees', 'Ground Floor Saree'],
   ['ground floor saree', 'Ground Floor Saree'],
   ['gf saree', 'Ground Floor Saree'],
   ['first floor saree', 'First Floor Saree'],
@@ -28,11 +39,11 @@ const DEPT_MAP = new Map([
   ['silk saree', 'Art & Raw Silk Saree'],
   ['home furnishing', 'Home Furnishing'],
   ['furnishing', 'Home Furnishing'],
-  ['billing', 'Billing'],
-  ['accounts', 'Accounts'],
-  ['account', 'Accounts'],
-  ['hr', 'HR'],
-  ['human resources', 'HR'],
+  ['billing', 'Others'],
+  ['accounts', 'Others'],
+  ['account', 'Others'],
+  ['hr', 'Others'],
+  ['human resources', 'Others'],
   ['others', 'Others'],
   ['other', 'Others'],
   ['unassigned', 'Unassigned'],
@@ -94,7 +105,9 @@ function normalizeDepartment(dept) {
   const clean = dept.trim().replace(/\s+/g, ' ');
   const lower = clean.toLowerCase();
   if (DEPT_MAP.has(lower)) return DEPT_MAP.get(lower);
-  return toTitleCase(clean);
+  const title = toTitleCase(clean);
+  if (APPROVED_DEPARTMENTS.includes(title)) return title;
+  return 'Unassigned'; // Returns Unassigned if not in approved taxonomy, routing to Data Verification panel
 }
 
 /**
@@ -117,8 +130,10 @@ function normalizeSection(sec) {
 }
 
 module.exports = {
+  APPROVED_DEPARTMENTS,
   normalizeDepartment,
   normalizeDesignation,
   normalizeSection,
   toTitleCase,
 };
+
