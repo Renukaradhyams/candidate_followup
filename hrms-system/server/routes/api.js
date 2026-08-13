@@ -13,6 +13,7 @@ const settingsController = require('../controllers/settingsController');
 const broadcastController = require('../controllers/broadcastController');
 const deptHiringController = require('../controllers/deptHiringController');
 const joiningCallDeskController = require('../controllers/joiningCallDeskController');
+const workforceAnalyticsController = require('../controllers/workforceAnalyticsController');
 
 // ── Auth Routes ──────────────────────────────────────────────
 router.post('/auth/login', authController.login);
@@ -140,6 +141,9 @@ router.get('/joining-call-desk', joiningCallDeskController.getAll);
 router.post('/joining-call-desk/update-status', authenticate, joiningCallDeskController.updateStatus);
 router.get('/joining-call-desk/history/:appNo', authenticate, joiningCallDeskController.getHistory);
 router.post('/joining-call-desk/update-doj', authenticate, joiningCallDeskController.updateDoj);
+
+// ── Workforce Analytics Route (NEW) ──────────────────────────────────────────
+router.get('/workforce-analytics', workforceAnalyticsController.getAnalytics);
 router.post('/dept-hiring/sections/add', deptHiringController.addDepartmentSection);
 router.post('/dept-hiring/sections/edit', deptHiringController.editDepartmentSection);
 router.post('/dept-hiring/sections/delete', deptHiringController.deleteDepartmentSection);

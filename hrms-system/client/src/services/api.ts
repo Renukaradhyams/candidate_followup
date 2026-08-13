@@ -376,6 +376,11 @@ export const API = {
     return apiFetch(`/joining-call-desk/by-designation/${encodeURIComponent(designation)}`);
   },
   async getCallDeskAnalytics() { return apiFetch('/joining-call-desk/analytics'); },
+  // Workforce Analytics
+  async getWorkforceAnalytics(filters: any = {}) {
+    const query = new URLSearchParams(filters).toString();
+    return apiFetch(`/workforce-analytics${query ? '?' + query : ''}`);
+  },
 
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {

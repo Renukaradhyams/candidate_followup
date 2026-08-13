@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Sparkles,
   Megaphone,
-  PhoneCall
+  PhoneCall,
+  PieChart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,12 +31,12 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   const role = session?.role || 'HR';
 
   const roleNavMap: Record<string, string[]> = {
-    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
-    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
-    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast'],
+    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
+    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
+    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast'],
     'Recruiter':   ['dashboard', 'candidates', 'interview', 'form', 'broadcast'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'joining_call_desk', 'dept_hiring', 'section_allocation', 'broadcast'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'joining_call_desk', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'broadcast'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -51,7 +52,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
       if (settingsObj && Object.keys(settingsObj).length > 0) {
         const allKeys = [
           'dashboard', 'candidates', 'interview', 'offer', 'openings', 
-          'onboarding', 'employees', 'joining_call_desk', 'dept_hiring', 'section_allocation', 
+          'onboarding', 'employees', 'joining_call_desk', 'workforce_analytics', 'dept_hiring', 'section_allocation', 
           'exit', 'form', 'broadcast', 'settings'
         ];
         
@@ -90,6 +91,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'onboarding', href: '/onboarding', label: 'Onboarding Hub', icon: PartyPopper, section: 'Talent Management' },
     { key: 'employees', href: '/employees', label: 'Employee Directory', icon: UserCheck, section: 'Talent Management' },
     { key: 'joining_call_desk', href: '/joining-call-desk', label: 'Joining Call Desk', icon: PhoneCall, section: 'Talent Management' },
+    { key: 'workforce_analytics', href: '/workforce-analytics', label: 'Employee Workforce Analytics', icon: PieChart, section: 'Talent Management' },
     { key: 'dept_hiring', href: '/department-hiring', label: 'Department Hiring Status', icon: Briefcase, section: 'Talent Management' },
     { key: 'section_allocation', href: '/section-allocation', label: 'Section Allocation', icon: UserCheck, section: 'Talent Management' },
     { key: 'exit', href: '/employee-exit', label: 'Exit & FnF Desk', icon: DoorOpen, section: 'Talent Management' },
