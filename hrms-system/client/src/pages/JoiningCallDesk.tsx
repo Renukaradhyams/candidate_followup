@@ -172,7 +172,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 }
 
 // ─── SVG Progress Ring ────────────────────────────────────────────────────────
-function ProgressRing({ pct, size = 52, stroke = 5, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
+function ProgressRing({ pct, size = 48, stroke = 4, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
@@ -185,8 +185,8 @@ function ProgressRing({ pct, size = 52, stroke = 5, color = '#C9952A' }: { pct: 
   );
 }
 
-// ─── Telecaller Call Interaction Slide-over Panel ─────────────────────────────
-function TelecallerPanel({
+// ─── Centered 880px × 80vh Profile Popup Modal Card ────────────────────────────
+function ProfileModal({
   emp, session, onClose, onUpdate, onLogSessionActivity, matchingList, onNavigate
 }: {
   emp: Employee;
@@ -197,8 +197,8 @@ function TelecallerPanel({
   matchingList?: Employee[];
   onNavigate?: (emp: Employee) => void;
 }) {
-  const [callStatus, setCallStatus] = useState<CallStatus>(emp.callStatus);
-  const [dojConf, setDojConf] = useState<DojConf>(emp.dojConfirmation);
+  const [callStatus, setCallStatus] = useState<CallStatus>(emp.callStatus || 'Pending');
+  const [dojConf, setDojConf] = useState<DojConf>(emp.dojConfirmation || 'Pending confirmation');
   const [notes, setNotes] = useState(emp.notes || '');
   const [followUpDate, setFollowUpDate] = useState(emp.followUpDate || '');
   const [editDoj, setEditDoj] = useState(false);
@@ -210,8 +210,8 @@ function TelecallerPanel({
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    setCallStatus(emp.callStatus);
-    setDojConf(emp.dojConfirmation);
+    setCallStatus(emp.callStatus || 'Pending');
+    setDojConf(emp.dojConfirmation || 'Pending confirmation');
     setNotes(emp.notes || '');
     setFollowUpDate(emp.followUpDate || '');
     setNewDoj(emp.offeredDoj || '');
@@ -237,7 +237,7 @@ function TelecallerPanel({
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (andNext = false) => {
     setSaving(true);
     try {
       const doneByUser = session?.username || 'HR';
@@ -298,11 +298,13 @@ function TelecallerPanel({
       }
 
       showToast(`Updated status for ${emp.name}!`, 'success');
-      if (hasNext && matchingList && onNavigate) {
+      if (andNext && hasNext && matchingList && onNavigate) {
         onNavigate(matchingList[currentIndex + 1]);
+      } else if (!andNext) {
+        onClose();
       }
     } catch (e: any) {
-      showToast('Failed to save status: ' + e.message, 'error');
+      showToast('Failed to save update: ' + e.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -339,7 +341,6 @@ function TelecallerPanel({
     }
   };
 
-  const urgency = urgencyOf(emp.offeredDoj);
   const photo = fileUrl(emp.photoUrl);
 
   const historyActionLabel = (type: string) => {
@@ -358,314 +359,350 @@ function TelecallerPanel({
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] md:w-[520px] bg-white shadow-2xl flex flex-col border-l border-[#e2dfd7] animate-slide-left">
-      {/* Panel Header */}
-      <div className="bg-gradient-to-r from-[#1E2D4E] to-[#2a3f6e] p-4 text-white flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#C9952A] bg-white/10 px-2 py-0.5 rounded-full border border-white/20">
-              Telecaller Call Desk Profile
-            </span>
-            {matchingList && matchingList.length > 0 && (
-              <span className="text-[10px] text-white/70 font-mono">
-                {currentIndex + 1} of {matchingList.length}
-              </span>
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="max-w-[880px] w-full h-[80vh] max-h-[750px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#e2dfd7] animate-scale-up z-50">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#1E2D4E] to-[#2a3f6e] p-4 text-white flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {photo ? (
+                <img src={photo} alt={emp.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30 shadow-md flex-shrink-0"
+                  onError={e => { (e.target as any).style.display = 'none'; }} />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#a3761c] text-white flex items-center justify-center font-black text-xl shadow-md flex-shrink-0 border-2 border-white/30">
+                  {emp.name.charAt(0)}
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-black text-lg text-white leading-tight">{emp.name}</h2>
+                  <span className="px-2 py-0.5 rounded bg-white/20 text-white font-mono font-bold text-xs">
+                    App: {emp.appNo}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-[#C9952A] text-white font-black text-xs">
+                    {emp.gender || 'Male'}
+                  </span>
+                </div>
+                <div className="text-xs text-white/80 font-semibold mt-1">
+                  <span className="text-[#C9952A] font-black">{emp.designation}</span> · {[emp.department, emp.section].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {matchingList && matchingList.length > 0 && (
+                <span className="text-xs text-white/70 font-mono hidden sm:inline">
+                  {currentIndex + 1} of {matchingList.length}
+                </span>
+              )}
+              <button onClick={onClose} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+        </div>
+
+        {/* 2-Column Body (Left 35%, Right 65%) */}
+        <div className="flex-1 overflow-y-auto p-5 grid grid-cols-12 gap-5 bg-[#fbf9f6]">
+          
+          {/* Left Column (35%) */}
+          <div className="col-span-12 md:col-span-4 space-y-3">
+            {/* Profile Photo (Max 220x260) */}
+            <div className="bg-white p-2 rounded-2xl border border-[#e2dfd7] shadow-xs flex flex-col items-center justify-center">
+              {photo ? (
+                <img src={photo} alt={emp.name} className="max-w-[220px] max-h-[240px] w-full object-cover rounded-xl border border-slate-100" />
+              ) : (
+                <div className="w-[180px] h-[200px] rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-5xl">
+                  {emp.name.charAt(0)}
+                </div>
+              )}
+            </div>
+
+            {/* Candidate Key Details */}
+            <div className="bg-white p-3 rounded-2xl border border-[#e2dfd7] space-y-1.5 text-xs">
+              <div className="flex justify-between border-b border-slate-100 pb-1">
+                <span className="text-[#777] font-bold">App ID</span>
+                <span className="font-mono font-black text-[#1E2D4E]">{emp.appNo}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-1">
+                <span className="text-[#777] font-bold">Gender</span>
+                <span className="font-bold text-[#1E2D4E]">{emp.gender}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-1">
+                <span className="text-[#777] font-bold">Department</span>
+                <span className="font-bold text-[#1E2D4E] truncate max-w-[120px]">{emp.department}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-100 pb-1">
+                <span className="text-[#777] font-bold">Section</span>
+                <span className="font-bold text-[#1E2D4E] truncate max-w-[120px]">{emp.section}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#777] font-bold">Offered DOJ</span>
+                <span className="font-mono font-black text-[#C9952A]">{fmtDate(emp.offeredDoj)}</span>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="space-y-1.5">
+              <a href={`tel:${emp.phone}`}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors flex items-center justify-center gap-1.5 shadow-2xs">
+                <PhoneCall className="w-3.5 h-3.5" /> Call ({emp.phone})
+              </a>
+              <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                className="w-full py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black transition-colors flex items-center justify-center gap-1.5 shadow-2xs">
+                <PhoneOutgoing className="w-3.5 h-3.5" /> WhatsApp
+              </a>
+              <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone number copied!', 'success'); }}
+                className="w-full py-2 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5">
+                <Copy className="w-3.5 h-3.5" /> Copy Phone Number
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column (65%) */}
+          <div className="col-span-12 md:col-span-8 space-y-4">
+            
+            {/* 1. Call Outcome Controls */}
+            <div className="bg-white p-3.5 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">1. Call Outcome Status</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['Pending', 'Call done', 'Call not received', 'Wrong number', 'Rescheduled'] as CallStatus[]).map(st => (
+                  <button key={st} type="button" onClick={() => setCallStatus(st)}
+                    className={`py-2 px-2.5 rounded-xl text-xs font-black border transition-all text-left flex items-center gap-1.5 ${callStatus === st ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm ring-2 ring-[#1E2D4E]/20' : 'bg-slate-50 text-[#555] border-[#e2dfd7] hover:bg-slate-100'}`}>
+                    <span>{callStatusEmoji(st)}</span>
+                    <span className="truncate">{st}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. DOJ Confirmation Controls */}
+            <div className="bg-white p-3.5 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">2. Candidate DOJ Confirmation</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['Confirmed', 'Not confirmed', 'Pending confirmation'] as DojConf[]).map(conf => (
+                  <button key={conf} type="button" onClick={() => setDojConf(conf)}
+                    className={`py-2 px-2 rounded-xl text-xs font-black border transition-all text-center ${dojConf === conf ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-sm' : 'bg-slate-50 text-[#555] border-[#e2dfd7] hover:bg-slate-100'}`}>
+                    {conf === 'Confirmed' ? '✅ Confirmed' : conf === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pending'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Inline Offered DOJ Edit Tool */}
+            <div className="bg-white p-3.5 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] font-black uppercase tracking-widest text-[#777]">Offered Date of Joining</span>
+                <button onClick={() => setEditDoj(e => !e)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${editDoj ? 'bg-[#1E2D4E] text-white' : 'bg-slate-100 border border-[#e2dfd7] text-[#555] hover:text-[#C9952A]'}`}>
+                  <Edit3 className="w-2.5 h-2.5" />{editDoj ? 'Cancel' : 'Edit DOJ'}
+                </button>
+              </div>
+              <div className="text-sm font-black text-[#1E2D4E]">{fmtDate(emp.offeredDoj)}</div>
+              {editDoj && (
+                <div className="flex items-center gap-2 pt-2 border-t border-[#e2dfd7]">
+                  <input type="date" value={newDoj} onChange={e => setNewDoj(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold" />
+                  <button onClick={handleSaveDoj} disabled={savingDoj}
+                    className="px-4 py-1.5 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] transition-colors flex items-center gap-1">
+                    {savingDoj ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Update
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Follow-up Date & Telecaller Remarks Notes */}
+            <div className="bg-white p-3.5 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <div>
+                <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Next Follow-up Date</label>
+                <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Telecaller Remarks / Call Notes</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                  placeholder="Enter call conversation notes..."
+                  className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]" />
+              </div>
+            </div>
+
+            {/* Audit History Accordion */}
+            <div>
+              <button onClick={loadHistory}
+                className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#C9952A] transition-all shadow-2xs">
+                <span className="flex items-center gap-2"><History className="w-3.5 h-3.5 text-[#C9952A]" />Audit Timeline & Call History</span>
+                {loadingHistory ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              {showHistory && (
+                <div className="mt-2 space-y-2 animate-fade-in max-h-40 overflow-y-auto pr-1">
+                  {history.length === 0 && !loadingHistory && (
+                    <div className="text-center py-3 text-[#999] text-xs">No call history recorded yet</div>
+                  )}
+                  {history.map((h) => (
+                    <div key={h.id} className="flex gap-2 text-xs bg-white rounded-xl px-3 py-2 border border-[#e2dfd7]">
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${historyActionColor(h.action_type)}`}>{historyActionLabel(h.action_type)}</span>
+                      <span className="text-[10px] text-[#555] truncate flex-1">{h.new_value || h.notes}</span>
+                      <span className="text-[9px] text-[#aaa] font-mono">{fmtTs(h.created_at)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Last Contact Info */}
+            <div className="bg-white p-2.5 rounded-xl border border-[#e2dfd7] flex items-center justify-between text-[11px] font-bold text-[#777]">
+              <span>Last Call: <strong className="text-[#1E2D4E]">{fmtDate(emp.lastCallDate)}</strong></span>
+              <span>Updated By: <strong className="text-[#1E2D4E]">{emp.updatedBy || 'HR'}</strong></span>
+              <span>Updated At: <strong className="text-[#1E2D4E]">{emp.updatedAt ? fmtTs(emp.updatedAt) : '—'}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Sticky Modal Footer */}
+        <div className="p-3.5 bg-white border-t border-[#e2dfd7] flex items-center justify-between flex-shrink-0 gap-2">
+          <div className="flex items-center gap-2">
             {hasPrev && onNavigate && matchingList && (
-              <button onClick={() => onNavigate(matchingList[currentIndex - 1])} title="Previous Employee"
-                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-                <ChevronLeft className="w-4 h-4" />
+              <button onClick={() => onNavigate(matchingList[currentIndex - 1])}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-[#1E2D4E] text-xs font-bold hover:bg-slate-200 flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" /> Previous
               </button>
             )}
             {hasNext && onNavigate && matchingList && (
-              <button onClick={() => onNavigate(matchingList[currentIndex + 1])} title="Next Employee"
-                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-                <ChevronRight className="w-4 h-4" />
+              <button onClick={() => onNavigate(matchingList[currentIndex + 1])}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-[#1E2D4E] text-xs font-bold hover:bg-slate-200 flex items-center gap-1">
+                Next <ChevronRight className="w-4 h-4" />
               </button>
             )}
-            <button onClick={onClose} className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
-              <X className="w-4 h-4" />
-            </button>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3 mt-2">
-          {photo ? (
-            <img src={photo} alt={emp.name} loading="lazy" className="w-13 h-13 rounded-xl object-cover border-2 border-white/30 shadow-md flex-shrink-0"
-              onError={e => { (e.target as any).style.display = 'none'; }} />
-          ) : (
-            <div className="w-13 h-13 rounded-xl bg-gradient-to-br from-[#C9952A] to-[#a3761c] text-white flex items-center justify-center font-black text-lg shadow-md flex-shrink-0 border-2 border-white/30">
-              {emp.name.charAt(0)}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-black text-base text-white truncate leading-tight">{emp.name}</h3>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-white/80 flex-wrap">
-              <span className="font-mono bg-white/15 px-1.5 py-0.5 rounded text-[9.5px]">App: {emp.appNo}</span>
-              <span className="font-semibold">{emp.gender}</span>
-              <span>·</span>
-              <span className="font-bold text-[#C9952A]">{emp.designation}</span>
-            </div>
-            <div className="text-[10.5px] text-white/70 font-medium truncate mt-0.5">
-              {[emp.department, emp.section].filter(Boolean).join(' · ')}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Form Controls */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbf9f6]">
-        {/* Quick Phone Actions Row */}
-        <div className="card-glass p-3 rounded-2xl border border-[#e2dfd7] bg-white flex items-center justify-between gap-2 shadow-xs">
           <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-[#C9952A]" />
-            <span className="font-mono font-bold text-[#1E2D4E] text-sm">{emp.phone}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <a href={`tel:${emp.phone}`}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors flex items-center gap-1 shadow-xs">
-              <PhoneCall className="w-3.5 h-3.5" />Call
-            </a>
-            <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-              className="px-3 py-1.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black transition-colors flex items-center gap-1 shadow-xs">
-              <PhoneOutgoing className="w-3.5 h-3.5" />WhatsApp
-            </a>
-            <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
-              className="p-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[#555] hover:bg-slate-200">
-              <Copy className="w-3.5 h-3.5" />
+            <button onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white border border-[#e2dfd7] text-[#666] text-xs font-bold hover:bg-slate-50">
+              Cancel
             </button>
-          </div>
-        </div>
-
-        {/* Call Outcome Options */}
-        <div className="space-y-1.5">
-          <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">1. Call Outcome Status</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['Pending', 'Call done', 'Call not received', 'Wrong number', 'Rescheduled'] as CallStatus[]).map(st => (
-              <button key={st} type="button" onClick={() => setCallStatus(st)}
-                className={`px-3 py-2 rounded-xl text-xs font-black border transition-all text-left flex items-center gap-2 ${callStatus === st ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-md ring-2 ring-[#1E2D4E]/20' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
-                <span>{callStatusEmoji(st)}</span>
-                <span className="truncate">{st}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* DOJ Confirmation */}
-        <div className="space-y-1.5">
-          <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">2. Candidate DOJ Confirmation</label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['Confirmed', 'Not confirmed', 'Pending confirmation'] as DojConf[]).map(conf => (
-              <button key={conf} type="button" onClick={() => setDojConf(conf)}
-                className={`px-2 py-2 rounded-xl text-xs font-black border transition-all text-center ${dojConf === conf ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-md' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#C9952A]'}`}>
-                {conf === 'Confirmed' ? '✅ Confirmed' : conf === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pending'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date of Joining Inline Edit Card */}
-        <div className="bg-[#F9F7F4] rounded-2xl border border-[#e2dfd7] p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10.5px] font-black uppercase tracking-widest text-[#777]">Offered Date of Joining</span>
-            <button onClick={() => setEditDoj(e => !e)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${editDoj ? 'bg-[#1E2D4E] text-white' : 'bg-white border border-[#e2dfd7] text-[#555] hover:border-[#C9952A] hover:text-[#C9952A]'}`}>
-              <Edit3 className="w-2.5 h-2.5" />{editDoj ? 'Cancel' : 'Edit DOJ'}
+            <button onClick={() => handleSave(false)} disabled={saving}
+              className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-black hover:bg-[#162340] flex items-center gap-1.5 shadow-md">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Update
             </button>
-          </div>
-          <div className="text-base font-black text-[#1E2D4E] flex items-center justify-between">
-            <span>{fmtDate(emp.offeredDoj)}</span>
-            {urgency && (
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${urgency === 'overdue' ? 'bg-rose-100 text-rose-700' : urgency === 'today' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                {urgency.toUpperCase()}
-              </span>
+            {hasNext && (
+              <button onClick={() => handleSave(true)} disabled={saving}
+                className="px-4 py-2 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] flex items-center gap-1.5 shadow-md">
+                Save & Next Candidate →
+              </button>
             )}
           </div>
-
-          {editDoj && (
-            <div className="mt-2 space-y-2 animate-fade-in pt-2 border-t border-[#e2dfd7]">
-              <input type="date" value={newDoj} onChange={e => setNewDoj(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#C9952A]" />
-              <div className="text-[10px] text-amber-700 font-medium bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                ⚠ Updates propagate immediately to Candidate CRM & Employee Directory
-              </div>
-              <button onClick={handleSaveDoj} disabled={savingDoj}
-                className="w-full py-2 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] flex items-center justify-center gap-1.5 transition-colors disabled:opacity-60">
-                {savingDoj ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Update Offered DOJ
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Follow-up Date & Notes */}
-        <div className="space-y-3">
-          <div>
-            <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Next Follow-up Date</label>
-            <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]" />
-          </div>
-
-          <div>
-            <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Telecaller Remarks / Call Notes</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-              placeholder="Enter details from conversation..."
-              className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]" />
-          </div>
-        </div>
-
-        {/* Save Button */}
-        <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 rounded-2xl bg-[#1E2D4E] text-white text-sm font-black hover:bg-[#162340] transition-all flex items-center justify-center gap-2 shadow-xl disabled:opacity-60">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save Outcome & Continue {hasNext ? '→' : ''}
-        </button>
-
-        {/* Audit History Accordion */}
-        <div>
-          <button onClick={loadHistory}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#C9952A] hover:text-[#1E2D4E] transition-all shadow-xs">
-            <span className="flex items-center gap-2"><History className="w-3.5 h-3.5 text-[#C9952A]" />Audit Timeline & Call History</span>
-            {loadingHistory ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-          {showHistory && (
-            <div className="mt-2 space-y-2 animate-fade-in">
-              {history.length === 0 && !loadingHistory && (
-                <div className="text-center py-4 text-[#999] text-xs">No call history recorded yet</div>
-              )}
-              {history.map((h, i) => (
-                <div key={h.id} className="flex gap-2.5 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                  <div className="flex-shrink-0 mt-1">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black ${historyActionColor(h.action_type)}`}>
-                      {h.action_type === 'call_status' ? '📞' : h.action_type === 'doj_changed' ? '📅' : h.action_type === 'note_added' ? '📝' : '·'}
-                    </div>
-                  </div>
-                  <div className="flex-1 bg-[#F9F7F4] rounded-xl px-3 py-2 border border-[#e2dfd7]">
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-[10.5px] font-black text-[#1E2D4E]">{historyActionLabel(h.action_type)}</span>
-                      <span className="text-[9px] text-[#aaa] font-medium flex-shrink-0">{fmtTs(h.created_at)}</span>
-                    </div>
-                    {h.old_value && h.new_value && h.action_type !== 'note_added' && (
-                      <div className="flex items-center gap-1.5 text-[10px] mb-1">
-                        <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 line-through">{h.old_value}</span>
-                        <ArrowRight className="w-2.5 h-2.5 text-[#aaa]" />
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">{h.new_value}</span>
-                      </div>
-                    )}
-                    {h.notes && h.action_type !== 'note_added' && <p className="text-[10px] text-[#666] font-medium">{h.notes}</p>}
-                    {h.action_type === 'note_added' && <p className="text-[10px] text-purple-700 font-medium bg-purple-50 rounded px-1.5 py-1">{h.new_value}</p>}
-                    <p className="text-[9px] text-[#bbb] mt-1">by {h.done_by}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Compact Enterprise High-Density Employee Card (40% Reduced Height) ───────
-const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOpen, searchQuery, onSelect, onOpenPanel }: {
-  emp: Employee; selected: boolean; isPanelOpen: boolean; searchQuery: string;
+// ─── Redesigned Compact Employee Glass Card (52x52 Thumbnail) ────────────────
+const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, searchQuery, onSelect, onOpenModal, onQuickUpdate }: {
+  emp: Employee; selected: boolean; searchQuery: string;
   onSelect: (checked: boolean) => void;
-  onOpenPanel: () => void;
+  onOpenModal: () => void;
+  onQuickUpdate: (appNo: string, callStatus?: CallStatus, dojConf?: DojConf) => void;
 }) {
   const urgency = urgencyOf(emp.offeredDoj);
   const photo = fileUrl(emp.photoUrl);
   const daysRem = daysUntil(emp.offeredDoj);
 
   return (
-    <div onClick={onOpenPanel}
-      className={`card-glass p-3 rounded-2xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group bg-white ${isPanelOpen ? 'ring-2 ring-[#C9952A] shadow-md' : 'border-[#e2dfd7]'} ${urgencyBorderColor(urgency)} flex flex-col justify-between space-y-2.5`}>
+    <div onClick={onOpenModal}
+      className={`card-glass p-3 rounded-2xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group bg-white ${urgencyBorderColor(urgency)} flex flex-col justify-between space-y-2.5`}>
       
-      {/* Compact Main Layout Grid */}
-      <div className="grid grid-cols-12 gap-2 items-center">
-        {/* Left Section (4 cols): Checkbox + Photo (72px) + Name & AppNo */}
-        <div className="col-span-12 sm:col-span-5 flex items-center gap-2.5 min-w-0">
-          <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
-            onClick={e => e.stopPropagation()}
-            className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer flex-shrink-0" />
-          {photo ? (
-            <img src={photo} alt={emp.name} loading="lazy" className="w-14 h-14 rounded-xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-2xs" onError={e => { (e.target as any).style.display = 'none'; }} />
-          ) : (
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-2xs flex-shrink-0">
-              {emp.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              <h4 className="font-black text-[#1E2D4E] text-xs leading-tight truncate">
-                <HighlightMatch text={emp.name} query={searchQuery} />
-              </h4>
-              <span className={`px-1 py-0.2 rounded text-[8.5px] font-black border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                {emp.gender || 'M'}
-              </span>
-            </div>
-            <div className="text-[9.5px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.2 rounded w-max mt-0.5">
-              <HighlightMatch text={emp.appNo} query={searchQuery} />
-            </div>
+      {/* Top Row: Checkbox + Photo (52x52) + Name & AppNo + Gender */}
+      <div className="flex items-center gap-2.5">
+        <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
+          onClick={e => e.stopPropagation()}
+          className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer flex-shrink-0" />
+        {photo ? (
+          <img src={photo} alt={emp.name} loading="lazy" className="w-[52px] h-[52px] rounded-xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-2xs" onError={e => { (e.target as any).style.display = 'none'; }} />
+        ) : (
+          <div className="w-[52px] h-[52px] rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-2xs flex-shrink-0">
+            {emp.name.charAt(0).toUpperCase()}
           </div>
-        </div>
-
-        {/* Center Section (4 cols): Dept, Section, Designation, Phone */}
-        <div className="col-span-12 sm:col-span-4 text-[10.5px] text-[#555] space-y-0.5 border-t sm:border-t-0 sm:border-l border-slate-100 pt-1 sm:pt-0 sm:pl-2 min-w-0">
-          <div className="font-bold text-[#1E2D4E] truncate">
-            <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
-          </div>
-          <div className="font-semibold text-[#C9952A] truncate">
-            <HighlightMatch text={emp.designation} query={searchQuery} />
-          </div>
-          <div className="font-mono font-semibold text-[#666] flex items-center gap-1">
-            <Phone className="w-2.5 h-2.5 text-[#C9952A]" />
-            <HighlightMatch text={emp.phone} query={searchQuery} />
-          </div>
-        </div>
-
-        {/* Right Section (3 cols): Offered DOJ, Days Rem, Badges */}
-        <div className="col-span-12 sm:col-span-3 sm:text-right space-y-1 border-t sm:border-t-0 sm:border-l border-slate-100 pt-1 sm:pt-0 sm:pl-2">
-          <div className="flex items-center sm:justify-end gap-1">
-            <Calendar className="w-3 h-3 text-[#C9952A]" />
-            <span className="font-mono font-black text-xs text-[#1E2D4E]">{fmtDate(emp.offeredDoj)}</span>
-          </div>
-
-          <div className="flex items-center sm:justify-end gap-1 flex-wrap">
-            {daysRem !== null && (
-              <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
-                {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Today' : daysRem === 1 ? 'Tomorrow' : `In ${daysRem}d`}
-              </span>
-            )}
-            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-bold border ${callStatusCls(emp.callStatus)}`}>
-              {callStatusEmoji(emp.callStatus)} {emp.callStatus}
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <h4 className="font-black text-[#1E2D4E] text-xs leading-tight truncate">
+              <HighlightMatch text={emp.name} query={searchQuery} />
+            </h4>
+            <span className={`px-1 py-0.2 rounded text-[8.5px] font-black border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+              {emp.gender || 'M'}
             </span>
-            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md text-[9px] font-bold border ${dojConfCls(emp.dojConfirmation)}`}>
-              {emp.dojConfirmation === 'Confirmed' ? '✅ Conf' : emp.dojConfirmation === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pend'}
-            </span>
+          </div>
+          <div className="text-[9.5px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.2 rounded w-max mt-0.5">
+            <HighlightMatch text={emp.appNo} query={searchQuery} />
           </div>
         </div>
       </div>
 
-      {/* Bottom Section: Thin 4-stage Pipeline Progress Timeline & Action Pills */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-        {/* Thin 4-stage Pipeline Progress */}
-        <div className="flex items-center gap-1 flex-1 min-w-[140px]">
-          <span className="text-[8px] font-black uppercase text-[#888] mr-1">Pipeline:</span>
-          <div className="flex-1 grid grid-cols-4 gap-1 items-center">
-            <div className="h-1 rounded-full bg-emerald-500" title="1. Call Pending" />
-            <div className={`h-1 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Completed" />
-            <div className={`h-1 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmed" />
-            <div className={`h-1 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : 'bg-slate-200'}`} title="4. Joining Completed" />
+      {/* Row 2: Designation / Department / Section */}
+      <div className="text-[10.5px] text-[#555] space-y-0.5 bg-[#F9F7F4] p-2 rounded-xl border border-[#e2dfd7]/60">
+        <div className="font-bold text-[#C9952A] truncate">
+          <HighlightMatch text={emp.designation} query={searchQuery} />
+        </div>
+        <div className="font-semibold text-[#1E2D4E] truncate text-[10px]">
+          <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
+        </div>
+      </div>
+
+      {/* Row 3: Phone + Offered DOJ & Urgency Chip */}
+      <div className="flex items-center justify-between text-[10.5px] text-[#555]">
+        <span className="font-mono font-semibold text-[#1E2D4E] flex items-center gap-1">
+          <Phone className="w-2.5 h-2.5 text-[#C9952A]" />
+          <HighlightMatch text={emp.phone} query={searchQuery} />
+        </span>
+        <div className="flex items-center gap-1 font-mono font-bold text-xs text-[#1E2D4E]">
+          <Calendar className="w-3 h-3 text-[#C9952A]" />
+          {fmtDate(emp.offeredDoj)}
+          {daysRem !== null && (
+            <span className={`text-[8.5px] font-black px-1.5 py-0.2 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+              {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Today' : daysRem === 1 ? 'Tomorrow' : `${daysRem}d`}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Row 4: Call Status & DOJ Confirmation Badges (Click to Quick Update) */}
+      <div className="flex items-center justify-between gap-1" onClick={e => e.stopPropagation()}>
+        <button
+          onClick={() => {
+            const nextStatus: CallStatus = emp.callStatus === 'Pending' ? 'Call done' : emp.callStatus === 'Call done' ? 'Call not received' : 'Pending';
+            onQuickUpdate(emp.appNo, nextStatus, undefined);
+          }}
+          className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[9.5px] font-bold border transition-all hover:scale-105 ${callStatusCls(emp.callStatus)}`}>
+          {callStatusEmoji(emp.callStatus)} {emp.callStatus || 'Pending'}
+        </button>
+
+        <button
+          onClick={() => {
+            const nextConf: DojConf = emp.dojConfirmation === 'Confirmed' ? 'Not confirmed' : emp.dojConfirmation === 'Not confirmed' ? 'Pending confirmation' : 'Confirmed';
+            onQuickUpdate(emp.appNo, undefined, nextConf);
+          }}
+          className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[9.5px] font-bold border transition-all hover:scale-105 ${dojConfCls(emp.dojConfirmation)}`}>
+          {emp.dojConfirmation === 'Confirmed' ? '✅ Conf' : emp.dojConfirmation === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pend'}
+        </button>
+      </div>
+
+      {/* Row 5: Compact Pipeline Indicator + Action Pills */}
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 flex-wrap">
+        <div className="flex items-center gap-1 flex-1 min-w-[120px]">
+          <span className="text-[8px] font-black uppercase text-[#888] mr-1">Progress:</span>
+          <div className="flex-1 grid grid-cols-3 gap-1 items-center">
+            <div className="h-1 rounded-full bg-emerald-500" title="1. Registered" />
+            <div className={`h-1 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Status" />
+            <div className={`h-1 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmation" />
           </div>
         </div>
 
-        {/* Compact Action Pills */}
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button onClick={onOpenPanel}
+          <button onClick={onOpenModal}
             className="px-2 py-1 rounded-lg bg-[#C9952A] hover:bg-[#b38222] text-white text-[10px] font-black transition-all flex items-center gap-0.5 shadow-2xs">
-            <Eye className="w-2.5 h-2.5" />View
+            <Eye className="w-2.5 h-2.5" />View Profile
           </button>
           <a href={`tel:${emp.phone}`} className="px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-0.5">
             <PhoneCall className="w-2.5 h-2.5" />Call
@@ -675,7 +712,7 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
             <PhoneOutgoing className="w-2.5 h-2.5" />WA
           </a>
           <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
-            className="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-200 transition-colors">
+            className="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-200 transition-colors ml-auto">
             <Copy className="w-2.5 h-2.5" />
           </button>
         </div>
@@ -685,16 +722,16 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, isPanelOp
 });
 
 // ─── Designation Accordion Group Card ─────────────────────────────────────────
-function DesigGroupCard({ designation, employees, totalCount, selectedIds, panelEmpNo, searchQuery, defaultExpanded, onSelect, onOpenPanel }: {
+function DesigGroupCard({ designation, employees, totalCount, selectedIds, searchQuery, defaultExpanded, onSelect, onOpenModal, onQuickUpdate }: {
   designation: string;
   employees: Employee[];
   totalCount: number;
   selectedIds: Set<string>;
-  panelEmpNo: string | null;
   searchQuery: string;
   defaultExpanded: boolean;
   onSelect: (appNo: string, checked: boolean) => void;
-  onOpenPanel: (emp: Employee) => void;
+  onOpenModal: (emp: Employee) => void;
+  onQuickUpdate: (appNo: string, callStatus?: CallStatus, dojConf?: DojConf) => void;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -703,7 +740,7 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
   }, [searchQuery]);
 
   const callDone = employees.filter(e => e.callStatus === 'Call done').length;
-  const pending = employees.filter(e => e.callStatus === 'Pending').length;
+  const pending = employees.filter(e => e.callStatus === 'Pending' || !e.callStatus).length;
   const notReceived = employees.filter(e => e.callStatus === 'Call not received').length;
   const dojConfirmed = employees.filter(e => e.dojConfirmation === 'Confirmed').length;
 
@@ -715,9 +752,9 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
       <button onClick={() => setExpanded(e => !e)}
         className="w-full p-4 flex items-center gap-3.5 hover:bg-slate-50/80 transition-colors text-left">
         <div className="relative flex-shrink-0">
-          <ProgressRing pct={pct} size={52} stroke={5} color={ringColor} />
+          <ProgressRing pct={pct} size={48} stroke={4} color={ringColor} />
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[11px] font-black text-[#1E2D4E]">{pct}%</span>
+            <span className="text-[10.5px] font-black text-[#1E2D4E]">{pct}%</span>
           </div>
         </div>
         <div className="flex-1 min-w-0">
@@ -744,9 +781,10 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {employees.map(emp => (
               <EmployeeCard key={emp.appNo} emp={emp} selected={selectedIds.has(emp.appNo)}
-                isPanelOpen={panelEmpNo === emp.appNo} searchQuery={searchQuery}
+                searchQuery={searchQuery}
                 onSelect={c => onSelect(emp.appNo, c)}
-                onOpenPanel={() => onOpenPanel(emp)} />
+                onOpenModal={() => onOpenModal(emp)}
+                onQuickUpdate={onQuickUpdate} />
             ))}
           </div>
         </div>
@@ -756,14 +794,14 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, panel
 }
 
 // ─── Priority Call Queue ──────────────────────────────────────────────────────
-function PriorityBoard({ priorityData, onOpenPanel }: {
+function PriorityBoard({ priorityData, onOpenModal }: {
   priorityData: {
     joiningToday: Employee[];
     joiningTomorrow: Employee[];
     overdue: Employee[];
     unconfirmed: Employee[];
   };
-  onOpenPanel: (emp: Employee) => void;
+  onOpenModal: (emp: Employee) => void;
 }) {
   const lanes = [
     { key: 'today',    label: 'Joining Today',    color: 'border-emerald-400 bg-emerald-50/70', badge: 'bg-emerald-600', emps: priorityData.joiningToday },
@@ -797,7 +835,7 @@ function PriorityBoard({ priorityData, onOpenPanel }: {
               </div>
               <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
                 {lane.emps.slice(0, 8).map(emp => (
-                  <button key={emp.appNo} onClick={() => onOpenPanel(emp)}
+                  <button key={emp.appNo} onClick={() => onOpenModal(emp)}
                     className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-white text-left transition-all hover:shadow-xs">
                     <div className="w-7 h-7 rounded-lg bg-[#1E2D4E] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
                       {emp.name.charAt(0).toUpperCase()}
@@ -981,7 +1019,7 @@ function BulkActionBar({ count, saving, onAction, onClear, onExport }: {
 
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => onAction('Call done')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors disabled:opacity-50">✅ Call Done</button>
-        <button onClick={() => onAction('Call not received')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors disabled:opacity-50">📵 No Answer</button>
+        <button onClick={() => onAction('Call not received')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors disabled:opacity-50">特性 No Answer</button>
         <button onClick={() => onAction('Pending')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-colors disabled:opacity-50">⏳ Pending</button>
         <div className="h-5 w-px bg-white/20 hidden sm:block" />
         <button onClick={() => onAction(undefined, 'Confirmed')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-colors disabled:opacity-50">📅 Confirmed</button>
@@ -1021,8 +1059,8 @@ export default function JoiningCallDeskPage() {
     new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   );
 
-  // Telecaller Right Panel
-  const [panelEmp, setPanelEmp] = useState<Employee | null>(null);
+  // Centered Profile Modal state
+  const [modalEmp, setModalEmp] = useState<Employee | null>(null);
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -1052,7 +1090,7 @@ export default function JoiningCallDeskPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Keyboard shortcut Ctrl+K or / to focus search bar
+  // Keyboard shortcut Ctrl+K to focus search bar
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1079,7 +1117,7 @@ export default function JoiningCallDeskPage() {
     setLastUpdatedTime(fullTimeStr);
   }, []);
 
-  // Fetch full employee directory dataset for instant client search & single source of truth
+  // Fetch full employee directory dataset for single source of truth
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -1103,10 +1141,35 @@ export default function JoiningCallDeskPage() {
   // In-place local state update after edit (Syncs all KPIs instantly)
   const handleEmployeeUpdate = useCallback((appNo: string, updates: Partial<Employee>) => {
     setAllEmployees(prev => prev.map(e => e.appNo === appNo ? { ...e, ...updates } : e));
-    setPanelEmp(prev => prev?.appNo === appNo ? { ...prev, ...updates } as Employee : prev);
+    setModalEmp(prev => prev?.appNo === appNo ? { ...prev, ...updates } as Employee : prev);
   }, []);
 
-  // 100% Dynamic Single Source of Truth Analytics Calculation
+  // Inline Quick Update Trigger for Employee Cards
+  const handleQuickUpdate = useCallback(async (appNo: string, callStatus?: CallStatus, dojConf?: DojConf) => {
+    try {
+      const doneByUser = session?.username || 'HR';
+      await API.updateCallDeskStatus({
+        appNo,
+        ...(callStatus ? { callStatus } : {}),
+        ...(dojConf ? { dojConfirmation: dojConf } : {}),
+        doneBy: doneByUser
+      });
+
+      const updates: Partial<Employee> = {};
+      if (callStatus) updates.callStatus = callStatus;
+      if (dojConf) updates.dojConfirmation = dojConf;
+      updates.lastCallDate = new Date().toISOString().slice(0, 10);
+      updates.updatedBy = doneByUser;
+      updates.updatedAt = new Date().toISOString();
+
+      handleEmployeeUpdate(appNo, updates);
+      showToast('Quick status updated!', 'success');
+    } catch (e: any) {
+      showToast('Quick update failed: ' + e.message, 'error');
+    }
+  }, [session, handleEmployeeUpdate]);
+
+  // Dynamic Single Source of Truth Analytics Calculation
   const analytics = useMemo<Analytics>(() => {
     const total = allEmployees.length;
     let callDone = 0;
@@ -1249,7 +1312,7 @@ export default function JoiningCallDeskPage() {
     } else if (quickFilter === 'confirmed') {
       list = list.filter(e => e.dojConfirmation === 'Confirmed');
     } else if (quickFilter === 'pending') {
-      list = list.filter(e => e.callStatus === 'Pending');
+      list = list.filter(e => e.callStatus === 'Pending' || !e.callStatus);
     } else if (quickFilter === 'no_answer') {
       list = list.filter(e => e.callStatus === 'Call not received');
     }
@@ -1302,7 +1365,6 @@ export default function JoiningCallDeskPage() {
       map.get(desig)!.push(e);
     });
 
-    // Total employee counts per designation from master allEmployees
     const masterCounts = new Map<string, number>();
     allEmployees.forEach(e => {
       const desig = e.designation || 'Unassigned';
@@ -1318,10 +1380,10 @@ export default function JoiningCallDeskPage() {
       .sort((a, b) => a.designation.localeCompare(b.designation));
   }, [filteredEmployees, allEmployees]);
 
-  // Auto-open panel if search yields EXACTLY 1 employee result
+  // Auto-open modal if search yields EXACTLY 1 candidate result
   useEffect(() => {
     if (debouncedSearch.trim() && filteredEmployees.length === 1) {
-      setPanelEmp(filteredEmployees[0]);
+      setModalEmp(filteredEmployees[0]);
     }
   }, [debouncedSearch, filteredEmployees]);
 
@@ -1330,7 +1392,7 @@ export default function JoiningCallDeskPage() {
   const uniqSections = useMemo(() => [...new Set(allEmployees.map(e => e.section).filter(Boolean))].sort(), [allEmployees]);
   const uniqDesigs   = useMemo(() => [...new Set(allEmployees.map(e => e.designation).filter(Boolean))].sort(), [allEmployees]);
 
-  // Bulk actions
+  // Bulk Actions
   const handleBulkAction = async (callStatus?: CallStatus, dojConf?: DojConf, followUpDate?: string) => {
     if (selectedIds.size === 0) return;
     setBulkSaving(true);
@@ -1385,8 +1447,8 @@ export default function JoiningCallDeskPage() {
       Section: e.section,
       Designation: e.designation,
       'Offered DOJ': e.offeredDoj,
-      'Call Status': e.callStatus,
-      'DOJ Confirmation': e.dojConfirmation,
+      'Call Status': e.callStatus || 'Pending',
+      'DOJ Confirmation': e.dojConfirmation || 'Pending confirmation',
       Notes: e.notes || '',
     }));
 
@@ -1401,21 +1463,20 @@ export default function JoiningCallDeskPage() {
   };
 
   const hasFilters = searchInput || quickFilter !== 'all' || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
-  const isPanelOpen = !!panelEmp;
 
   return (
     <div className="min-h-screen bg-[#F4F1EA] text-[#1E2D4E] flex flex-col font-sans">
       <ToastContainer />
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isPanelOpen ? 'lg:pr-[520px]' : ''} lg:pl-64`}>
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Topbar title="Joining Call Desk" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Joining Call Desk' }]}
           session={session} onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Sticky Enterprise Operations Search & Segmented Filter Bar */}
+        {/* Sticky Search & Segmented Filter Controls */}
         <div className="sticky top-16 z-30 bg-[#F4F1EA]/95 backdrop-blur-md border-b border-[#e2dfd7] px-4 py-3 shadow-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Command Search Bar */}
+            {/* Search Box */}
             <div className="relative flex-1 min-w-[240px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C9952A]" />
               <input
@@ -1453,7 +1514,7 @@ export default function JoiningCallDeskPage() {
                 <button
                   key={seg.key}
                   onClick={() => setQuickFilter(seg.key as QuickFilterType)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-black transition-all flex-shrink-0 ${quickFilter === seg.key ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex-shrink-0 ${quickFilter === seg.key ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
                   {seg.label}
                 </button>
               ))}
@@ -1469,7 +1530,7 @@ export default function JoiningCallDeskPage() {
               <option value="name">Name (A–Z)</option>
             </select>
 
-            {/* Filter Toggle */}
+            {/* Filter Drawer Toggle */}
             <button onClick={() => setShowFilters(f => !f)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-xs font-black transition-all shadow-xs ${showFilters || hasFilters ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
               <SlidersHorizontal className="w-3.5 h-3.5" />Filters{hasFilters ? ' ●' : ''}
@@ -1588,7 +1649,7 @@ export default function JoiningCallDeskPage() {
                 Joining Confirmation Call Desk
               </h1>
               <p className="text-xs text-[#777] font-semibold mt-1">
-                High-density telecalling dashboard · Updates sync across Employee Directory & Offer Desk
+                Real-time telecalling operations · Centered popup profile card & instant inline status updates
               </p>
             </div>
 
@@ -1611,7 +1672,7 @@ export default function JoiningCallDeskPage() {
           />
 
           {/* Dynamic Priority Follow-up Queue */}
-          <PriorityBoard priorityData={priorityQueueData} onOpenPanel={setPanelEmp} />
+          <PriorityBoard priorityData={priorityQueueData} onOpenModal={setModalEmp} />
 
           {/* Search Result Summary Feedback Bar */}
           {debouncedSearch.trim() && (
@@ -1641,9 +1702,9 @@ export default function JoiningCallDeskPage() {
             <div className="card-glass p-16 flex flex-col items-center justify-center text-center gap-3 bg-white rounded-3xl border border-[#e2dfd7]">
               <Users className="w-12 h-12 text-[#1E2D4E]/20" />
               <div>
-                <p className="font-black text-[#1E2D4E] text-base">No matching employees found</p>
+                <p className="font-black text-[#1E2D4E] text-base">No matching candidates found</p>
                 <p className="text-xs text-[#777] font-medium mt-1">
-                  {debouncedSearch ? `No record matched "${debouncedSearch}". Try searching by name, phone, or App No.` : 'No joined employees found in the directory.'}
+                  {debouncedSearch ? `No record matched "${debouncedSearch}". Try searching by name, phone, or App No.` : 'No joined candidates found in the directory.'}
                 </p>
               </div>
               {hasFilters && (
@@ -1663,7 +1724,6 @@ export default function JoiningCallDeskPage() {
               employees={group.employees}
               totalCount={group.totalCount}
               selectedIds={selectedIds}
-              panelEmpNo={panelEmp?.appNo || null}
               searchQuery={debouncedSearch}
               defaultExpanded={!!debouncedSearch.trim() || designationGroups.length <= 3}
               onSelect={(appNo, checked) => {
@@ -1673,26 +1733,24 @@ export default function JoiningCallDeskPage() {
                   return next;
                 });
               }}
-              onOpenPanel={setPanelEmp}
+              onOpenModal={setModalEmp}
+              onQuickUpdate={handleQuickUpdate}
             />
           ))}
         </main>
       </div>
 
-      {/* Right Telecaller Call Interaction Slide-over Panel */}
-      {panelEmp && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-40 sm:hidden" onClick={() => setPanelEmp(null)} />
-          <TelecallerPanel
-            emp={panelEmp}
-            session={session}
-            onClose={() => setPanelEmp(null)}
-            onUpdate={handleEmployeeUpdate}
-            onLogSessionActivity={handleLogSessionActivity}
-            matchingList={filteredEmployees}
-            onNavigate={setPanelEmp}
-          />
-        </>
+      {/* Centered Profile Popup Modal Card (880px x 80vh) */}
+      {modalEmp && (
+        <ProfileModal
+          emp={modalEmp}
+          session={session}
+          onClose={() => setModalEmp(null)}
+          onUpdate={handleEmployeeUpdate}
+          onLogSessionActivity={handleLogSessionActivity}
+          matchingList={filteredEmployees}
+          onNavigate={setModalEmp}
+        />
       )}
 
       {/* Sticky Bulk Action Bar */}
