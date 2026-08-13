@@ -16,7 +16,7 @@ async function ensureTables() {
         updated_by VARCHAR(100),
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS joining_call_history (
@@ -29,8 +29,15 @@ async function ensureTables() {
         done_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_jch_app_no (app_no)
-      )
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    // Convert table collations to utf8mb4_unicode_ci to prevent collation mismatch on MySQL 8.4+
+    try {
+      await pool.query(`ALTER TABLE joining_call_desk CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    } catch (e) {}
+    try {
+      await pool.query(`ALTER TABLE joining_call_history CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    } catch (e) {}
     // Migrate ENUM to add new statuses if table already existed with smaller ENUM
     try {
       await pool.query(`
@@ -80,8 +87,8 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no = so.app_no
-        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.designation
@@ -124,8 +131,8 @@ class JoiningCallDeskController {
                d.call_status, d.doj_confirmation, d.notes,
                d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no = so.app_no
-        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
           AND COALESCE(c.designation,'Unassigned') = ?
@@ -183,8 +190,8 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) BETWEEN ? AND ?     THEN 1 ELSE 0 END) AS joining_this_week,
           SUM(CASE WHEN COALESCE(d.follow_up_date, NULL) < ? AND COALESCE(d.call_status,'Pending') != 'Call done' THEN 1 ELSE 0 END) AS overdue_followups
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no = so.app_no
-        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
       `, [today, weekEndStr, today]);
@@ -236,7 +243,7 @@ class JoiningCallDeskController {
                so.actual_doj AS offer_actual_doj,
                so.status AS offer_status
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         WHERE LOWER(TRIM(c.status)) IN ('joined','hired')
            OR LOWER(TRIM(so.status)) = 'joined'
         GROUP BY c.app_no
