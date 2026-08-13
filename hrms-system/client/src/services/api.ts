@@ -367,7 +367,7 @@ export const API = {
   async getCallDeskHistory(appNo: string) {
     return apiFetch(`/joining-call-desk/history/${encodeURIComponent(appNo)}`);
   },
-  async updateCallDeskDOJ(payload: { appNo: string; newDoj: string; doneBy?: string }) {
+  async updateCallDeskDOJ(payload: { appNo: string; newDoj?: string; offeredDoj?: string; doneBy?: string }) {
     return apiFetch('/joining-call-desk/update-doj', { method: 'POST', body: JSON.stringify(payload) });
   },
   // V2 endpoints
