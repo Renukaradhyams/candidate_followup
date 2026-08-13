@@ -132,7 +132,10 @@ router.post('/section-allocations/bulk', deptHiringController.bulkSaveSectionAll
 
 router.get('/dept-hiring/sections', deptHiringController.getDepartmentSections);
 
-// ── Joining Call Desk Routes (NEW – does not modify any existing route) ─────
+// ── Joining Call Desk Routes (V2 enhanced) ───────────────────────────────────
+router.get('/joining-call-desk/summary', joiningCallDeskController.getSummary);
+router.get('/joining-call-desk/analytics', joiningCallDeskController.getAnalytics);
+router.get('/joining-call-desk/by-designation/:designation', authenticate, joiningCallDeskController.getByDesignation);
 router.get('/joining-call-desk', joiningCallDeskController.getAll);
 router.post('/joining-call-desk/update-status', authenticate, joiningCallDeskController.updateStatus);
 router.get('/joining-call-desk/history/:appNo', authenticate, joiningCallDeskController.getHistory);

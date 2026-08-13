@@ -370,6 +370,12 @@ export const API = {
   async updateCallDeskDOJ(payload: { appNo: string; newDoj: string; doneBy?: string }) {
     return apiFetch('/joining-call-desk/update-doj', { method: 'POST', body: JSON.stringify(payload) });
   },
+  // V2 endpoints
+  async getCallDeskSummary() { return apiFetch('/joining-call-desk/summary'); },
+  async getCallDeskByDesignation(designation: string) {
+    return apiFetch(`/joining-call-desk/by-designation/${encodeURIComponent(designation)}`);
+  },
+  async getCallDeskAnalytics() { return apiFetch('/joining-call-desk/analytics'); },
 
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {

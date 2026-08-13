@@ -1,14 +1,14 @@
 const pool = require('../config/db');
-const { successRes, errorRes } = require('../utils/response');
+const { errorRes } = require('../utils/response');
 
-// ── Auto-create tables on startup ────────────────────────────────────────────
+// ── Auto-create & migrate tables ─────────────────────────────────────────────
 async function ensureTables() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS joining_call_desk (
         id INT AUTO_INCREMENT PRIMARY KEY,
         app_no VARCHAR(50) NOT NULL UNIQUE,
-        call_status ENUM('Pending','Call done','Call not received') DEFAULT 'Pending',
+        call_status ENUM('Pending','Call done','Call not received','Wrong number','Rescheduled') DEFAULT 'Pending',
         doj_confirmation ENUM('Pending confirmation','Confirmed','Not confirmed') DEFAULT 'Pending confirmation',
         notes TEXT,
         follow_up_date DATE,
@@ -31,14 +31,25 @@ async function ensureTables() {
         INDEX idx_jch_app_no (app_no)
       )
     `);
+    // Migrate ENUM to add new statuses if table already existed with smaller ENUM
+    try {
+      await pool.query(`
+        ALTER TABLE joining_call_desk 
+        MODIFY COLUMN call_status 
+        ENUM('Pending','Call done','Call not received','Wrong number','Rescheduled') 
+        DEFAULT 'Pending'
+      `);
+    } catch (e) {
+      // Ignore — table may already have correct enum or not exist yet
+    }
   } catch (e) {
     console.warn('[JoiningCallDesk] Table init warning:', e.message);
   }
 }
 ensureTables();
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const formatDate = (d) => {
+// ── Helper ───────────────────────────────────────────────────────────────────
+const fmtDate = (d) => {
   if (!d) return '';
   if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10);
   const dt = new Date(d);
@@ -46,104 +57,246 @@ const formatDate = (d) => {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 };
 
+const TERMINAL_STATUSES = ['Call done', 'Call not received', 'Wrong number', 'Rescheduled'];
+
 class JoiningCallDeskController {
 
-  // GET /api/joining-call-desk
-  // Returns all employees with a DOJ, merged with call desk state
-  async getAll(req, res) {
+  // ─── GET /api/joining-call-desk/summary ────────────────────────────────────
+  // Returns designation-level summaries only (no individual employee data)
+  // This is the fast initial load endpoint
+  async getSummary(req, res) {
     try {
       await ensureTables();
 
-      // Fetch employees (Joined/Hired status) — same query as getEmployees
-      const [empRows] = await pool.query(`
-        SELECT c.*,
-               so.est_doj as offer_est_doj,
-               so.actual_doj as offer_actual_doj,
-               so.status as offer_status
+      const [rows] = await pool.query(`
+        SELECT
+          COALESCE(c.designation, 'Unassigned') AS designation,
+          COUNT(DISTINCT c.app_no) AS total,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call done'         THEN 1 ELSE 0 END) AS call_done,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending'            THEN 1 ELSE 0 END) AS pending,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call not received'  THEN 1 ELSE 0 END) AS not_received,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Wrong number'       THEN 1 ELSE 0 END) AS wrong_number,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Rescheduled'        THEN 1 ELSE 0 END) AS rescheduled,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no = so.app_no
-        WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired')
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+          AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+        GROUP BY c.designation
+        ORDER BY c.designation ASC
+      `);
+
+      const summaries = rows.map(r => ({
+        designation:    r.designation || 'Unassigned',
+        total:          Number(r.total),
+        callDone:       Number(r.call_done),
+        pending:        Number(r.pending),
+        notReceived:    Number(r.not_received),
+        wrongNumber:    Number(r.wrong_number),
+        rescheduled:    Number(r.rescheduled),
+        dojConfirmed:   Number(r.doj_confirmed),
+        dojNotConfirmed:Number(r.doj_not_confirmed),
+      }));
+
+      return res.json({ success: true, summaries, total: summaries.reduce((a, s) => a + s.total, 0) });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getSummary]', err);
+      return errorRes(res, 'Failed to load summaries: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/joining-call-desk/by-designation/:designation ───────────────
+  // Returns full employee objects for one designation (lazy-loaded on expand)
+  async getByDesignation(req, res) {
+    try {
+      await ensureTables();
+      const { designation } = req.params;
+      const desig = decodeURIComponent(designation || '');
+      if (!desig) return errorRes(res, 'designation is required', [], 400);
+
+      const [empRows] = await pool.query(`
+        SELECT c.*,
+               so.est_doj  AS offer_est_doj,
+               so.actual_doj AS offer_actual_doj,
+               so.status   AS offer_status,
+               d.call_status, d.doj_confirmation, d.notes,
+               d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+          AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+          AND COALESCE(c.designation,'Unassigned') = ?
+        GROUP BY c.app_no
+        ORDER BY c.name ASC
+      `, [desig]);
+
+      const employees = empRows.map(r => ({
+        appNo:           r.app_no,
+        name:            r.name || '',
+        phone:           r.phone || '',
+        email:           r.email || '',
+        gender:          r.gender || '',
+        department:      r.department || '',
+        section:         r.section || '',
+        designation:     r.designation || '',
+        offeredDoj:      fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj),
+        photoUrl:        r.photo_url || '',
+        callStatus:      r.call_status || 'Pending',
+        dojConfirmation: r.doj_confirmation || 'Pending confirmation',
+        notes:           r.notes || '',
+        followUpDate:    fmtDate(r.follow_up_date),
+        lastCallDate:    fmtDate(r.last_call_date),
+        updatedBy:       r.updated_by || '',
+        updatedAt:       r.desk_updated_at || null,
+      }));
+
+      return res.json({ success: true, employees });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getByDesignation]', err);
+      return errorRes(res, 'Failed to load employees: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/joining-call-desk/analytics ──────────────────────────────────
+  // Returns analytics for the dashboard header
+  async getAnalytics(req, res) {
+    try {
+      await ensureTables();
+      const today = new Date().toISOString().slice(0, 10);
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const weekEndStr = weekEnd.toISOString().slice(0, 10);
+
+      const [[overall]] = await pool.query(`
+        SELECT
+          COUNT(DISTINCT c.app_no) AS total,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call done'         THEN 1 ELSE 0 END) AS call_done,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending'            THEN 1 ELSE 0 END) AS pending,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call not received'  THEN 1 ELSE 0 END) AS not_received,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Wrong number'       THEN 1 ELSE 0 END) AS wrong_number,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Rescheduled'        THEN 1 ELSE 0 END) AS rescheduled,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed,
+          SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) BETWEEN ? AND ?     THEN 1 ELSE 0 END) AS joining_this_week,
+          SUM(CASE WHEN COALESCE(d.follow_up_date, NULL) < ? AND COALESCE(d.call_status,'Pending') != 'Call done' THEN 1 ELSE 0 END) AS overdue_followups
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+          AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+      `, [today, weekEndStr, today]);
+
+      // Today's activity from history
+      const [todayHistory] = await pool.query(`
+        SELECT action_type, COUNT(*) AS cnt
+        FROM joining_call_history
+        WHERE DATE(created_at) = ?
+        GROUP BY action_type
+      `, [today]);
+
+      const todayMap = {};
+      for (const h of todayHistory) { todayMap[h.action_type] = Number(h.cnt); }
+
+      return res.json({
+        success: true,
+        total:          Number(overall.total),
+        callDone:       Number(overall.call_done),
+        pending:        Number(overall.pending),
+        notReceived:    Number(overall.not_received),
+        wrongNumber:    Number(overall.wrong_number),
+        rescheduled:    Number(overall.rescheduled),
+        dojConfirmed:   Number(overall.doj_confirmed),
+        dojNotConfirmed:Number(overall.doj_not_confirmed),
+        joiningThisWeek:Number(overall.joining_this_week),
+        overdueFollowUps:Number(overall.overdue_followups),
+        today: {
+          callsDone:         (todayMap['call_status'] || 0),
+          dojConfirmed:      (todayMap['doj_confirmation'] || 0),
+          dojChanged:        (todayMap['doj_changed'] || 0),
+          notesAdded:        (todayMap['note_added'] || 0),
+          followupsScheduled: 0, // will be derived from follow_up_date set today
+        }
+      });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getAnalytics]', err);
+      return errorRes(res, 'Failed to load analytics: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/joining-call-desk (backward compat — used by V1 references) ─
+  async getAll(req, res) {
+    try {
+      await ensureTables();
+      const [empRows] = await pool.query(`
+        SELECT c.*,
+               so.est_doj AS offer_est_doj,
+               so.actual_doj AS offer_actual_doj,
+               so.status AS offer_status
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        WHERE LOWER(TRIM(c.status)) IN ('joined','hired')
            OR LOWER(TRIM(so.status)) = 'joined'
         GROUP BY c.app_no
         ORDER BY LOWER(c.name) ASC
       `);
-
-      // Fetch all desk records in one query
       const [deskRows] = await pool.query(`SELECT * FROM joining_call_desk`);
       const deskMap = {};
-      for (const row of deskRows) {
-        deskMap[row.app_no] = row;
-      }
+      for (const row of deskRows) { deskMap[row.app_no] = row; }
 
       const employees = empRows.map(r => {
-        const desk = deskMap[r.app_no] || {};
-        const offeredDoj = formatDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj);
+        const d = deskMap[r.app_no] || {};
+        const offeredDoj = fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj);
         return {
-          appNo: r.app_no,
-          name: r.name || '',
-          phone: r.phone || '',
-          email: r.email || '',
-          gender: r.gender || '',
-          department: r.department || '',
-          section: r.section || '',
-          designation: r.designation || '',
-          offeredDoj,
-          photoUrl: r.photo_url || '',
-          // Call desk state
-          callStatus: desk.call_status || 'Pending',
-          dojConfirmation: desk.doj_confirmation || 'Pending confirmation',
-          notes: desk.notes || '',
-          followUpDate: formatDate(desk.follow_up_date),
-          lastCallDate: formatDate(desk.last_call_date),
-          updatedBy: desk.updated_by || '',
-          updatedAt: desk.updated_at || null,
+          appNo: r.app_no, name: r.name || '', phone: r.phone || '', email: r.email || '',
+          gender: r.gender || '', department: r.department || '', section: r.section || '',
+          designation: r.designation || '', offeredDoj, photoUrl: r.photo_url || '',
+          callStatus: d.call_status || 'Pending',
+          dojConfirmation: d.doj_confirmation || 'Pending confirmation',
+          notes: d.notes || '', followUpDate: fmtDate(d.follow_up_date),
+          lastCallDate: fmtDate(d.last_call_date), updatedBy: d.updated_by || '', updatedAt: d.updated_at || null,
         };
       });
-
-      // Only include employees who have a DOJ set
       const withDoj = employees.filter(e => e.offeredDoj);
-
       return res.json({ success: true, employees: withDoj, total: withDoj.length });
     } catch (err) {
-      console.error('[JoiningCallDesk.getAll]', err);
-      return errorRes(res, 'Failed to load joining call desk data: ' + err.message, [err.message], 500);
+      return errorRes(res, 'Failed to load data: ' + err.message, [err.message], 500);
     }
   }
 
-  // POST /api/joining-call-desk/update-status
-  // Body: { appNo, callStatus, dojConfirmation, notes, followUpDate, doneBy }
+  // ─── POST /api/joining-call-desk/update-status ────────────────────────────
   async updateStatus(req, res) {
     try {
       await ensureTables();
       const { appNo, callStatus, dojConfirmation, notes, followUpDate, doneBy } = req.body;
       const user = doneBy || (req.user ? req.user.username : 'HR');
-
       if (!appNo) return errorRes(res, 'appNo is required', [], 400);
 
-      // Fetch existing record for audit trail
       const [existing] = await pool.query(`SELECT * FROM joining_call_desk WHERE app_no = ?`, [appNo]);
       const old = existing[0] || {};
 
-      const lastCallDate = (callStatus === 'Call done' || callStatus === 'Call not received')
+      const isTerminal = TERMINAL_STATUSES.includes(callStatus);
+      const lastCallDate = isTerminal
         ? new Date().toISOString().slice(0, 10)
-        : (old.last_call_date ? formatDate(old.last_call_date) : null);
+        : (old.last_call_date ? fmtDate(old.last_call_date) : null);
 
-      // Upsert
       await pool.query(`
         INSERT INTO joining_call_desk
           (app_no, call_status, doj_confirmation, notes, follow_up_date, last_call_date, updated_by)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-          call_status = VALUES(call_status),
+          call_status      = VALUES(call_status),
           doj_confirmation = VALUES(doj_confirmation),
-          notes = VALUES(notes),
-          follow_up_date = VALUES(follow_up_date),
-          last_call_date = VALUES(last_call_date),
-          updated_by = VALUES(updated_by),
-          updated_at = CURRENT_TIMESTAMP
+          notes            = VALUES(notes),
+          follow_up_date   = VALUES(follow_up_date),
+          last_call_date   = VALUES(last_call_date),
+          updated_by       = VALUES(updated_by),
+          updated_at       = CURRENT_TIMESTAMP
       `, [
         appNo,
-        callStatus || old.call_status || 'Pending',
+        callStatus      || old.call_status      || 'Pending',
         dojConfirmation || old.doj_confirmation || 'Pending confirmation',
         notes !== undefined ? notes : (old.notes || ''),
         followUpDate || null,
@@ -151,19 +304,21 @@ class JoiningCallDeskController {
         user
       ]);
 
-      // History entries
-      const historyEntries = [];
+      // Audit trail
+      const inserts = [];
       if (callStatus && callStatus !== old.call_status) {
-        historyEntries.push([appNo, 'call_status', old.call_status || 'Pending', callStatus, notes || '', user]);
+        inserts.push([appNo, 'call_status', old.call_status || 'Pending', callStatus, notes || '', user]);
       }
       if (dojConfirmation && dojConfirmation !== old.doj_confirmation) {
-        historyEntries.push([appNo, 'doj_confirmation', old.doj_confirmation || 'Pending confirmation', dojConfirmation, notes || '', user]);
+        inserts.push([appNo, 'doj_confirmation', old.doj_confirmation || 'Pending confirmation', dojConfirmation, notes || '', user]);
       }
-      if (notes && notes !== old.notes) {
-        historyEntries.push([appNo, 'note_added', '', notes, notes, user]);
+      if (notes && notes.trim() && notes !== old.notes) {
+        inserts.push([appNo, 'note_added', '', notes, notes, user]);
       }
-
-      for (const entry of historyEntries) {
+      if (followUpDate && followUpDate !== fmtDate(old.follow_up_date)) {
+        inserts.push([appNo, 'followup_set', fmtDate(old.follow_up_date) || '', followUpDate, `Follow-up set to ${followUpDate}`, user]);
+      }
+      for (const entry of inserts) {
         await pool.query(
           `INSERT INTO joining_call_history (app_no, action_type, old_value, new_value, notes, done_by) VALUES (?, ?, ?, ?, ?, ?)`,
           entry
@@ -173,64 +328,73 @@ class JoiningCallDeskController {
       return res.json({ success: true });
     } catch (err) {
       console.error('[JoiningCallDesk.updateStatus]', err);
-      return errorRes(res, 'Failed to update call status: ' + err.message, [err.message], 500);
+      return errorRes(res, 'Failed to update: ' + err.message, [err.message], 500);
     }
   }
 
-  // GET /api/joining-call-desk/history/:appNo
+  // ─── GET /api/joining-call-desk/history/:appNo ────────────────────────────
   async getHistory(req, res) {
     try {
       await ensureTables();
       const { appNo } = req.params;
       if (!appNo) return errorRes(res, 'appNo is required', [], 400);
-
       const [rows] = await pool.query(
         `SELECT * FROM joining_call_history WHERE app_no = ? ORDER BY created_at DESC LIMIT 100`,
         [appNo]
       );
-
       return res.json({ success: true, history: rows });
     } catch (err) {
       return errorRes(res, 'Failed to load history: ' + err.message, [err.message], 500);
     }
   }
 
-  // POST /api/joining-call-desk/update-doj
-  // Body: { appNo, newDoj, doneBy }
-  // Updates offered_doj in candidates table (same as Employee Directory does) + records audit trail
+  // ─── POST /api/joining-call-desk/update-doj ───────────────────────────────
+  // V2 FIX: Updates BOTH candidates.offered_doj AND selection_offers.est_doj in transaction
   async updateDoj(req, res) {
+    const conn = await pool.getConnection();
     try {
       await ensureTables();
       const { appNo, newDoj, doneBy } = req.body;
       const user = doneBy || (req.user ? req.user.username : 'HR');
-
       if (!appNo || !newDoj) return errorRes(res, 'appNo and newDoj are required', [], 400);
 
-      // Get current DOJ for audit
-      const [rows] = await pool.query(`SELECT offered_doj FROM candidates WHERE app_no = ?`, [appNo]);
-      const oldDoj = rows[0] ? formatDate(rows[0].offered_doj) : '';
+      await conn.beginTransaction();
 
-      // Update offered_doj in candidates table
-      await pool.query(`UPDATE candidates SET offered_doj = ?, updated_at = NOW() WHERE app_no = ?`, [newDoj, appNo]);
+      // Get old DOJ for audit
+      const [[candRow]] = await conn.query(`SELECT offered_doj FROM candidates WHERE app_no = ?`, [appNo]);
+      const oldDoj = candRow ? fmtDate(candRow.offered_doj) : '';
 
-      // Audit trail in call history
-      await pool.query(
-        `INSERT INTO joining_call_history (app_no, action_type, old_value, new_value, notes, done_by)
-         VALUES (?, 'doj_changed', ?, ?, ?, ?)`,
-        [appNo, oldDoj, newDoj, `DOJ changed from ${oldDoj} to ${newDoj}`, user]
+      // Update candidates table (primary source of truth)
+      await conn.query(`UPDATE candidates SET offered_doj = ?, updated_at = NOW() WHERE app_no = ?`, [newDoj, appNo]);
+
+      // Update selection_offers.est_doj (keeps Offer Desk in sync)
+      await conn.query(
+        `UPDATE selection_offers SET est_doj = ?, updated_at = NOW() WHERE app_no = ?`,
+        [newDoj, appNo]
       );
 
-      // Update updated_at in desk record if exists
-      await pool.query(
+      // Audit trail
+      await conn.query(
+        `INSERT INTO joining_call_history (app_no, action_type, old_value, new_value, notes, done_by)
+         VALUES (?, 'doj_changed', ?, ?, ?, ?)`,
+        [appNo, oldDoj, newDoj, `DOJ changed from ${oldDoj || '—'} to ${newDoj}`, user]
+      );
+
+      // Touch desk record (for updated_at tracking)
+      await conn.query(
         `INSERT INTO joining_call_desk (app_no, updated_by) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE updated_by = VALUES(updated_by), updated_at = CURRENT_TIMESTAMP`,
         [appNo, user]
       );
 
+      await conn.commit();
       return res.json({ success: true, oldDoj, newDoj });
     } catch (err) {
+      await conn.rollback();
       console.error('[JoiningCallDesk.updateDoj]', err);
       return errorRes(res, 'Failed to update DOJ: ' + err.message, [err.message], 500);
+    } finally {
+      conn.release();
     }
   }
 }
