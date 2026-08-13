@@ -114,7 +114,7 @@ const urgencyBorderColor = (u: string | null) => {
   if (u === 'tomorrow') return 'border-l-blue-400';
   if (u === 'soon')     return 'border-l-yellow-400';
   if (u === 'week')     return 'border-l-emerald-400';
-  return 'border-l-[#1E3A5F]/20';
+  return 'border-l-[#1E2D4E]/20';
 };
 
 const callStatusCls = (s: string) => {
@@ -165,14 +165,14 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
   return (
     <>
       {before}
-      <mark className="bg-amber-200 text-[#1E3A5F] font-semibold rounded-xs px-0.5">{match}</mark>
+      <mark className="bg-amber-200 text-[#1E2D4E] font-black rounded-xs px-0.5">{match}</mark>
       {after}
     </>
   );
 }
 
 // ─── SVG Progress Ring ────────────────────────────────────────────────────────
-function ProgressRing({ pct, size = 52, stroke = 4, color = '#D4A017' }: { pct: number; size?: number; stroke?: number; color?: string }) {
+function ProgressRing({ pct, size = 52, stroke = 4, color = '#C9952A' }: { pct: number; size?: number; stroke?: number; color?: string }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
@@ -318,39 +318,39 @@ function ProfileModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-sans">
-      <div className="max-w-[880px] w-full h-[80vh] max-h-[750px] bg-white rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-scale-up z-50">
+      <div className="max-w-[880px] w-full h-[80vh] max-h-[750px] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#e2dfd7] animate-scale-up z-50">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#1E3A5F] to-[#2b4d7c] p-4 text-white flex-shrink-0">
+        <div className="bg-gradient-to-r from-[#1E2D4E] to-[#2a3f6e] p-4 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {photo ? (
                 <img src={photo} alt={emp.name} className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30 shadow-md flex-shrink-0"
                   onError={e => { (e.target as any).style.display = 'none'; }} />
               ) : (
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4A017] to-[#a87d0e] text-white flex items-center justify-center font-semibold text-xl shadow-md flex-shrink-0 border-2 border-white/30">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9952A] to-[#a3761c] text-white flex items-center justify-center font-black text-xl shadow-md flex-shrink-0 border-2 border-white/30">
                   {emp.name.charAt(0)}
                 </div>
               )}
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-[20px] font-semibold text-white leading-tight">{emp.name}</h2>
-                  <span className="px-2 py-0.5 rounded-lg bg-white/20 text-white font-mono text-[13px]">
+                  <h2 className="text-xl font-black text-white leading-tight">{emp.name}</h2>
+                  <span className="px-2 py-0.5 rounded bg-white/20 text-white font-mono font-bold text-xs">
                     App: {emp.appNo}
                   </span>
-                  <span className="px-2 py-0.5 rounded-lg bg-[#D4A017] text-white text-[12px] font-medium">
+                  <span className="px-2 py-0.5 rounded bg-[#C9952A] text-white text-xs font-black">
                     {emp.gender || 'Male'}
                   </span>
                 </div>
-                <div className="text-[13px] text-white/80 font-normal mt-1">
-                  <span className="text-[#D4A017] font-medium">{emp.designation}</span> · {[emp.department, emp.section].filter(Boolean).join(' · ')}
+                <div className="text-xs text-white/80 font-semibold mt-1">
+                  <span className="text-[#C9952A] font-black">{emp.designation}</span> · {[emp.department, emp.section].filter(Boolean).join(' · ')}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               {matchingList && matchingList.length > 0 && (
-                <span className="text-[13px] text-white/70 font-mono hidden sm:inline">
+                <span className="text-xs text-white/70 font-mono hidden sm:inline">
                   {currentIndex + 1} of {matchingList.length}
                 </span>
               )}
@@ -362,56 +362,56 @@ function ProfileModal({
         </div>
 
         {/* 2-Column Body (Left 35%, Right 65%) */}
-        <div className="flex-1 overflow-y-auto p-5 grid grid-cols-12 gap-5 bg-[#F8F9FA]">
+        <div className="flex-1 overflow-y-auto p-5 grid grid-cols-12 gap-5 bg-[#F9F7F4]">
           
           {/* Left Column (35%) */}
           <div className="col-span-12 md:col-span-4 space-y-3">
-            <div className="bg-white p-2.5 rounded-[20px] border border-slate-200/80 shadow-xs flex flex-col items-center justify-center">
+            <div className="bg-white p-2.5 rounded-2xl border border-[#e2dfd7] shadow-xs flex flex-col items-center justify-center">
               {photo ? (
                 <img src={photo} alt={emp.name} className="max-w-[220px] max-h-[240px] w-full object-cover rounded-xl border border-slate-100" />
               ) : (
-                <div className="w-[180px] h-[200px] rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#2b4d7c] flex items-center justify-center text-white font-semibold text-5xl">
+                <div className="w-[180px] h-[200px] rounded-xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-5xl">
                   {emp.name.charAt(0)}
                 </div>
               )}
             </div>
 
             {/* Candidate Info Details */}
-            <div className="bg-white p-3.5 rounded-[20px] border border-slate-200/80 space-y-2 text-[13px]">
+            <div className="bg-white p-3.5 rounded-2xl border border-[#e2dfd7] space-y-2 text-xs">
               <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[12px] font-medium text-slate-500">App ID</span>
-                <span className="font-mono font-normal text-[#1E3A5F]">{emp.appNo}</span>
+                <span className="text-[#777] font-bold">App ID</span>
+                <span className="font-mono font-black text-[#1E2D4E]">{emp.appNo}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[12px] font-medium text-slate-500">Gender</span>
-                <span className="text-[13px] font-normal text-slate-700">{emp.gender}</span>
+                <span className="text-[#777] font-bold">Gender</span>
+                <span className="font-bold text-[#1E2D4E]">{emp.gender}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[12px] font-medium text-slate-500">Department</span>
-                <span className="text-[13px] font-normal text-slate-700 truncate max-w-[120px]">{emp.department}</span>
+                <span className="text-[#777] font-bold">Department</span>
+                <span className="font-bold text-[#1E2D4E] truncate max-w-[120px]">{emp.department}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-1">
-                <span className="text-[12px] font-medium text-slate-500">Section</span>
-                <span className="text-[13px] font-normal text-slate-700 truncate max-w-[120px]">{emp.section}</span>
+                <span className="text-[#777] font-bold">Section</span>
+                <span className="font-bold text-[#1E2D4E] truncate max-w-[120px]">{emp.section}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[12px] font-medium text-slate-500">Offered DOJ</span>
-                <span className="font-mono text-[13px] font-medium text-[#D4A017]">{fmtDate(emp.offeredDoj)}</span>
+                <span className="text-[#777] font-bold">Offered DOJ</span>
+                <span className="font-mono font-black text-[#C9952A]">{fmtDate(emp.offeredDoj)}</span>
               </div>
             </div>
 
             {/* Actions */}
             <div className="space-y-2">
               <a href={`tel:${emp.phone}`}
-                className="w-full h-9 rounded-xl bg-[#10B981] hover:bg-[#0d9668] text-white text-[14px] font-medium transition-colors flex items-center justify-center gap-1.5 shadow-xs">
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors flex items-center justify-center gap-1.5 shadow-xs">
                 <PhoneCall className="w-4 h-4" /> Call ({emp.phone})
               </a>
               <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-                className="w-full h-9 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-[14px] font-medium transition-colors flex items-center justify-center gap-1.5 shadow-xs">
+                className="w-full py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black transition-colors flex items-center justify-center gap-1.5 shadow-xs">
                 <PhoneOutgoing className="w-4 h-4" /> WhatsApp
               </a>
               <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone number copied!', 'success'); }}
-                className="w-full h-9 rounded-xl bg-white border border-slate-200 text-[#1E3A5F] text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5">
+                className="w-full py-2.5 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5">
                 <Copy className="w-4 h-4" /> Copy Number
               </button>
             </div>
@@ -421,12 +421,12 @@ function ProfileModal({
           <div className="col-span-12 md:col-span-8 space-y-4">
             
             {/* 1. Call Outcome */}
-            <div className="bg-white p-4 rounded-[20px] border border-slate-200/80 space-y-2">
-              <label className="text-[12px] font-medium text-slate-500 uppercase tracking-wider block">1. Call Outcome Status</label>
+            <div className="bg-white p-4 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">1. Call Outcome Status</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['Pending', 'Call done', 'Call not received', 'Wrong number', 'Rescheduled'] as CallStatus[]).map(st => (
                   <button key={st} type="button" onClick={() => setCallStatus(st)}
-                    className={`py-2 px-3 rounded-xl text-[13px] font-medium border transition-all text-left flex items-center gap-1.5 ${callStatus === st ? 'bg-[#1E3A5F] text-white border-[#1E3A5F] shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    className={`py-2 px-3 rounded-xl text-xs font-black border transition-all text-left flex items-center gap-1.5 ${callStatus === st ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-sm' : 'bg-slate-50 text-[#555] border-[#e2dfd7] hover:bg-slate-100'}`}>
                     <span>{callStatusEmoji(st)}</span>
                     <span className="truncate">{st}</span>
                   </button>
@@ -435,12 +435,12 @@ function ProfileModal({
             </div>
 
             {/* 2. DOJ Confirmation */}
-            <div className="bg-white p-4 rounded-[20px] border border-slate-200/80 space-y-2">
-              <label className="text-[12px] font-medium text-slate-500 uppercase tracking-wider block">2. Candidate DOJ Confirmation</label>
+            <div className="bg-white p-4 rounded-2xl border border-[#e2dfd7] space-y-2">
+              <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block">2. Candidate DOJ Confirmation</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['Confirmed', 'Not confirmed', 'Pending confirmation'] as DojConf[]).map(conf => (
                   <button key={conf} type="button" onClick={() => setDojConf(conf)}
-                    className={`py-2 px-3 rounded-xl text-[13px] font-medium border transition-all text-center ${dojConf === conf ? 'bg-[#D4A017] text-white border-[#D4A017] shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                    className={`py-2 px-3 rounded-xl text-xs font-black border transition-all text-center ${dojConf === conf ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-sm' : 'bg-slate-50 text-[#555] border-[#e2dfd7] hover:bg-slate-100'}`}>
                     {conf === 'Confirmed' ? '✅ Confirmed' : conf === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pending'}
                   </button>
                 ))}
@@ -448,21 +448,21 @@ function ProfileModal({
             </div>
 
             {/* 3. Inline DOJ Edit */}
-            <div className="bg-white p-4 rounded-[20px] border border-slate-200/80 space-y-2">
+            <div className="bg-white p-4 rounded-2xl border border-[#e2dfd7] space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[12px] font-medium text-slate-500 uppercase tracking-wider">Offered Date of Joining</span>
+                <span className="text-[10.5px] font-black uppercase tracking-widest text-[#777]">Offered Date of Joining</span>
                 <button onClick={() => setEditDoj(e => !e)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all ${editDoj ? 'bg-[#1E3A5F] text-white' : 'bg-slate-100 border border-slate-200 text-slate-700 hover:text-[#D4A017]'}`}>
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${editDoj ? 'bg-[#1E2D4E] text-white' : 'bg-slate-100 border border-[#e2dfd7] text-[#555] hover:text-[#C9952A]'}`}>
                   <Edit3 className="w-3 h-3" />{editDoj ? 'Cancel' : 'Edit DOJ'}
                 </button>
               </div>
-              <div className="text-[18px] font-semibold text-[#1E3A5F]">{fmtDate(emp.offeredDoj)}</div>
+              <div className="text-base font-black text-[#1E2D4E]">{fmtDate(emp.offeredDoj)}</div>
               {editDoj && (
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
+                <div className="flex items-center gap-2 pt-2 border-t border-[#e2dfd7]">
                   <input type="date" value={newDoj} onChange={e => setNewDoj(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 text-[13px] font-medium text-slate-700" />
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-[#e2dfd7] text-xs font-bold" />
                   <button onClick={handleSaveDoj} disabled={savingDoj}
-                    className="h-9 px-4 rounded-xl bg-[#D4A017] text-white text-[14px] font-medium hover:bg-[#b88910] transition-colors flex items-center gap-1">
+                    className="py-2 px-4 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] transition-colors flex items-center gap-1">
                     {savingDoj ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Update
                   </button>
                 </div>
@@ -470,36 +470,36 @@ function ProfileModal({
             </div>
 
             {/* 4. Follow-up & Remarks */}
-            <div className="bg-white p-4 rounded-[20px] border border-slate-200/80 space-y-3">
+            <div className="bg-white p-4 rounded-2xl border border-[#e2dfd7] space-y-3">
               <div>
-                <label className="text-[12px] font-medium text-slate-500 block mb-1">Next Follow-up Date</label>
+                <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Next Follow-up Date</label>
                 <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-[13px] font-normal text-slate-700 focus:outline-none" />
+                  className="w-full px-3 py-1.5 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] focus:outline-none" />
               </div>
               <div>
-                <label className="text-[12px] font-medium text-slate-500 block mb-1">Telecaller Remarks / Call Notes</label>
+                <label className="text-[10.5px] font-black uppercase tracking-wider text-[#666] block mb-1">Telecaller Remarks / Call Notes</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                   placeholder="Enter remarks..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-[13px] font-normal text-slate-700 focus:outline-none focus:border-[#1E3A5F]" />
+                  className="w-full px-3 py-2 rounded-xl border border-[#e2dfd7] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]" />
               </div>
             </div>
 
             {/* History Accordion */}
             <div>
               <button onClick={loadHistory}
-                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-slate-700 hover:border-[#D4A017] transition-all shadow-2xs">
-                <span className="flex items-center gap-2"><History className="w-4 h-4 text-[#D4A017]" />Audit Timeline & Call History</span>
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#C9952A] transition-all shadow-2xs">
+                <span className="flex items-center gap-2"><History className="w-4 h-4 text-[#C9952A]" />Audit Timeline & Call History</span>
                 {loadingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
               {showHistory && (
                 <div className="mt-2 space-y-2 animate-fade-in max-h-40 overflow-y-auto pr-1">
                   {history.length === 0 && !loadingHistory && (
-                    <div className="text-center py-3 text-slate-400 text-[13px]">No call history recorded yet</div>
+                    <div className="text-center py-3 text-[#999] text-xs">No call history recorded yet</div>
                   )}
                   {history.map((h) => (
-                    <div key={h.id} className="flex gap-2 text-[13px] bg-white rounded-xl px-3 py-2 border border-slate-200">
-                      <span className="text-slate-700 flex-1">{h.new_value || h.notes}</span>
-                      <span className="text-[12px] text-slate-400 font-mono">{fmtTs(h.created_at)}</span>
+                    <div key={h.id} className="flex gap-2 text-xs bg-white rounded-xl px-3 py-2 border border-[#e2dfd7]">
+                      <span className="text-[#555] flex-1">{h.new_value || h.notes}</span>
+                      <span className="text-[10px] text-[#aaa] font-mono">{fmtTs(h.created_at)}</span>
                     </div>
                   ))}
                 </div>
@@ -509,17 +509,17 @@ function ProfileModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between flex-shrink-0 gap-2">
+        <div className="p-4 bg-white border-t border-[#e2dfd7] flex items-center justify-between flex-shrink-0 gap-2">
           <div className="flex items-center gap-2">
             {hasPrev && onNavigate && matchingList && (
               <button onClick={() => onNavigate(matchingList[currentIndex - 1])}
-                className="h-9 px-4 rounded-xl bg-slate-100 border border-slate-200 text-[#1E3A5F] text-[14px] font-medium hover:bg-slate-200 flex items-center gap-1">
+                className="py-2.5 px-4 rounded-xl bg-slate-100 border border-slate-200 text-[#1E2D4E] text-xs font-bold hover:bg-slate-200 flex items-center gap-1">
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
             )}
             {hasNext && onNavigate && matchingList && (
               <button onClick={() => onNavigate(matchingList[currentIndex + 1])}
-                className="h-9 px-4 rounded-xl bg-slate-100 border border-slate-200 text-[#1E3A5F] text-[14px] font-medium hover:bg-slate-200 flex items-center gap-1">
+                className="py-2.5 px-4 rounded-xl bg-slate-100 border border-slate-200 text-[#1E2D4E] text-xs font-bold hover:bg-slate-200 flex items-center gap-1">
                 Next <ChevronRight className="w-4 h-4" />
               </button>
             )}
@@ -527,16 +527,16 @@ function ProfileModal({
 
           <div className="flex items-center gap-2">
             <button onClick={onClose}
-              className="h-9 px-4 rounded-xl bg-white border border-slate-200 text-slate-600 text-[14px] font-medium hover:bg-slate-50">
+              className="py-2.5 px-4 rounded-xl bg-white border border-[#e2dfd7] text-[#666] text-xs font-bold hover:bg-slate-50">
               Cancel
             </button>
             <button onClick={() => handleSave(false)} disabled={saving}
-              className="h-9 px-4 rounded-xl bg-[#1E3A5F] text-white text-[14px] font-medium hover:bg-[#152a45] flex items-center gap-1.5 shadow-md">
+              className="py-2.5 px-4 rounded-xl bg-[#1E2D4E] text-white text-xs font-black hover:bg-[#162340] flex items-center gap-1.5 shadow-md">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Update
             </button>
             {hasNext && (
               <button onClick={() => handleSave(true)} disabled={saving}
-                className="h-9 px-4 rounded-xl bg-[#D4A017] text-white text-[14px] font-medium hover:bg-[#b88910] flex items-center gap-1.5 shadow-md">
+                className="py-2.5 px-4 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b38222] flex items-center gap-1.5 shadow-md">
                 Save & Next Candidate →
               </button>
             )}
@@ -547,7 +547,7 @@ function ProfileModal({
   );
 }
 
-// ─── Premium Executive CRM Employee Card (20px Radius, 20px Padding, 20px Name)
+// ─── Premium Employee Card (Single System Style) ──────────────────────────────
 const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, searchQuery, onSelect, onOpenModal, onQuickUpdate }: {
   emp: Employee; selected: boolean; searchQuery: string;
   onSelect: (checked: boolean) => void;
@@ -560,66 +560,66 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, searchQue
 
   return (
     <div onClick={onOpenModal}
-      className={`bg-white rounded-[20px] p-5 shadow-xs border border-slate-200/80 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 group flex flex-col justify-between min-h-[220px] space-y-3 border-l-4 ${urgencyBorderColor(urgency)}`}>
+      className={`card-glass p-4 rounded-3xl border-l-4 cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-1 group bg-white border-[#e2dfd7] ${urgencyBorderColor(urgency)} flex flex-col justify-between min-h-[220px] space-y-3`}>
       
-      {/* Top Section: Photo (64x64) + Name (20px Semibold) + App ID + Badges + Checkbox */}
+      {/* Top Section */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           {photo ? (
-            <img src={photo} alt={emp.name} loading="lazy" className="w-[64px] h-[64px] rounded-2xl object-cover border border-slate-200 flex-shrink-0 shadow-2xs" onError={e => { (e.target as any).style.display = 'none'; }} />
+            <img src={photo} alt={emp.name} loading="lazy" className="w-[52px] h-[52px] rounded-2xl object-cover border border-[#e2dfd7] flex-shrink-0 shadow-2xs" onError={e => { (e.target as any).style.display = 'none'; }} />
           ) : (
-            <div className="w-[64px] h-[64px] rounded-2xl bg-gradient-to-br from-[#1E3A5F] to-[#2b4d7c] flex items-center justify-center text-white font-semibold text-xl shadow-2xs flex-shrink-0">
+            <div className="w-[52px] h-[52px] rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2a3f6e] flex items-center justify-center text-white font-black text-base shadow-2xs flex-shrink-0">
               {emp.name.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <h4 className="text-[18px] sm:text-[20px] font-semibold text-[#1E3A5F] leading-tight truncate">
+            <h4 className="font-black text-[#1E2D4E] text-sm leading-tight truncate">
               <HighlightMatch text={emp.name} query={searchQuery} />
             </h4>
-            <div className="text-[13px] font-normal text-slate-500 font-mono mt-0.5">
+            <div className="text-[10px] font-mono font-bold text-[#888] bg-slate-100 px-1.5 py-0.5 rounded w-max mt-1">
               App: <HighlightMatch text={emp.appNo} query={searchQuery} />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-          <span className={`px-2 py-0.5 rounded-lg text-[12px] font-medium border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+        <div className="flex items-center gap-1.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-black border ${emp.gender === 'Female' ? 'bg-pink-50 text-pink-700 border-pink-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
             {emp.gender || 'M'}
           </span>
           {daysRem !== null && (
-            <span className={`text-[12px] font-medium px-2 py-0.5 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+            <span className={`text-[9.5px] font-black px-2 py-0.5 rounded-full ${daysRem < 0 ? 'bg-rose-100 text-rose-700' : daysRem === 0 ? 'bg-amber-100 text-amber-800' : daysRem === 1 ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
               {daysRem < 0 ? `Overdue ${Math.abs(daysRem)}d` : daysRem === 0 ? 'Today' : daysRem === 1 ? 'Tomorrow' : `${daysRem}d`}
             </span>
           )}
           <input type="checkbox" checked={selected} onChange={e => { e.stopPropagation(); onSelect(e.target.checked); }}
-            className="w-4 h-4 rounded accent-[#D4A017] cursor-pointer" />
+            className="w-4 h-4 rounded accent-[#C9952A] cursor-pointer" />
         </div>
       </div>
 
-      {/* Middle Section: Two Info Blocks */}
-      <div className="grid grid-cols-2 gap-3 text-[13px] bg-[#F8F9FA] p-3 rounded-xl border border-slate-200/60">
+      {/* Middle Info Block */}
+      <div className="grid grid-cols-2 gap-2 text-[10.5px] text-[#666] bg-[#F9F7F4] p-2.5 rounded-xl border border-[#e2dfd7]/60">
         <div>
-          <span className="text-[12px] font-medium text-slate-500 block">Department & Section</span>
-          <span className="text-[13px] font-normal text-[#1E3A5F] truncate block">
+          <span className="text-[9px] font-black uppercase text-[#888] block">Dept & Section</span>
+          <span className="font-bold text-[#1E2D4E] truncate block">
             <HighlightMatch text={[emp.department, emp.section].filter(Boolean).join(' · ')} query={searchQuery} />
           </span>
         </div>
         <div>
-          <span className="text-[12px] font-medium text-slate-500 block">Designation & Offered DOJ</span>
-          <span className="text-[13px] font-normal text-[#D4A017] truncate block">
+          <span className="text-[9px] font-black uppercase text-[#888] block">Designation & DOJ</span>
+          <span className="font-bold text-[#C9952A] truncate block">
             <HighlightMatch text={emp.designation} query={searchQuery} /> · {fmtDate(emp.offeredDoj)}
           </span>
         </div>
       </div>
 
-      {/* Status Section: Horizontal Status Area */}
-      <div className="flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
+      {/* Status Section */}
+      <div className="flex items-center justify-between gap-1.5" onClick={e => e.stopPropagation()}>
         <button
           onClick={() => {
             const nextStatus: CallStatus = emp.callStatus === 'Pending' ? 'Call done' : emp.callStatus === 'Call done' ? 'Call not received' : 'Pending';
             onQuickUpdate(emp.appNo, nextStatus, undefined);
           }}
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-medium border transition-all hover:scale-105 ${callStatusCls(emp.callStatus)}`}>
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all hover:scale-105 ${callStatusCls(emp.callStatus)}`}>
           {callStatusEmoji(emp.callStatus)} {emp.callStatus || 'Pending'}
         </button>
 
@@ -628,37 +628,27 @@ const EmployeeCard = React.memo(function EmployeeCard({ emp, selected, searchQue
             const nextConf: DojConf = emp.dojConfirmation === 'Confirmed' ? 'Not confirmed' : emp.dojConfirmation === 'Not confirmed' ? 'Pending confirmation' : 'Confirmed';
             onQuickUpdate(emp.appNo, undefined, nextConf);
           }}
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-medium border transition-all hover:scale-105 ${dojConfCls(emp.dojConfirmation)}`}>
+          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all hover:scale-105 ${dojConfCls(emp.dojConfirmation)}`}>
           {emp.dojConfirmation === 'Confirmed' ? '✅ Conf' : emp.dojConfirmation === 'Not confirmed' ? '❌ Not Conf' : '⏳ Pend'}
         </button>
       </div>
 
-      {/* Progress Section: Segmented Progress Indicator */}
-      <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-        <span className="text-[12px] font-medium text-slate-500">Progress:</span>
-        <div className="flex-1 grid grid-cols-3 gap-1.5 items-center">
-          <div className="h-1.5 rounded-full bg-emerald-500" title="1. Registered" />
-          <div className={`h-1.5 rounded-full ${emp.callStatus === 'Call done' ? 'bg-emerald-500' : emp.callStatus === 'Call not received' ? 'bg-rose-500' : 'bg-amber-400'}`} title="2. Call Status" />
-          <div className={`h-1.5 rounded-full ${emp.dojConfirmation === 'Confirmed' ? 'bg-emerald-500' : emp.dojConfirmation === 'Not confirmed' ? 'bg-orange-500' : 'bg-slate-200'}`} title="3. DOJ Confirmation" />
-        </div>
-      </div>
-
-      {/* Action Buttons: Equal Height 36px (h-9), 14px Medium Font */}
-      <div className="flex items-center gap-2 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+      {/* Action Buttons */}
+      <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
         <button onClick={onOpenModal}
-          className="h-9 px-3.5 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-[14px] font-medium transition-all flex items-center gap-1.5 shadow-2xs">
-          <Eye className="w-4 h-4" />View Profile
+          className="px-2.5 py-1.5 rounded-xl bg-[#C9952A] hover:bg-[#b38222] text-white text-[10.5px] font-black transition-colors flex items-center gap-1 shadow-xs">
+          <Eye className="w-3 h-3" />View Profile
         </button>
-        <a href={`tel:${emp.phone}`} className="h-9 px-3 rounded-xl bg-[#10B981] hover:bg-[#0d9668] text-white text-[14px] font-medium transition-colors flex items-center gap-1">
-          <PhoneCall className="w-4 h-4" />Call
+        <a href={`tel:${emp.phone}`} className="px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[10.5px] font-bold text-emerald-700 hover:bg-emerald-100 transition-colors flex items-center gap-1">
+          <PhoneCall className="w-3 h-3" />Call
         </a>
         <a href={`https://wa.me/91${(emp.phone || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-          className="h-9 px-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-[14px] font-medium transition-colors flex items-center gap-1">
-          <PhoneOutgoing className="w-4 h-4" />WA
+          className="px-2.5 py-1.5 rounded-xl bg-[#e8fde8] border border-[#c3f0c3] text-[10.5px] font-bold text-[#1a8a4a] hover:bg-[#d0f7d0] transition-colors flex items-center gap-1">
+          <PhoneOutgoing className="w-3 h-3" />WA
         </a>
         <button onClick={() => { navigator.clipboard.writeText(emp.phone); showToast('Phone copied!', 'success'); }}
-          className="h-9 px-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[14px] font-medium hover:bg-slate-200 transition-colors ml-auto">
-          <Copy className="w-4 h-4" />
+          className="p-1.5 rounded-xl bg-slate-100 border border-slate-200 text-[#555] hover:bg-slate-200 ml-auto">
+          <Copy className="w-3 h-3" />
         </button>
       </div>
     </div>
@@ -689,39 +679,39 @@ function DesigGroupCard({ designation, employees, totalCount, selectedIds, searc
   const dojConfirmed = employees.filter(e => e.dojConfirmation === 'Confirmed').length;
 
   const pct = totalCount > 0 ? Math.round((callDone / totalCount) * 100) : 0;
-  const ringColor = pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#F43F5E';
+  const ringColor = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="bg-white rounded-[24px] overflow-hidden border border-slate-200/80 shadow-xs">
+    <div className="card-glass rounded-3xl overflow-hidden border border-[#e2dfd7] shadow-xs bg-white">
       <button onClick={() => setExpanded(e => !e)}
-        className="w-full p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left">
+        className="w-full p-4 flex items-center gap-3.5 hover:bg-slate-50/80 transition-colors text-left">
         <div className="relative flex-shrink-0">
           <ProgressRing pct={pct} size={52} stroke={4} color={ringColor} />
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[12px] font-semibold text-[#1E3A5F]">{pct}%</span>
+            <span className="text-[11px] font-black text-[#1E2D4E]">{pct}%</span>
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-[18px] font-semibold text-[#1E3A5F]">
+            <h3 className="font-black text-[#1E2D4E] text-base">
               <HighlightMatch text={designation} query={searchQuery} />
             </h3>
-            <span className="text-[13px] font-medium px-3 py-0.5 rounded-full bg-[#1E3A5F] text-white">
+            <span className="text-xs px-3 py-0.5 rounded-full bg-[#1E2D4E] text-white font-black">
               {employees.length} {searchQuery ? 'matching' : `of ${totalCount}`}
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 mt-1.5 text-[13px]">
-            <span className="font-medium text-emerald-600">✅ {callDone} Done</span>
-            <span className="font-medium text-amber-600">⏳ {pending} Pending</span>
-            <span className="font-medium text-rose-600">📵 {notReceived} No Ans</span>
-            <span className="font-medium text-blue-600">📅 {dojConfirmed} Confirmed</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-0.5 mt-1.5">
+            <span className="text-xs font-bold text-emerald-600">✅ {callDone} Done</span>
+            <span className="text-xs font-bold text-amber-600">⏳ {pending} Pending</span>
+            <span className="text-xs font-bold text-rose-600">📵 {notReceived} No Ans</span>
+            <span className="text-xs font-bold text-blue-600">📅 {dojConfirmed} Confirmed</span>
           </div>
         </div>
-        {expanded ? <ChevronUp className="w-5 h-5 text-slate-400 flex-shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-400 flex-shrink-0" />}
+        {expanded ? <ChevronUp className="w-5 h-5 text-[#777] flex-shrink-0" /> : <ChevronDown className="w-5 h-5 text-[#777] flex-shrink-0" />}
       </button>
 
       {expanded && (
-        <div className="border-t border-slate-200/80 p-4 bg-[#F8F9FA]">
+        <div className="border-t border-[#e2dfd7] p-4 bg-[#F9F7F4]">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {employees.map(emp => (
               <EmployeeCard key={emp.appNo} emp={emp} selected={selectedIds.has(emp.appNo)}
@@ -758,35 +748,35 @@ function PriorityBoard({ priorityData, onOpenModal }: {
   if (nonEmpty.length === 0) return null;
 
   return (
-    <div className="bg-white p-5 rounded-[24px] border border-slate-200/80 shadow-xs space-y-3 font-sans">
+    <div className="card-glass p-5 bg-white rounded-3xl border border-[#e2dfd7] shadow-xs space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-[13px] font-medium text-[#1E3A5F] uppercase tracking-wider flex items-center gap-2">
+        <h3 className="font-black text-[#1E2D4E] text-sm uppercase tracking-wider flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
           Priority Call Queue (Auto-Classified)
         </h3>
-        <span className="text-[12px] font-medium text-slate-400">Real-time Offered DOJ & Confirmation Status</span>
+        <span className="text-xs font-bold text-[#888]">Real-time Offered DOJ & Confirmation Status</span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {nonEmpty.map(lane => (
-          <div key={lane.key} className={`rounded-[20px] border-2 ${lane.color} p-3.5 space-y-2 flex flex-col justify-between`}>
+          <div key={lane.key} className={`rounded-2xl border-2 ${lane.color} p-3 space-y-2 flex flex-col justify-between`}>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-medium text-[#1E3A5F]">{lane.label}</span>
-                <span className={`w-5 h-5 rounded-full ${lane.badge} flex items-center justify-center text-white text-[11px] font-medium`}>
+                <span className="text-xs font-black text-[#1E2D4E]">{lane.label}</span>
+                <span className={`w-5 h-5 rounded-full ${lane.badge} flex items-center justify-center text-white text-[10px] font-black`}>
                   {lane.emps.length}
                 </span>
               </div>
               <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
                 {lane.emps.slice(0, 8).map(emp => (
                   <button key={emp.appNo} onClick={() => onOpenModal(emp)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-white text-left transition-all hover:shadow-xs">
-                    <div className="w-7 h-7 rounded-lg bg-[#1E3A5F] flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white hover:bg-slate-50 border border-white text-left transition-all hover:shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-[#1E2D4E] flex items-center justify-center text-white font-black text-xs flex-shrink-0">
                       {emp.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium text-[#1E3A5F] truncate">{emp.name}</div>
-                      <div className="text-[12px] text-slate-500 font-normal">{fmtDate(emp.offeredDoj)}</div>
+                      <div className="text-xs font-black text-[#1E2D4E] truncate">{emp.name}</div>
+                      <div className="text-[10px] text-[#777] font-semibold">{fmtDate(emp.offeredDoj)}</div>
                     </div>
                     <a href={`tel:${emp.phone}`} onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 flex-shrink-0">
                       <PhoneCall className="w-3.5 h-3.5" />
@@ -835,21 +825,21 @@ function TodaysOperationsPanel({
   ];
 
   return (
-    <div className="bg-white p-5 rounded-[24px] border border-slate-200/80 shadow-xs space-y-4 font-sans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+    <div className="card-glass p-5 bg-white rounded-3xl border border-[#e2dfd7] shadow-xs space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e2dfd7] pb-3">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-          <h3 className="text-[18px] font-semibold text-[#1E3A5F] flex items-center gap-2">
+          <h3 className="font-black text-[#1E2D4E] text-base flex items-center gap-2">
             <Activity className="w-5 h-5 text-emerald-600" />
             Today's Telecalling Operations Panel
           </h3>
         </div>
 
-        <div className="flex items-center gap-3 text-[13px] font-normal text-slate-500">
-          <span className="font-mono">Last updated: {lastUpdatedTime}</span>
+        <div className="flex items-center gap-3 text-xs font-bold">
+          <span className="text-[#888] font-mono">Last updated: {lastUpdatedTime}</span>
           <button
             onClick={() => setShowFeed(f => !f)}
-            className="h-8 px-3 rounded-xl bg-[#1E3A5F] text-white text-[13px] font-medium flex items-center gap-1.5">
+            className="px-3 py-1 rounded-xl bg-[#1E2D4E] text-white text-xs font-black flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" />
             {showFeed ? 'Hide Live Feed' : `View Live Feed (${sessionLog.length})`}
           </button>
@@ -864,40 +854,40 @@ function TodaysOperationsPanel({
               <div className="flex items-center justify-between">
                 <Icon className={`w-4 h-4 ${c.color}`} />
               </div>
-              <div className={`text-2xl font-semibold ${c.color} mt-1`}>{c.value}</div>
-              <div className="text-[12px] font-medium text-slate-500 uppercase tracking-wider mt-0.5 truncate">{c.label}</div>
+              <div className={`text-2xl font-black ${c.color} mt-1`}>{c.value}</div>
+              <div className="text-[9.5px] font-black uppercase tracking-wider text-[#777] mt-0.5 truncate">{c.label}</div>
             </div>
           );
         })}
       </div>
 
       {showFeed && (
-        <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 animate-fade-in">
-          <div className="flex items-center justify-between text-[13px]">
-            <span className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wider text-slate-500">
+        <div className="mt-3 pt-3 border-t border-[#e2dfd7] space-y-2 animate-fade-in">
+          <div className="flex items-center justify-between text-xs font-black text-[#1E2D4E]">
+            <span className="flex items-center gap-1.5 uppercase tracking-wider text-[10.5px] text-[#777]">
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               Live Activity Stream (Today's Actions)
             </span>
-            <span className="text-slate-400 font-normal">{sessionLog.length} recent events logged</span>
+            <span className="text-[#888] font-semibold">{sessionLog.length} recent events logged</span>
           </div>
 
           {sessionLog.length === 0 ? (
-            <div className="p-4 text-center text-[13px] font-normal text-slate-400 bg-[#F8F9FA] rounded-2xl border border-slate-200/80">
+            <div className="p-4 text-center text-xs font-bold text-[#888] bg-[#F9F7F4] rounded-2xl border border-[#e2dfd7]">
               No actions logged yet in this session today. Updating any employee status, DOJ, or note will stream live updates here!
             </div>
           ) : (
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               {sessionLog.slice(0, 10).map(log => (
-                <div key={log.id} className="px-3 py-2 rounded-xl border border-slate-200/80 bg-[#F8F9FA] flex items-center justify-between text-[13px] gap-2">
+                <div key={log.id} className="card-glass px-3 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-between text-xs gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono text-[12px] text-slate-500 px-1.5 py-0.5 rounded bg-white border border-slate-200 flex-shrink-0">
+                    <span className="font-mono text-[10px] font-bold text-[#888] px-1.5 py-0.5 rounded bg-white border border-[#e2dfd7] flex-shrink-0">
                       {log.time}
                     </span>
-                    <span className="font-semibold text-[#1E3A5F] truncate">{log.empName}</span>
-                    <span className="text-[12px] font-mono text-slate-400">({log.appNo})</span>
-                    <span className="text-[13px] text-slate-600 truncate">· {log.description}</span>
+                    <span className="font-black text-[#1E2D4E] truncate">{log.empName}</span>
+                    <span className="text-[10px] font-mono font-semibold text-[#888]">({log.appNo})</span>
+                    <span className="text-xs text-[#555] font-semibold truncate">· {log.description}</span>
                   </div>
-                  <span className="text-[12px] text-slate-400 flex-shrink-0">by {log.doneBy}</span>
+                  <span className="text-[9.5px] font-bold text-[#888] flex-shrink-0">by {log.doneBy}</span>
                 </div>
               ))}
             </div>
@@ -912,12 +902,12 @@ function TodaysOperationsPanel({
 function AnalyticsHeader({ analytics, loading }: { analytics: Analytics | null; loading: boolean }) {
   if (loading || !analytics) return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      {Array(6).fill(0).map((_, i) => <div key={i} className="h-24 rounded-[20px] animate-pulse bg-white border border-slate-200/80" />)}
+      {Array(6).fill(0).map((_, i) => <div key={i} className="card-glass h-24 rounded-2xl animate-pulse bg-white border border-[#e2dfd7]" />)}
     </div>
   );
 
   const cards = [
-    { label: 'Total Employees', value: analytics.total,           icon: Users,         color: 'text-[#1E3A5F]',  bg: 'bg-white' },
+    { label: 'Total Employees', value: analytics.total,           icon: Users,         color: 'text-[#1E2D4E]',  bg: 'bg-white' },
     { label: 'Calls Done',      value: analytics.callDone,        icon: CheckCircle,   color: 'text-emerald-600', bg: 'bg-emerald-50/60' },
     { label: 'Pending Calls',   value: analytics.pending,         icon: Clock,         color: 'text-amber-600',   bg: 'bg-amber-50/60' },
     { label: 'No Answer',       value: analytics.notReceived,     icon: PhoneOff,      color: 'text-rose-600',    bg: 'bg-rose-50/60' },
@@ -926,16 +916,16 @@ function AnalyticsHeader({ analytics, loading }: { analytics: Analytics | null; 
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-sans">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map(c => {
         const Icon = c.icon;
         return (
-          <div key={c.label} className={`rounded-[20px] p-4 border border-slate-200/80 ${c.bg} shadow-xs hover:-translate-y-0.5 transition-all`}>
+          <div key={c.label} className={`card-glass rounded-3xl p-4 border border-[#e2dfd7] ${c.bg} shadow-xs hover:-translate-y-0.5 transition-all`}>
             <div className="flex items-center justify-between">
               <Icon className={`w-5 h-5 ${c.color}`} />
             </div>
-            <div className={`text-3xl font-semibold ${c.color} tracking-tight mt-1`}>{c.value}</div>
-            <div className="text-[12px] font-medium uppercase tracking-wider text-slate-500 mt-1 truncate">{c.label}</div>
+            <div className={`text-3xl font-black ${c.color} tracking-tight mt-1`}>{c.value}</div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-[#888] mt-1 truncate">{c.label}</div>
           </div>
         );
       })}
@@ -952,32 +942,32 @@ function BulkActionBar({ count, saving, onAction, onClear, onExport }: {
 }) {
   const [fpDate, setFpDate] = useState('');
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1E3A5F] text-white p-3 px-5 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-3 animate-slide-up flex-wrap max-w-4xl w-[92%] justify-between font-sans">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-[#1E2D4E] text-white p-3 px-5 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-3 animate-slide-up flex-wrap max-w-4xl w-[92%] justify-between">
       <div className="flex items-center gap-2">
-        <span className="px-2.5 py-1 rounded-xl bg-[#D4A017] text-white text-[13px] font-medium">{count} Selected</span>
-        <span className="text-[13px] font-medium text-white/80 hidden md:inline">Bulk Telecaller Operations:</span>
+        <span className="px-2.5 py-1 rounded-xl bg-[#C9952A] text-white text-xs font-black">{count} Selected</span>
+        <span className="text-xs font-bold text-white/80 hidden md:inline">Bulk Telecaller Operations:</span>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap text-[14px]">
-        <button onClick={() => onAction('Call done')} disabled={saving} className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors disabled:opacity-50">✅ Call Done</button>
-        <button onClick={() => onAction('Call not received')} disabled={saving} className="h-9 px-3.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors disabled:opacity-50">📵 No Answer</button>
-        <button onClick={() => onAction('Pending')} disabled={saving} className="h-9 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium transition-colors disabled:opacity-50">⏳ Pending</button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => onAction('Call done')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-colors disabled:opacity-50">✅ Call Done</button>
+        <button onClick={() => onAction('Call not received')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-colors disabled:opacity-50">📵 No Answer</button>
+        <button onClick={() => onAction('Pending')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-colors disabled:opacity-50">⏳ Pending</button>
         <div className="h-5 w-px bg-white/20 hidden sm:block" />
-        <button onClick={() => onAction(undefined, 'Confirmed')} disabled={saving} className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50">📅 Confirmed</button>
-        <button onClick={() => onAction(undefined, 'Not confirmed')} disabled={saving} className="h-9 px-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors disabled:opacity-50">⚠️ Not Conf</button>
+        <button onClick={() => onAction(undefined, 'Confirmed')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-colors disabled:opacity-50">📅 Confirmed</button>
+        <button onClick={() => onAction(undefined, 'Not confirmed')} disabled={saving} className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-black transition-colors disabled:opacity-50">⚠️ Not Conf</button>
         
         <div className="flex items-center gap-1">
           <input type="date" value={fpDate} onChange={e => setFpDate(e.target.value)} title="Set follow-up date"
-            className="px-2 py-1 rounded-lg bg-white/10 text-white text-[13px] font-normal border border-white/20 focus:outline-none" />
+            className="px-2 py-1 rounded-lg bg-white/10 text-white text-xs font-bold border border-white/20 focus:outline-none" />
           {fpDate && <button onClick={() => { onAction(undefined, undefined, fpDate); setFpDate(''); }} disabled={saving}
-            className="h-9 px-3 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors">Set FU</button>}
+            className="px-2.5 py-1 rounded-lg bg-purple-600 text-white text-xs font-black hover:bg-purple-700 transition-colors">Set FU</button>}
         </div>
 
-        <button onClick={onExport} className="h-9 px-3.5 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors flex items-center gap-1">
-          <FileSpreadsheet className="w-4 h-4" />Export
+        <button onClick={onExport} className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-colors flex items-center gap-1">
+          <FileSpreadsheet className="w-3.5 h-3.5" />Export
         </button>
-        <button onClick={onClear} className="h-9 px-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors flex items-center gap-1">
-          <X className="w-4 h-4" />Clear
+        <button onClick={onClear} className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-colors flex items-center gap-1">
+          <X className="w-3.5 h-3.5" />Clear
         </button>
       </div>
     </div>
@@ -1406,7 +1396,7 @@ export default function JoiningCallDeskPage() {
   const hasFilters = searchInput || quickFilter !== 'all' || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1E3A5F] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F4F1EA] text-[#1E2D4E] flex flex-col font-sans">
       <ToastContainer />
       <Sidebar session={session} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -1415,25 +1405,25 @@ export default function JoiningCallDeskPage() {
           session={session} onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Sticky Search & Segmented Filter Controls */}
-        <div className="sticky top-16 z-30 bg-[#F8F9FA]/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-xs">
+        <div className="sticky top-16 z-30 bg-[#F4F1EA]/95 backdrop-blur-md border-b border-[#e2dfd7] px-4 py-3 shadow-xs">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Search Box */}
             <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C9952A]" />
               <input
                 ref={searchInputRef}
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Enterprise Search (Name, App No, Phone, ID, Dept, Section)..."
-                className="w-full pl-10 pr-20 py-2 rounded-2xl border border-slate-200 bg-white text-[13px] font-normal text-[#1E3A5F] focus:outline-none focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/10 shadow-xs transition-all"
+                className="w-full pl-10 pr-20 py-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] focus:ring-2 focus:ring-[#1E2D4E]/10 shadow-xs transition-all"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {searchInput ? (
-                  <button onClick={() => setSearchInput('')} className="p-1 rounded-md hover:bg-slate-100 text-slate-400">
+                  <button onClick={() => setSearchInput('')} className="p-1 rounded-md hover:bg-slate-100 text-[#888]">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 ) : (
-                  <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[9px] font-mono text-slate-400 bg-slate-100 border border-slate-200 rounded">
+                  <kbd className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 text-[9px] font-mono text-[#888] bg-slate-100 border border-slate-200 rounded">
                     Ctrl+K
                   </kbd>
                 )}
@@ -1441,7 +1431,7 @@ export default function JoiningCallDeskPage() {
             </div>
 
             {/* Quick Segmented Controls */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-200 shadow-xs overflow-x-auto scrollbar-none">
+            <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-[#e2dfd7] shadow-xs overflow-x-auto scrollbar-none">
               {[
                 { key: 'all', label: 'All' },
                 { key: 'overdue', label: 'Overdue' },
@@ -1455,7 +1445,7 @@ export default function JoiningCallDeskPage() {
                 <button
                   key={seg.key}
                   onClick={() => setQuickFilter(seg.key as QuickFilterType)}
-                  className={`px-3 py-1.5 rounded-xl text-[13px] font-medium transition-all flex-shrink-0 ${quickFilter === seg.key ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'}`}>
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex-shrink-0 ${quickFilter === seg.key ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#555] hover:bg-slate-100'}`}>
                   {seg.label}
                 </button>
               ))}
@@ -1463,7 +1453,7 @@ export default function JoiningCallDeskPage() {
 
             {/* Sort Dropdown */}
             <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
-              className="px-3 py-2 rounded-2xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none shadow-xs">
+              className="px-3 py-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none shadow-xs">
               <option value="doj_nearest">DOJ Nearest</option>
               <option value="recently_updated">Recently Updated</option>
               <option value="pending_first">Pending First</option>
@@ -1473,18 +1463,18 @@ export default function JoiningCallDeskPage() {
 
             {/* Filter Drawer Toggle */}
             <button onClick={() => setShowFilters(f => !f)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-[13px] font-medium transition-all shadow-xs ${showFilters || hasFilters ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]' : 'bg-white text-slate-600 border-slate-200 hover:border-[#1E3A5F]'}`}>
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border text-xs font-black transition-all shadow-xs ${showFilters || hasFilters ? 'bg-[#1E2D4E] text-white border-[#1E2D4E]' : 'bg-white text-[#555] border-[#e2dfd7] hover:border-[#1E2D4E]'}`}>
               <SlidersHorizontal className="w-3.5 h-3.5" />Filters{hasFilters ? ' ●' : ''}
             </button>
 
             <button onClick={loadData} title="Refresh Data"
-              className="p-2 rounded-2xl border border-slate-200 bg-white text-[13px] font-medium text-slate-600 hover:border-[#1E3A5F] transition-all shadow-xs">
+              className="p-2 rounded-2xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#555] hover:border-[#1E2D4E] transition-all shadow-xs">
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
             {hasFilters && (
               <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
-                className="flex items-center gap-1 px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50 text-[13px] font-medium text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
+                className="flex items-center gap-1 px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
                 <X className="w-3.5 h-3.5" />Clear
               </button>
             )}
@@ -1492,35 +1482,35 @@ export default function JoiningCallDeskPage() {
 
           {/* Active Filter Chips Bar */}
           {hasFilters && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap pt-2 border-t border-slate-200/80">
-              <span className="text-[12px] font-medium uppercase text-slate-500 mr-1">Active Filters:</span>
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap pt-2 border-t border-[#e2dfd7]">
+              <span className="text-[10px] font-black uppercase text-[#777] mr-1">Active Filters:</span>
               {quickFilter !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E3A5F] text-white text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E2D4E] text-white text-[10.5px] font-bold">
                   ⚡ {quickFilter.toUpperCase()} ONLY <X className="w-3 h-3 cursor-pointer" onClick={() => setQuickFilter('all')} />
                 </span>
               )}
               {debouncedSearch && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10.5px] font-bold">
                   🔍 "{debouncedSearch}" <X className="w-3 h-3 cursor-pointer" onClick={() => setSearchInput('')} />
                 </span>
               )}
               {filterDesig && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10.5px] font-bold">
                   Desig: {filterDesig} <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterDesig('')} />
                 </span>
               )}
               {filterCallStatus && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10.5px] font-bold">
                   Status: {filterCallStatus} <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterCallStatus('')} />
                 </span>
               )}
               {filterDojConf && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10.5px] font-bold">
                   DOJ Conf: {filterDojConf} <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterDojConf('')} />
                 </span>
               )}
               {filterDept && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[12px] font-medium">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10.5px] font-bold">
                   Dept: {filterDept} <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterDept('')} />
                 </span>
               )}
@@ -1529,15 +1519,15 @@ export default function JoiningCallDeskPage() {
 
           {/* Filter Drawer */}
           {showFilters && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-2 pt-2 border-t border-slate-200/80 animate-fade-in">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-2 pt-2 border-t border-[#e2dfd7] animate-fade-in">
               <select value={filterDesig} onChange={e => setFilterDesig(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All Designations</option>
                 {uniqDesigs.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
 
               <select value={filterCallStatus} onChange={e => setFilterCallStatus(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All Call Statuses</option>
                 <option value="Pending">Pending</option>
                 <option value="Call done">Call done</option>
@@ -1547,7 +1537,7 @@ export default function JoiningCallDeskPage() {
               </select>
 
               <select value={filterDojConf} onChange={e => setFilterDojConf(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All DOJ Confirmations</option>
                 <option value="Confirmed">Confirmed</option>
                 <option value="Not confirmed">Not confirmed</option>
@@ -1555,19 +1545,19 @@ export default function JoiningCallDeskPage() {
               </select>
 
               <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All Departments</option>
                 {uniqDepts.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
 
               <select value={filterSection} onChange={e => setFilterSection(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All Sections</option>
                 {uniqSections.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
 
               <select value={filterGender} onChange={e => setFilterGender(e.target.value)}
-                className="px-2.5 py-2 rounded-xl border border-slate-200 bg-white text-[13px] font-medium text-[#1E3A5F] outline-none">
+                className="px-2.5 py-2 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] outline-none">
                 <option value="">All Genders</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
@@ -1580,24 +1570,24 @@ export default function JoiningCallDeskPage() {
         <main className={`p-4 lg:p-6 space-y-6 flex-1 overflow-y-auto ${selectedIds.size > 0 ? 'pb-24' : ''}`}>
 
           {/* Banner Header */}
-          <div className="bg-white p-5 rounded-[24px] border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="card-glass p-5 rounded-3xl bg-white border border-[#e2dfd7] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-widest text-[#D4A017]">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#C9952A]">
                 <ShieldCheck className="w-4 h-4" />
                 <span>Telecalling Operations Command Center</span>
               </div>
-              <h1 className="text-2xl font-semibold text-[#1E3A5F] tracking-tight mt-0.5">
+              <h1 className="text-2xl font-black text-[#1E2D4E] tracking-tight mt-0.5">
                 Joining Confirmation Call Desk
               </h1>
-              <p className="text-[13px] text-slate-500 font-normal mt-1">
+              <p className="text-xs text-[#777] font-semibold mt-1">
                 Executive HR telecalling platform · Real-time status sync across Employee Directory & Offer Desk
               </p>
             </div>
 
             <button
               onClick={handleExportSelected}
-              className="h-10 px-4 rounded-xl bg-[#1E3A5F] hover:bg-[#152a45] text-white text-[14px] font-medium transition-colors flex items-center gap-2 shadow-md flex-shrink-0">
-              <Download className="w-4 h-4 text-[#D4A017]" />
+              className="px-4 py-2.5 rounded-2xl bg-[#1E2D4E] hover:bg-[#162340] text-white text-xs font-black transition-colors flex items-center gap-2 shadow-md flex-shrink-0">
+              <Download className="w-4 h-4 text-[#C9952A]" />
               Export Full Report (CSV)
             </button>
           </div>
@@ -1617,14 +1607,14 @@ export default function JoiningCallDeskPage() {
 
           {/* Search Result Feedback Bar */}
           {debouncedSearch.trim() && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between shadow-xs">
+            <div className="card-glass p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between shadow-xs">
               <div className="flex items-center gap-2">
                 <Search className="w-4 h-4 text-amber-700" />
-                <span className="text-[13px] font-medium text-amber-950">
+                <span className="text-xs font-black text-amber-950">
                   Showing {filteredEmployees.length} matching result{filteredEmployees.length !== 1 ? 's' : ''} for "{debouncedSearch}" across {designationGroups.length} designation{designationGroups.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <button onClick={() => setSearchInput('')} className="text-[13px] font-medium text-amber-800 underline hover:text-amber-950">
+              <button onClick={() => setSearchInput('')} className="text-xs font-bold text-amber-800 underline hover:text-amber-950">
                 Clear Search
               </button>
             </div>
@@ -1632,25 +1622,25 @@ export default function JoiningCallDeskPage() {
 
           {/* Loading State */}
           {loading && (
-            <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white rounded-[24px] border border-slate-200/80">
-              <Loader2 className="w-8 h-8 animate-spin text-[#D4A017]" />
-              <p className="text-[14px] font-medium text-slate-500">Synchronizing call desk data...</p>
+            <div className="card-glass p-16 flex flex-col items-center justify-center gap-3 bg-white rounded-3xl border border-[#e2dfd7]">
+              <Loader2 className="w-8 h-8 animate-spin text-[#C9952A]" />
+              <p className="text-sm font-bold text-[#777]">Synchronizing call desk data...</p>
             </div>
           )}
 
           {/* Empty State */}
           {!loading && designationGroups.length === 0 && (
-            <div className="p-16 flex flex-col items-center justify-center text-center gap-3 bg-white rounded-[24px] border border-slate-200/80">
-              <Users className="w-12 h-12 text-slate-300" />
+            <div className="card-glass p-16 flex flex-col items-center justify-center text-center gap-3 bg-white rounded-3xl border border-[#e2dfd7]">
+              <Users className="w-12 h-12 text-[#1E2D4E]/20" />
               <div>
-                <p className="font-semibold text-[#1E3A5F] text-base">No matching candidates found</p>
-                <p className="text-[13px] text-slate-500 font-normal mt-1">
+                <p className="font-black text-[#1E2D4E] text-base">No matching candidates found</p>
+                <p className="text-xs text-[#777] font-medium mt-1">
                   {debouncedSearch ? `No record matched "${debouncedSearch}". Try searching by name, phone, or App No.` : 'No joined candidates found in the directory.'}
                 </p>
               </div>
               {hasFilters && (
                 <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
-                  className="mt-2 h-9 px-4 rounded-xl bg-[#1E3A5F] text-white text-[14px] font-medium hover:bg-[#152a45] shadow-md">
+                  className="mt-2 px-4 py-2.5 rounded-2xl bg-[#1E2D4E] text-white text-xs font-black hover:bg-[#162340] shadow-md">
                   Clear All Filters
                 </button>
               )}
