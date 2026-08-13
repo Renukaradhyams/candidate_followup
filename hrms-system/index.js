@@ -53,9 +53,14 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 console.log(`[Boot] PORT=${PORT} | DB=${process.env.DB_NAME} | ENV=${process.env.NODE_ENV}`);
 
 app.set('trust proxy', true);
-app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
+app.use(helmet({ 
+  contentSecurityPolicy: false, 
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
-// Dynamic CORS configuration compliant with W3C specs for credentials
+// Dynamic CORS configuration compliant with W3C specs for mobile and desktop clients
 const corsOptions = {
   origin: (origin, callback) => {
     // Reflect request origin to allow credentials safely, or allow server-to-server/mobile requests
@@ -64,8 +69,32 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'x-candidate-name', 'x-app-no', 'Accept', 'Origin', 'X-Requested-With']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-auth-token', 
+    'x-candidate-name', 
+    'x-app-no', 
+    'Accept', 
+    'Origin', 
+    'X-Requested-With', 
+    'User-Agent',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers'
+  ]
 };
+
+// Immediate HTTP OPTIONS preflight responder to prevent 403 Forbidden errors on mobile browsers
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-token, x-candidate-name, x-app-no, Accept, Origin, X-Requested-With, User-Agent');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(204).end();
+  }
+  next();
+});
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));

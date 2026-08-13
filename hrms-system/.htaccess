@@ -1,5 +1,5 @@
 # ==============================================================================
-# BSC Enterprise HRMS - Hostinger Apache & Passenger Configuration (.htaccess)
+# BSC Enterprise HRMS - Hostinger Apache & LiteSpeed Configuration (.htaccess)
 # ==============================================================================
 
 # Explicitly set Directory Index files so Apache never attempts directory listing 403s
@@ -24,16 +24,28 @@ Options -Indexes +SymLinksIfOwnerMatch
 </IfModule>
 <IfModule mod_security2.c>
     SecRuleEngine Off
+    SecRequestBodyAccess Off
 </IfModule>
 
-# Disable LiteSpeed Web Server Anti-Bot / Anti-DDoS Challenge Filters for App Routes
+# Completely Disable LiteSpeed Web Server Anti-Bot / Anti-DDoS Challenge & Captcha Filters
 <IfModule LiteSpeed>
     CacheLookup off
+    SetEnv verifycaptcha off
+    SetEnv reaptcha off
+    SetEnv no-security off
+    SetEnv nolog off
+    RewriteEngine On
+    RewriteRule .* - [E=verifycaptcha:off]
 </IfModule>
 
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Cleanly return 200 OK for HTTP OPTIONS Preflight CORS requests from mobile browsers
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule .* - [R=200,L]
+
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
@@ -73,6 +85,3 @@ Options -Indexes +SymLinksIfOwnerMatch
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
-
-
-

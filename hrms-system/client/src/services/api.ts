@@ -70,7 +70,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     ...(options.headers as Record<string, string>)
   };
 
-  if (session && session.token) {
+  const isPublicRoute = endpoint.includes('/public/') || endpoint.includes('/auth/login') || endpoint.includes('/candidate-entry');
+
+  if (session && session.token && !isPublicRoute) {
     headers['Authorization'] = `Bearer ${session.token}`;
     headers['x-auth-token'] = session.token; // Fallback for Hostinger Apache stripping Authorization header
   }
@@ -96,6 +98,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         });
       } else if (res.status === 401 && !endpoint.includes('/auth/login')) {
         console.warn(`[401 UNAUTHORIZED] Token expired or invalid for URL: ${url}`);
+        // Clear invalid or expired session to prevent continuous 401/403 loop on mobile devices
+        Auth.clear();
       }
       throw new Error(errorMsg);
     }
@@ -146,7 +150,12 @@ export const API = {
     const apiBase = getApiBase();
     const url = `${apiBase}/candidates/upload-documents`;
     const res = await fetch(url, { method: 'POST', headers, body: formData });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        console.warn(`[Upload Documents Security Warning] Server returned HTTP ${res.status}`);
+      }
+      throw new Error(`Upload failed with HTTP status ${res.status}`);
+    }
     return await res.json();
   },
   async getCandidates(filters: any = {}) {
