@@ -21,13 +21,14 @@ class WorkforceAnalyticsController {
           c.name,
           c.gender,
           c.department,
-          c.section,
+          COALESCE(sa.section, 'General') AS section,
           c.designation,
           c.status,
           COALESCE(c.offered_doj, so.est_doj, so.actual_doj, c.created_at) AS doj,
           c.created_at
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired')
            OR LOWER(TRIM(so.status)) = 'joined'
         GROUP BY c.app_no
