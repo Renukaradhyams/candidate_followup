@@ -9,7 +9,8 @@ import {
   RotateCcw, ChevronDown, ChevronUp, ChevronRight, SlidersHorizontal,
   PieChart, BarChart3, TrendingUp, Sparkles, User, Layers, ArrowUpRight,
   Printer, FileSpreadsheet, FileText, CheckCircle2, Award, AlertTriangle,
-  X, Phone, CheckSquare, ShieldCheck, Eye, ArrowRight, ArrowUpDown
+  X, Phone, CheckSquare, ShieldCheck, Eye, ArrowRight, ArrowUpDown,
+  Edit3, Save, Loader2
 } from 'lucide-react';
 
 // ─── Approved Departments Whitelist ───────────────────────────────────────────
@@ -38,10 +39,13 @@ interface EmployeeRecord {
   designation: string;
   doj: string;
   status?: string;
+  missingFields?: string[];
 }
 
 interface OverviewData {
   totalEmployees: number;
+  approvedCount?: number;
+  incompleteCount?: number;
   totalDepartments: number;
   totalDesignations: number;
   totalMale: number;
@@ -430,6 +434,221 @@ function UnverifiedVerificationDrawer({
   );
 }
 
+// ─── Incomplete Details Audit & Action Drawer ─────────────────────────────────
+function IncompleteDetailsDrawer({
+  incompleteList,
+  session,
+  onClose,
+  onRefresh
+}: {
+  incompleteList: EmployeeRecord[];
+  session: UserSession | null;
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
+  const [editingAppNo, setEditingAppNo] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    department: 'Mens',
+    designation: '',
+    gender: 'Male',
+    doj: '',
+    phone: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (emp: EmployeeRecord) => {
+    setEditingAppNo(emp.appNo);
+    setFormData({
+      department: APPROVED_DEPARTMENTS.includes(emp.department) ? emp.department : 'Mens',
+      designation: emp.designation && emp.designation !== 'Unassigned' ? emp.designation : 'Sales Executive',
+      gender: emp.gender || 'Male',
+      doj: emp.doj || '',
+      phone: emp.phone || '',
+    });
+  };
+
+  const handleSave = async (emp: EmployeeRecord) => {
+    setSaving(true);
+    try {
+      await API.updateCandidate(
+        emp.appNo,
+        {
+          department: formData.department,
+          desig: formData.designation,
+          designation: formData.designation,
+          gender: formData.gender,
+          offeredDoj: formData.doj || undefined,
+          phone: formData.phone || undefined,
+          isFullEdit: true,
+        },
+        emp.name,
+        session?.username || 'HR'
+      );
+      showToast(`Saved & verified details for ${emp.name}!`, 'success');
+      setEditingAppNo(null);
+      onRefresh();
+    } catch (e: any) {
+      showToast('Failed to save details: ' + e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+      <div className="w-full sm:w-[560px] bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left border-l border-[#e2dfd7]">
+        <div className="bg-gradient-to-r from-rose-700 to-rose-800 p-5 text-white flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-rose-200" />
+              <span className="text-xs font-black uppercase tracking-widest text-rose-100">Action Required: Fill Employee Details</span>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <h2 className="text-xl font-black">Fill Missing Employee Details</h2>
+          <p className="text-rose-100 text-xs font-medium mt-1">
+            {incompleteList.length} employee record{incompleteList.length > 1 ? 's' : ''} with incomplete information. Fill details below to verify and sync headcount with Directory.
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbf9f6]">
+          {incompleteList.map(emp => {
+            const isEditing = editingAppNo === emp.appNo;
+            const photo = fileUrl(emp.photoUrl);
+            return (
+              <div key={emp.appNo} className="card-glass p-4 rounded-3xl border-2 border-rose-200 bg-white shadow-xs space-y-3">
+                <div className="flex items-center gap-3">
+                  {photo ? (
+                    <img src={photo} alt={emp.name} className="w-12 h-12 rounded-xl object-cover border flex-shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-[#1E2D4E] text-white flex items-center justify-center font-black text-lg flex-shrink-0">
+                      {emp.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-black text-[#1E2D4E] text-sm truncate">{emp.name}</h3>
+                    <div className="text-xs font-mono font-bold text-[#777]">App No: {emp.appNo}</div>
+                  </div>
+                </div>
+
+                {/* Missing Fields Badges */}
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-2.5">
+                  <span className="text-[10.5px] font-black uppercase text-rose-700 block mb-1">Missing Necessary Information:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {emp.missingFields?.map(mf => (
+                      <span key={mf} className="px-2 py-0.5 rounded-lg bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
+                        ⚠️ Fill {mf}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {!isEditing ? (
+                  <button
+                    onClick={() => startEdit(emp)}
+                    className="w-full py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <Edit3 className="w-4 h-4" />
+                    Fill Details for this Employee
+                  </button>
+                ) : (
+                  <div className="bg-[#F9F7F4] p-3.5 rounded-2xl border border-[#e2dfd7] space-y-3 animate-fade-in">
+                    <div className="text-xs font-black text-[#1E2D4E] border-b border-[#e2dfd7] pb-1.5">
+                      Editing Details for {emp.name}
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-[#666] block mb-1">Approved Department</label>
+                      <select
+                        value={formData.department}
+                        onChange={e => setFormData(f => ({ ...f, department: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E]">
+                        {APPROVED_DEPARTMENTS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-[#666] block mb-1">Designation</label>
+                        <input
+                          type="text"
+                          value={formData.designation}
+                          onChange={e => setFormData(f => ({ ...f, designation: e.target.value }))}
+                          placeholder="e.g. Sales Executive"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-[#666] block mb-1">Gender</label>
+                        <select
+                          value={formData.gender}
+                          onChange={e => setFormData(f => ({ ...f, gender: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold">
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-[#666] block mb-1">Date of Joining (DOJ)</label>
+                        <input
+                          type="date"
+                          value={formData.doj}
+                          onChange={e => setFormData(f => ({ ...f, doj: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-[#666] block mb-1">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={e => setFormData(f => ({ ...f, phone: e.target.value }))}
+                          placeholder="Mobile number"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleSave(emp)}
+                        disabled={saving}
+                        className="flex-1 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-black hover:bg-[#162340] transition-colors flex items-center justify-center gap-1.5 shadow-md">
+                        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                        Save Details & Verify
+                      </button>
+                      <button
+                        onClick={() => setEditingAppNo(null)}
+                        className="px-3.5 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-bold text-[#666] hover:bg-slate-50">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 bg-white border-t border-[#e2dfd7] flex justify-end flex-shrink-0">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-black text-xs">
+            Close Panel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page Component ──────────────────────────────────────────────────────
 export default function WorkforceAnalytics() {
   const navigate = useNavigate();
@@ -445,6 +664,7 @@ export default function WorkforceAnalytics() {
   const [insights, setInsights] = useState<string[]>([]);
   const [rawEmployees, setRawEmployees] = useState<EmployeeRecord[]>([]);
   const [unverifiedEmployees, setUnverifiedEmployees] = useState<EmployeeRecord[]>([]);
+  const [incompleteEmployees, setIncompleteEmployees] = useState<EmployeeRecord[]>([]);
 
   // Selected Department Drawer State
   const [activeDeptDrawer, setActiveDeptDrawer] = useState<string | null>(null);
@@ -452,6 +672,7 @@ export default function WorkforceAnalytics() {
 
   // Unverified Audit Panel Drawer State
   const [showUnverifiedDrawer, setShowUnverifiedDrawer] = useState(false);
+  const [showIncompleteDrawer, setShowIncompleteDrawer] = useState(false);
 
   // Header Filters
   const [search, setSearch] = useState('');
@@ -474,6 +695,7 @@ export default function WorkforceAnalytics() {
         setInsights(res.executiveInsights || []);
         setRawEmployees(res.rawEmployees || []);
         setUnverifiedEmployees(res.unverifiedEmployees || []);
+        setIncompleteEmployees(res.incompleteEmployees || []);
       }
     } catch (err: any) {
       showToast('Failed to load workforce analytics: ' + err.message, 'error');
@@ -751,9 +973,14 @@ export default function WorkforceAnalytics() {
             <div className="card-glass rounded-2xl p-3 bg-white border border-[#e2dfd7]">
               <div className="flex items-center justify-between text-[#1E2D4E]">
                 <Users className="w-4 h-4 text-[#1E2D4E]" />
+                {overview?.incompleteCount ? (
+                  <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[8.5px] font-black animate-pulse">
+                    {overview.incompleteCount} Action Req.
+                  </span>
+                ) : null}
               </div>
               <div className="text-xl font-black text-[#1E2D4E] mt-1">{overview?.totalEmployees || 0}</div>
-              <div className="text-[9px] font-black uppercase tracking-wider text-[#888] mt-0.5 truncate">Total Employees</div>
+              <div className="text-[9px] font-black uppercase tracking-wider text-[#888] mt-0.5 truncate">Total Directory Emps</div>
             </div>
 
             <div className="card-glass rounded-2xl p-3 bg-white border border-[#e2dfd7]">
@@ -815,6 +1042,36 @@ export default function WorkforceAnalytics() {
               <div className="text-[8.5px] font-black uppercase tracking-wider text-purple-800 mt-0.5 truncate">Top Designation</div>
             </div>
           </div>
+
+          {/* Action Required: Incomplete Profile Details Alert Banner */}
+          {overview?.incompleteCount ? (
+            <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-black flex-shrink-0 shadow-md">
+                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-rose-950 text-sm">
+                      Action Required: {overview.incompleteCount} Employee Record{overview.incompleteCount > 1 ? 's' : ''} Has Incomplete Details
+                    </h3>
+                    <span className="px-2 py-0.5 rounded bg-rose-200 text-rose-900 font-mono font-black text-[10px]">
+                      Directory: {overview.totalEmployees} · Approved: {overview.approvedCount || (overview.totalEmployees - overview.incompleteCount)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-800 font-semibold mt-0.5">
+                    Necessary information is missing for this employee. Please fill details for this employee to verify and sync with approved department analytics.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIncompleteDrawer(true)}
+                className="px-4 py-2.5 rounded-2xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-black transition-colors flex items-center gap-1.5 flex-shrink-0 shadow-lg">
+                <Edit3 className="w-4 h-4" />
+                Fill Details for this Employee ({overview.incompleteCount})
+              </button>
+            </div>
+          ) : null}
 
           {/* Data Verification Alert Banner (if unverified records exist) */}
           {unverifiedEmployees.length > 0 && (
@@ -1017,7 +1274,6 @@ export default function WorkforceAnalytics() {
                     const topDept = des.departments[0]?.department || rawEmployees.find(e => e.designation === des.designation)?.department || 'Mens';
                     openDepartmentDrawer(topDept, des.designation);
                   }}
-
                   className="card-glass p-3.5 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:bg-white transition-all cursor-pointer group">
                   <div className="flex items-center justify-between">
                     <h4 className="font-black text-[#1E2D4E] text-xs group-hover:text-[#C9952A] transition-colors truncate">
@@ -1053,6 +1309,16 @@ export default function WorkforceAnalytics() {
         <UnverifiedVerificationDrawer
           unverifiedList={unverifiedEmployees}
           onClose={() => setShowUnverifiedDrawer(false)}
+        />
+      )}
+
+      {/* Incomplete Details Fill Action Drawer */}
+      {showIncompleteDrawer && (
+        <IncompleteDetailsDrawer
+          incompleteList={incompleteEmployees}
+          session={session}
+          onClose={() => setShowIncompleteDrawer(false)}
+          onRefresh={fetchAnalytics}
         />
       )}
     </div>

@@ -81,11 +81,37 @@ class WorkforceAnalyticsController {
         };
       });
 
-      // Filter into Approved workforce vs Unverified data
+      // Filter into Approved workforce vs Incomplete/Unverified data
       const approvedEmployees = allEmployees.filter(e => APPROVED_DEPARTMENTS.includes(e.department));
       const unverifiedEmployees = allEmployees.filter(e => !APPROVED_DEPARTMENTS.includes(e.department) || e.department === 'Unassigned');
 
-      const totalEmployees = approvedEmployees.length;
+      // Track missing fields for employee completion action
+      const incompleteEmployees = allEmployees.map(e => {
+        const missingFields = [];
+        if (!APPROVED_DEPARTMENTS.includes(e.department) || e.department === 'Unassigned') {
+          missingFields.push('Approved Department');
+        }
+        if (!e.designation || e.designation === 'Unassigned') {
+          missingFields.push('Designation');
+        }
+        if (!e.gender || e.gender === 'Unassigned') {
+          missingFields.push('Gender');
+        }
+        if (!e.doj) {
+          missingFields.push('Date of Joining (DOJ)');
+        }
+        if (!e.phone) {
+          missingFields.push('Phone Number');
+        }
+        return {
+          ...e,
+          missingFields,
+        };
+      }).filter(e => e.missingFields.length > 0);
+
+      // Total employees matches Employee Directory total (510)
+      const totalEmployees = allEmployees.length;
+      const approvedCount = approvedEmployees.length;
 
       // 2. Gender totals (Approved workforce)
       let maleCount = 0;
@@ -95,8 +121,8 @@ class WorkforceAnalyticsController {
         else maleCount++;
       });
 
-      const malePct = totalEmployees > 0 ? Math.round((maleCount / totalEmployees) * 1000) / 10 : 0;
-      const femalePct = totalEmployees > 0 ? Math.round((femaleCount / totalEmployees) * 1000) / 10 : 0;
+      const malePct = approvedCount > 0 ? Math.round((maleCount / approvedCount) * 1000) / 10 : 0;
+      const femalePct = approvedCount > 0 ? Math.round((femaleCount / approvedCount) * 1000) / 10 : 0;
 
       // 3. Department aggregation (Approved taxonomy)
       const deptMap = new Map();
@@ -163,7 +189,7 @@ class WorkforceAnalyticsController {
         .map(d => {
           const mPct = d.total > 0 ? Math.round((d.male / d.total) * 1000) / 10 : 0;
           const fPct = d.total > 0 ? Math.round((d.female / d.total) * 1000) / 10 : 0;
-          const wfPct = totalEmployees > 0 ? Math.round((d.total / totalEmployees) * 1000) / 10 : 0;
+          const wfPct = approvedCount > 0 ? Math.round((d.total / approvedCount) * 1000) / 10 : 0;
           return {
             department: d.department,
             total: d.total,
@@ -181,7 +207,7 @@ class WorkforceAnalyticsController {
       const totalDepartments = activeDepts.length;
 
       // Avg employees per department
-      const avgEmployeesPerDept = totalDepartments > 0 ? Math.round((totalEmployees / totalDepartments) * 10) / 10 : 0;
+      const avgEmployeesPerDept = totalDepartments > 0 ? Math.round((approvedCount / totalDepartments) * 10) / 10 : 0;
 
       // Largest Department
       const largestDeptObj = departmentAnalytics[0] || { department: 'N/A', total: 0, male: 0, female: 0 };
@@ -196,7 +222,7 @@ class WorkforceAnalyticsController {
       const designationAnalytics = Array.from(desigMap.values()).map(des => {
         const mPct = des.total > 0 ? Math.round((des.male / des.total) * 1000) / 10 : 0;
         const fPct = des.total > 0 ? Math.round((des.female / des.total) * 1000) / 10 : 0;
-        const wfPct = totalEmployees > 0 ? Math.round((des.total / totalEmployees) * 1000) / 10 : 0;
+        const wfPct = approvedCount > 0 ? Math.round((des.total / approvedCount) * 1000) / 10 : 0;
         const deptBreakdown = Array.from(des.depts.entries()).map(([dept, count]) => ({ department: dept, count }));
         return {
           designation: des.designation,
@@ -241,10 +267,10 @@ class WorkforceAnalyticsController {
         insights.push(`Largest designation is **${largestDesignation.name}** with **${largestDesignation.total}** employees.`);
       }
       insights.push(`Overall gender balance: **${malePct}% Male** (${maleCount}) / **${femalePct}% Female** (${femaleCount}).`);
-      if (unverifiedEmployees.length > 0) {
-        insights.push(`⚠ **${unverifiedEmployees.length}** records require department verification in the Data Verification Panel.`);
+      if (incompleteEmployees.length > 0) {
+        insights.push(`⚠ **${incompleteEmployees.length}** employee record(s) have incomplete details needing completion to sync with approved workforce.`);
       } else {
-        insights.push(`✅ 100% of workforce assigned to approved departments.`);
+        insights.push(`✅ 100% of employee profiles fully completed and verified.`);
       }
 
       const dataQualityAudit = {
@@ -261,7 +287,9 @@ class WorkforceAnalyticsController {
       return res.json({
         success: true,
         overview: {
-          totalEmployees,
+          totalEmployees, // Matches Employee Directory (510)
+          approvedCount,   // Approved department headcount (509)
+          incompleteCount: incompleteEmployees.length,
           totalDepartments,
           totalDesignations,
           totalMale: maleCount,
@@ -280,10 +308,14 @@ class WorkforceAnalyticsController {
         executiveInsights: insights,
         dataQualityAudit,
         rawEmployees: approvedEmployees,
+        allEmployees,
         unverifiedEmployees,
+        incompleteEmployees,
         dataVerificationSummary: {
           totalUnverified: unverifiedEmployees.length,
+          totalIncomplete: incompleteEmployees.length,
           unverifiedEmployees,
+          incompleteEmployees,
         },
       });
 
@@ -295,4 +327,5 @@ class WorkforceAnalyticsController {
 }
 
 module.exports = new WorkforceAnalyticsController();
+
 
