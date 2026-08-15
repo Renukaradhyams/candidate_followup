@@ -41,10 +41,27 @@ class CandidateController {
   async deleteCandidate(req, res) {
     try {
       const { appNo } = req.params;
-      const result = await candidateService.deleteCandidate(appNo);
+      const userContext = {
+        username: req.user ? (req.user.username || req.user.full_name || req.user.name) : (req.body?.deletedBy || req.headers['x-user-name'] || 'HR'),
+        userRole: req.user ? req.user.role : (req.body?.userRole || req.headers['x-user-role'] || 'Admin'),
+        userPhone: req.user ? (req.user.phone || req.user.userPhone || req.user.mobile) : (req.headers['x-user-phone'] || req.body?.userPhone || ''),
+        ipAddress: req.ip || (req.headers ? req.headers['x-forwarded-for'] : null) || (req.socket && req.socket.remoteAddress) || '',
+        deviceInfo: req.headers ? req.headers['user-agent'] : ''
+      };
+      const result = await candidateService.deleteCandidate(appNo, userContext);
       return res.json(result);
     } catch (err) {
       return errorRes(res, 'Failed to delete candidate', [err.message], 500);
+    }
+  }
+
+  async getDeletionLogs(req, res) {
+    try {
+      const limit = req.query.limit || 200;
+      const result = await candidateService.getDeletionLogs(limit);
+      return res.json(result);
+    } catch (err) {
+      return errorRes(res, 'Failed to fetch deletion logs', [err.message], 500);
     }
   }
 

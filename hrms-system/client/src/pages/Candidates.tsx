@@ -63,6 +63,27 @@ export default function CandidatesPage() {
   const [toDate, setToDate] = useState('');
   const [enlargedPhotoUrl, setEnlargedPhotoUrl] = useState<string | null>(null);
 
+  // Deletion Audit Log Modal State
+  const [deletionLogModal, setDeletionLogModal] = useState(false);
+  const [deletionLogs, setDeletionLogs] = useState<any[]>([]);
+  const [deletionLogsLoading, setDeletionLogsLoading] = useState(false);
+  const [deletionLogSearch, setDeletionLogSearch] = useState('');
+
+  const handleOpenDeletionLogs = async () => {
+    setDeletionLogModal(true);
+    setDeletionLogsLoading(true);
+    try {
+      const res = await API.getDeletionLogs(200);
+      if (res && res.logs) {
+        setDeletionLogs(res.logs);
+      }
+    } catch (err: any) {
+      showToast('Failed to load deletion logs: ' + err.message, 'error');
+    } finally {
+      setDeletionLogsLoading(false);
+    }
+  };
+
   const loadCandidates = useCallback(async () => {
     try {
       const d = await API.getCandidates({ limit: 50000 });
@@ -539,13 +560,23 @@ export default function CandidatesPage() {
           session={session}
           onMenuClick={() => setSidebarOpen(true)}
           rightElement={
-            <button
-              onClick={() => window.open('/candidate-entry', '_blank')}
-              className="btn-primary text-xs flex items-center gap-1.5 shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Register Candidate</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleOpenDeletionLogs}
+                className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
+                title="View Candidate Deletion Audit Logs"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>Deletion Logs</span>
+              </button>
+              <button
+                onClick={() => window.open('/candidate-entry', '_blank')}
+                className="btn-primary text-xs flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Register Candidate</span>
+              </button>
+            </div>
           }
         />
 
@@ -1551,6 +1582,160 @@ export default function CandidatesPage() {
                 className="px-5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 transition-colors border border-white/20"
               >
                 Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Candidate Deletion Audit Log Modal */}
+      {deletionLogModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-[#1E2D4E]/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl border border-[#e2dfd7] flex flex-col overflow-hidden animate-scale-in">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-[#e2dfd7] flex items-center justify-between bg-[#F9F7F4]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-200 text-rose-700 flex items-center justify-center shadow-xs">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-[#1E2D4E] text-base tracking-tight flex items-center gap-2">
+                    Candidate Deletion Audit Logs
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 font-extrabold">
+                      {deletionLogs.length} Deleted Records
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#777777] font-medium">
+                    Complete history of candidate deletions, including timestamp, user identity, mobile number, and device logs.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeletionLogModal(false)}
+                className="w-9 h-9 rounded-full hover:bg-white flex items-center justify-center text-[#777777] hover:text-[#1E2D4E] border border-transparent hover:border-[#e2dfd7] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Toolbar & Search */}
+            <div className="p-4 border-b border-[#e2dfd7] bg-white flex items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#999999]" />
+                <input
+                  type="text"
+                  placeholder="Search by candidate name, app no, phone, or user..."
+                  value={deletionLogSearch}
+                  onChange={(e) => setDeletionLogSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold focus:outline-none focus:border-[#1E2D4E]"
+                />
+              </div>
+              <button
+                onClick={handleOpenDeletionLogs}
+                disabled={deletionLogsLoading}
+                className="px-3.5 py-2 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#1E2D4E] hover:bg-[#F9F7F4] flex items-center gap-1.5"
+              >
+                <Clock className="w-4 h-4 text-[#C9952A]" />
+                <span>Refresh Logs</span>
+              </button>
+            </div>
+
+            {/* Log Table Body */}
+            <div className="p-4 overflow-y-auto flex-1 space-y-3 bg-[#F9F7F4]/50">
+              {deletionLogsLoading ? (
+                <div className="py-12 text-center text-xs text-[#777777] font-bold">
+                  Loading deletion audit records...
+                </div>
+              ) : deletionLogs.length === 0 ? (
+                <div className="py-12 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-extrabold text-[#1E2D4E] text-sm">No Candidate Deletions Recorded</h4>
+                  <p className="text-xs text-[#777777]">All registered candidates are intact. Any future candidate deletions will log detailed identity, timestamp, and mobile info here.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-[#e2dfd7] overflow-hidden shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-[#1E2D4E] text-white font-extrabold text-[11px] uppercase tracking-wider">
+                        <th className="py-3 px-4">Deletion Time (IST)</th>
+                        <th className="py-3 px-4">Deleted By (User &amp; Mobile)</th>
+                        <th className="py-3 px-4">Deleted Candidate</th>
+                        <th className="py-3 px-4">Device &amp; IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e2dfd7]">
+                      {deletionLogs
+                        .filter(log => {
+                          if (!deletionLogSearch.trim()) return true;
+                          const q = deletionLogSearch.toLowerCase();
+                          return (
+                            (log.candidateName && log.candidateName.toLowerCase().includes(q)) ||
+                            (log.candidateAppNo && log.candidateAppNo.toLowerCase().includes(q)) ||
+                            (log.candidatePhone && log.candidatePhone.includes(q)) ||
+                            (log.username && log.username.toLowerCase().includes(q)) ||
+                            (log.userPhone && log.userPhone.includes(q)) ||
+                            (log.userRole && log.userRole.toLowerCase().includes(q))
+                          );
+                        })
+                        .map(log => (
+                          <tr key={log.id} className="hover:bg-[#F9F7F4] transition-colors font-medium">
+                            <td className="py-3 px-4 whitespace-nowrap text-[#1E2D4E] font-bold">
+                              {log.createdAt ? new Date(log.createdAt).toLocaleString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+                              }) : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="space-y-0.5">
+                                <div className="font-extrabold text-[#1E2D4E] flex items-center gap-1.5">
+                                  <span>{log.username}</span>
+                                  <span className="text-[10px] px-2 py-0.2 rounded-full bg-[#1E2D4E]/10 text-[#1E2D4E] font-black uppercase">
+                                    {log.userRole}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-[#555555] flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-[#C9952A]" />
+                                  <span>{log.userPhone || 'Mobile N/A'}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="space-y-0.5">
+                                <div className="font-extrabold text-rose-700 flex items-center gap-1.5">
+                                  <span>{log.candidateName}</span>
+                                  <span className="text-[10px] px-2 py-0.2 rounded-full bg-rose-100 text-rose-800 font-bold">
+                                    {log.candidateAppNo}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-[#555555] flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-[#777777]" />
+                                  <span>{log.candidatePhone || 'No Phone Registered'}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-[#777777] text-[11px]">
+                              <div className="font-mono text-[10.5px]">{log.ipAddress}</div>
+                              <div className="truncate max-w-[200px] text-[10px]" title={log.deviceInfo}>
+                                {log.deviceInfo}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#e2dfd7] bg-white flex justify-end">
+              <button
+                onClick={() => setDeletionLogModal(false)}
+                className="px-5 py-2 rounded-xl bg-[#1E2D4E] text-white font-bold text-xs hover:bg-[#2A3E6A] transition-colors"
+              >
+                Close Logs
               </button>
             </div>
           </div>

@@ -402,12 +402,26 @@ async function autoInitializeDatabase(pool) {
       `CREATE TABLE IF NOT EXISTS audit_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(150),
+        user_role VARCHAR(50) NULL,
+        user_phone VARCHAR(50) NULL,
+        candidate_app_no VARCHAR(50) NULL,
+        candidate_name VARCHAR(255) NULL,
+        candidate_phone VARCHAR(50) NULL,
         action VARCHAR(100),
         module VARCHAR(100),
         details TEXT,
         ip_address VARCHAR(50),
+        device_info VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+      // audit_logs schema extensions
+      "ALTER TABLE audit_logs ADD COLUMN user_role VARCHAR(50) NULL",
+      "ALTER TABLE audit_logs ADD COLUMN user_phone VARCHAR(50) NULL",
+      "ALTER TABLE audit_logs ADD COLUMN candidate_app_no VARCHAR(50) NULL",
+      "ALTER TABLE audit_logs ADD COLUMN candidate_name VARCHAR(255) NULL",
+      "ALTER TABLE audit_logs ADD COLUMN candidate_phone VARCHAR(50) NULL",
+      "ALTER TABLE audit_logs ADD COLUMN device_info VARCHAR(255) NULL",
 
       // selection_offers missing columns needed by offerController
       "ALTER TABLE selection_offers ADD COLUMN call1_date DATETIME NULL",

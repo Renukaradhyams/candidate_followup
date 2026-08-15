@@ -55,6 +55,7 @@ router.post('/candidates', candidateController.addCandidate);
 router.post('/candidates/add', candidateController.addCandidate);
 router.put('/candidates/:appNo', candidateController.updateCandidate);
 router.post('/candidates/update', candidateController.updateCandidate);
+router.get('/candidates/deletion-logs', authenticate, candidateController.getDeletionLogs);
 router.delete('/candidates/:appNo', authenticate, authorize('Admin', 'Super Admin'), candidateController.deleteCandidate);
 router.get('/candidates/check-duplicate', candidateController.checkDuplicate);
 router.get('/candidates/next-app-no', candidateController.getNextAppNo);
@@ -224,7 +225,8 @@ router.post('/legacy', async (req, res) => {
     getDepartmentSections: deptHiringController.getDepartmentSections,
     addDepartmentSection: deptHiringController.addDepartmentSection,
     editDepartmentSection: deptHiringController.editDepartmentSection,
-    deleteDepartmentSection: deptHiringController.deleteDepartmentSection
+    deleteDepartmentSection: deptHiringController.deleteDepartmentSection,
+    getDeletionLogs: candidateController.getDeletionLogs
   };
 
   if (dispatchMap[action]) {

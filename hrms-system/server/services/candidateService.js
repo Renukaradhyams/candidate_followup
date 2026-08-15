@@ -410,18 +410,70 @@ class CandidateService {
     return { success: true };
   }
 
-  async deleteCandidate(appNo) {
+  async deleteCandidate(appNo, userContext = {}) {
     if (!appNo) return { success: false, error: 'App Number is required' };
 
-    // 1. Fetch file URLs before DB deletion
+    // 1. Fetch candidate information & file URLs before DB deletion for audit logging
+    let candidateInfo = null;
     let fileUrls = [];
     try {
-      const [rows] = await pool.query(`SELECT resume_url, photo_url, aadhaar_url FROM candidates WHERE app_no = ?`, [appNo]);
+      const [rows] = await pool.query(`SELECT app_no, name, phone, designation, status, created_at, resume_url, photo_url, aadhaar_url FROM candidates WHERE app_no = ?`, [appNo]);
       if (rows && rows.length > 0) {
+        candidateInfo = rows[0];
         fileUrls = [rows[0].resume_url, rows[0].photo_url, rows[0].aadhaar_url].filter(Boolean);
       }
     } catch (e) {
-      console.warn(`[DeleteCandidate] Could not fetch file URLs for ${appNo}:`, e.message);
+      console.warn(`[DeleteCandidate] Could not fetch candidate info for ${appNo}:`, e.message);
+    }
+
+    // Record Deletion Audit Log BEFORE purging DB rows
+    try {
+      const username = userContext.username || userContext.user || 'System User';
+      const userRole = userContext.userRole || userContext.role || 'Admin';
+      const userPhone = userContext.userPhone || userContext.phone || '';
+      const ipAddress = userContext.ipAddress || userContext.ip || '';
+      const deviceInfo = userContext.deviceInfo || userContext.userAgent || '';
+      
+      const candidateName = candidateInfo ? candidateInfo.name : 'Unknown Candidate';
+      const candidatePhone = candidateInfo ? candidateInfo.phone : '';
+
+      const detailsObj = {
+        candidate: {
+          app_no: appNo,
+          name: candidateName,
+          phone: candidatePhone,
+          designation: candidateInfo ? candidateInfo.designation : '',
+          status: candidateInfo ? candidateInfo.status : ''
+        },
+        deletedBy: {
+          username,
+          userRole,
+          userPhone,
+          ipAddress,
+          deviceInfo
+        },
+        deletedAt: new Date().toISOString()
+      };
+
+      await pool.query(
+        `INSERT INTO audit_logs (
+          username, user_role, user_phone, candidate_app_no, candidate_name, candidate_phone,
+          action, module, details, ip_address, device_info
+        ) VALUES (?, ?, ?, ?, ?, ?, 'DELETE_CANDIDATE', 'Candidates', ?, ?, ?)`,
+        [
+          username,
+          userRole,
+          userPhone,
+          appNo,
+          candidateName,
+          candidatePhone,
+          JSON.stringify(detailsObj),
+          ipAddress,
+          deviceInfo
+        ]
+      );
+    } catch (auditErr) {
+      console.error(`[DeleteCandidate] Failed to insert audit log for ${appNo}:`, auditErr.message);
     }
 
     // 2. Perform DB deletion in a transaction
@@ -486,6 +538,44 @@ class CandidateService {
     }
 
     return { success: true };
+  }
+
+  async getDeletionLogs(limit = 200) {
+    try {
+      const [rows] = await pool.query(
+        `SELECT id, username, user_role, user_phone, candidate_app_no, candidate_name, candidate_phone, action, module, details, ip_address, device_info, created_at 
+         FROM audit_logs 
+         WHERE action = 'DELETE_CANDIDATE' 
+         ORDER BY created_at DESC 
+         LIMIT ?`,
+        [parseInt(limit, 10) || 200]
+      );
+
+      const logs = rows.map(r => {
+        let parsedDetails = {};
+        try {
+          if (r.details) parsedDetails = JSON.parse(r.details);
+        } catch (e) {}
+
+        return {
+          id: r.id,
+          username: r.username || parsedDetails?.deletedBy?.username || 'Unknown User',
+          userRole: r.user_role || parsedDetails?.deletedBy?.userRole || 'Admin',
+          userPhone: r.user_phone || parsedDetails?.deletedBy?.userPhone || '',
+          candidateAppNo: r.candidate_app_no || parsedDetails?.candidate?.app_no || 'N/A',
+          candidateName: r.candidate_name || parsedDetails?.candidate?.name || 'Unknown Candidate',
+          candidatePhone: r.candidate_phone || parsedDetails?.candidate?.phone || '',
+          ipAddress: r.ip_address || parsedDetails?.deletedBy?.ipAddress || 'N/A',
+          deviceInfo: r.device_info || parsedDetails?.deletedBy?.deviceInfo || 'N/A',
+          createdAt: r.created_at
+        };
+      });
+
+      return { success: true, logs };
+    } catch (err) {
+      console.error('[getDeletionLogs ERROR]:', err.message);
+      return { success: false, logs: [], error: err.message };
+    }
   }
 
   async checkDuplicate(phone, email) {

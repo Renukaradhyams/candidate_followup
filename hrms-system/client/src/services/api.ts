@@ -172,10 +172,24 @@ export const API = {
       body: JSON.stringify({ data })
     });
   },
-  async deleteCandidate(appNo: string) {
+  async deleteCandidate(appNo: string, userContext?: any) {
+    const session = Auth.get();
+    const headers: Record<string, string> = {};
+    if (session) {
+      if ((session as any).phone) headers['x-user-phone'] = (session as any).phone;
+      if (session.username || session.fullName) headers['x-user-name'] = session.username || session.fullName;
+      if (session.role) headers['x-user-role'] = session.role;
+    }
+    if (userContext?.phone) headers['x-user-phone'] = userContext.phone;
+
     return apiFetch(`/candidates/${appNo}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers,
+      body: userContext ? JSON.stringify(userContext) : undefined
     });
+  },
+  async getDeletionLogs(limit: number = 200) {
+    return apiFetch(`/candidates/deletion-logs?limit=${limit}`);
   },
   async updateCandidate(appNo: string, updates: any, candName?: string, doneBy?: string) {
     return apiFetch(`/candidates/${appNo}`, {
