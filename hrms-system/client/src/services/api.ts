@@ -396,6 +396,12 @@ export const API = {
     return apiFetch(`/workforce-analytics${query ? '?' + query : ''}`);
   },
 
+  // DOJ Planning
+  async getDojPlanning(filters: any = {}) {
+    const query = new URLSearchParams(filters).toString();
+    return apiFetch(`/doj-planning${query ? '?' + query : ''}`);
+  },
+
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {
     if (!url) return null;

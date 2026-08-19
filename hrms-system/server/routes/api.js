@@ -14,6 +14,7 @@ const broadcastController = require('../controllers/broadcastController');
 const deptHiringController = require('../controllers/deptHiringController');
 const joiningCallDeskController = require('../controllers/joiningCallDeskController');
 const workforceAnalyticsController = require('../controllers/workforceAnalyticsController');
+const dojPlanningController = require('../controllers/dojPlanningController');
 
 // ── Auth Routes ──────────────────────────────────────────────
 router.post('/auth/login', authController.login);
@@ -148,6 +149,9 @@ router.get('/workforce-analytics', workforceAnalyticsController.getAnalytics);
 router.post('/dept-hiring/sections/add', deptHiringController.addDepartmentSection);
 router.post('/dept-hiring/sections/edit', deptHiringController.editDepartmentSection);
 router.post('/dept-hiring/sections/delete', deptHiringController.deleteDepartmentSection);
+
+// ── Date of Joining (DOJ Planning) Route ────────────────────────────────────
+router.get('/doj-planning', authenticate, dojPlanningController.getOverview);
 
 // ── Legacy Google Apps Script Action Dispatcher Endpoint ─────
 // Dispatches legacy `{ action: 'verifyUser', ... }` requests to appropriate controller actions

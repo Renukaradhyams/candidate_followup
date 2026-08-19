@@ -355,7 +355,7 @@ export default function SettingsPage() {
                   <div key={roleName} className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-3">
                     <div className="font-black text-sm text-[#1E2D4E] border-b border-[#e2dfd7] pb-2 uppercase tracking-wider">{roleName} Access</div>
                     <div className="space-y-2">
-                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast', 'settings'].map(pageKey => {
+                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast', 'settings'].map(pageKey => {
                         const key = `${roleName.toLowerCase()}_${pageKey}`;
                         const allowed = pageSettings[key] !== false;
 
