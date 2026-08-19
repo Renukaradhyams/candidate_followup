@@ -10,9 +10,29 @@ const fmtDate = (d) => {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 };
 
+async function ensureTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS section_allocations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        app_no VARCHAR(50) NOT NULL UNIQUE,
+        department VARCHAR(150),
+        section VARCHAR(150),
+        updated_by VARCHAR(100),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+  } catch (e) {
+    // Table may already exist or error ignored safely
+  }
+}
+ensureTables();
+
 class DOJPlanningController {
   async getOverview(req, res) {
     try {
+      await ensureTables();
+
       // Query all candidates with potential offer/joining information
       const [rows] = await pool.query(`
         SELECT c.id,
@@ -22,7 +42,7 @@ class DOJPlanningController {
                c.email,
                c.gender,
                c.department,
-               c.section,
+               COALESCE(sa.section, 'General') AS section,
                c.designation,
                c.offered_doj,
                c.photo_url,
@@ -39,6 +59,7 @@ class DOJPlanningController {
                d.updated_at AS desk_updated_at
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         GROUP BY c.app_no
         ORDER BY c.name ASC
