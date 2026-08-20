@@ -61,6 +61,7 @@ class DOJPlanningController {
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        WHERE (LOWER(TRIM(c.status)) IN ('joined', 'hired') OR LOWER(TRIM(so.status)) = 'joined')
         GROUP BY c.app_no
         ORDER BY c.name ASC
       `);
