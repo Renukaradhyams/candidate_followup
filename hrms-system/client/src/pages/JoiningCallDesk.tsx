@@ -20,6 +20,7 @@ import {
 type CallStatus = 'Pending' | 'Call done' | 'Call not received' | 'Wrong number' | 'Rescheduled';
 type DojConf    = 'Pending confirmation' | 'Confirmed' | 'Not confirmed';
 type QuickFilterType = 'all' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'confirmed' | 'pending' | 'no_answer';
+export type KpiFilterType = 'all' | 'call_done' | 'pending' | 'no_answer' | 'doj_confirmed' | 'unconfirmed_doj';
 
 interface Employee {
   appNo: string;
@@ -899,33 +900,65 @@ function TodaysOperationsPanel({
 }
 
 // ─── Single Source of Truth Analytics Header ──────────────────────────────────
-function AnalyticsHeader({ analytics, loading }: { analytics: Analytics | null; loading: boolean }) {
+function AnalyticsHeader({
+  analytics,
+  loading,
+  activeKpi,
+  onSelectKpi
+}: {
+  analytics: Analytics | null;
+  loading: boolean;
+  activeKpi: KpiFilterType;
+  onSelectKpi: (kpi: KpiFilterType) => void;
+}) {
   if (loading || !analytics) return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {Array(6).fill(0).map((_, i) => <div key={i} className="card-glass h-24 rounded-2xl animate-pulse bg-white border border-[#e2dfd7]" />)}
     </div>
   );
 
-  const cards = [
-    { label: 'Total Employees', value: analytics.total,           icon: Users,         color: 'text-[#1E2D4E]',  bg: 'bg-white' },
-    { label: 'Calls Done',      value: analytics.callDone,        icon: CheckCircle,   color: 'text-emerald-600', bg: 'bg-emerald-50/60' },
-    { label: 'Pending Calls',   value: analytics.pending,         icon: Clock,         color: 'text-amber-600',   bg: 'bg-amber-50/60' },
-    { label: 'No Answer',       value: analytics.notReceived,     icon: PhoneOff,      color: 'text-rose-600',    bg: 'bg-rose-50/60' },
-    { label: 'DOJ Confirmed',   value: analytics.dojConfirmed,    icon: CalendarCheck, color: 'text-blue-600',    bg: 'bg-blue-50/60' },
-    { label: 'Unconfirmed DOJ', value: analytics.dojNotConfirmed, icon: CalendarX,     color: 'text-orange-600',  bg: 'bg-orange-50/60' },
+  const cards: { key: KpiFilterType; label: string; value: number; icon: any; color: string; activeBg: string; borderCls: string }[] = [
+    { key: 'all',             label: 'Total Employees', value: analytics.total,           icon: Users,         color: 'text-[#1E2D4E]',  activeBg: 'bg-[#1E2D4E]/10 border-[#1E2D4E]', borderCls: 'border-[#e2dfd7]' },
+    { key: 'call_done',       label: 'Calls Done',      value: analytics.callDone,        icon: CheckCircle,   color: 'text-emerald-600', activeBg: 'bg-emerald-100/80 border-emerald-500', borderCls: 'border-emerald-200' },
+    { key: 'pending',         label: 'Pending Calls',   value: analytics.pending,         icon: Clock,         color: 'text-amber-600',   activeBg: 'bg-amber-100/80 border-amber-500', borderCls: 'border-amber-200' },
+    { key: 'no_answer',       label: 'No Answer',       value: analytics.notReceived,     icon: PhoneOff,      color: 'text-rose-600',    activeBg: 'bg-rose-100/80 border-rose-500', borderCls: 'border-rose-200' },
+    { key: 'doj_confirmed',   label: 'DOJ Confirmed',   value: analytics.dojConfirmed,    icon: CalendarCheck, color: 'text-blue-600',    activeBg: 'bg-blue-100/80 border-blue-500', borderCls: 'border-blue-200' },
+    { key: 'unconfirmed_doj', label: 'Unconfirmed DOJ', value: analytics.dojNotConfirmed, icon: CalendarX,     color: 'text-orange-600',  activeBg: 'bg-orange-100/80 border-orange-500', borderCls: 'border-orange-200' },
   ];
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       {cards.map(c => {
         const Icon = c.icon;
+        const isActive = activeKpi === c.key;
         return (
-          <div key={c.label} className={`card-glass rounded-3xl p-4 border border-[#e2dfd7] ${c.bg} shadow-xs hover:-translate-y-0.5 transition-all`}>
+          <div
+            key={c.key}
+            onClick={() => onSelectKpi(c.key)}
+            tabIndex={0}
+            role="button"
+            aria-pressed={isActive}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectKpi(c.key); } }}
+            className={`card-glass rounded-3xl p-4 border transition-all duration-200 cursor-pointer select-none relative group ${
+              isActive
+                ? `${c.activeBg} border-2 shadow-md ring-2 ring-[#1E2D4E]/20 scale-[1.02]`
+                : `bg-white ${c.borderCls} hover:shadow-md hover:-translate-y-0.5 hover:border-[#1E2D4E]/40`
+            }`}
+            title={`Click to filter by ${c.label}`}
+          >
             <div className="flex items-center justify-between">
               <Icon className={`w-5 h-5 ${c.color}`} />
+              {isActive && (
+                <span className="w-2.5 h-2.5 rounded-full bg-[#1E2D4E] animate-pulse" title="Active KPI Filter" />
+              )}
             </div>
             <div className={`text-3xl font-black ${c.color} tracking-tight mt-1`}>{c.value}</div>
-            <div className="text-[10px] font-black uppercase tracking-wider text-[#888] mt-1 truncate">{c.label}</div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#777] truncate">{c.label}</span>
+              {isActive && (
+                <span className="text-[9px] font-bold text-[#1E2D4E] bg-white/90 px-1.5 py-0.2 rounded-full border border-[#1E2D4E]/30">Active</span>
+              )}
+            </div>
           </div>
         );
       })}
@@ -1004,6 +1037,7 @@ export default function JoiningCallDeskPage() {
 
   // Filters
   const [quickFilter, setQuickFilter] = useState<QuickFilterType>('all');
+  const [activeKpi, setActiveKpi] = useState<KpiFilterType>('all');
   const [filterDesig, setFilterDesig] = useState('');
   const [filterCallStatus, setFilterCallStatus] = useState('');
   const [filterDojConf, setFilterDojConf] = useState('');
@@ -1014,6 +1048,10 @@ export default function JoiningCallDeskPage() {
   const [dojTo, setDojTo] = useState('');
   const [sortBy, setSortBy] = useState<'doj_nearest' | 'recently_updated' | 'pending_first' | 'overdue_first' | 'name'>('doj_nearest');
   const [showFilters, setShowFilters] = useState(false);
+
+  const handleKpiCardClick = useCallback((kpi: KpiFilterType) => {
+    setActiveKpi(prev => prev === kpi && kpi !== 'all' ? 'all' : kpi);
+  }, []);
 
   // Debounce search input (150ms)
   useEffect(() => {
@@ -1125,7 +1163,7 @@ export default function JoiningCallDeskPage() {
       else pending++;
 
       if (e.dojConfirmation === 'Confirmed') dojConfirmed++;
-      else if (e.dojConfirmation === 'Not confirmed') dojNotConfirmed++;
+      else dojNotConfirmed++;
 
       if (e.offeredDoj) {
         const u = urgencyOf(e.offeredDoj);
@@ -1228,6 +1266,19 @@ export default function JoiningCallDeskPage() {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().slice(0, 10);
 
+    // Top KPI Summary Interactive Card Filter
+    if (activeKpi === 'call_done') {
+      list = list.filter(e => e.callStatus === 'Call done');
+    } else if (activeKpi === 'pending') {
+      list = list.filter(e => e.callStatus === 'Pending' || !e.callStatus);
+    } else if (activeKpi === 'no_answer') {
+      list = list.filter(e => e.callStatus === 'Call not received');
+    } else if (activeKpi === 'doj_confirmed') {
+      list = list.filter(e => e.dojConfirmation === 'Confirmed');
+    } else if (activeKpi === 'unconfirmed_doj') {
+      list = list.filter(e => e.dojConfirmation !== 'Confirmed');
+    }
+
     // Quick Segmented Toggles
     if (quickFilter === 'overdue') {
       list = list.filter(e => e.offeredDoj && e.offeredDoj < todayStr && e.callStatus !== 'Call done');
@@ -1285,7 +1336,7 @@ export default function JoiningCallDeskPage() {
     }
 
     return list;
-  }, [allEmployees, quickFilter, debouncedSearch, filterDesig, filterCallStatus, filterDojConf, filterDept, filterSection, filterGender, dojFrom, dojTo, sortBy]);
+  }, [allEmployees, activeKpi, quickFilter, debouncedSearch, filterDesig, filterCallStatus, filterDojConf, filterDept, filterSection, filterGender, dojFrom, dojTo, sortBy]);
 
   // Group filtered employees by Designation
   const designationGroups = useMemo(() => {
@@ -1393,7 +1444,7 @@ export default function JoiningCallDeskPage() {
     showToast(`Exported ${listToExport.length} employee records to CSV`, 'success');
   };
 
-  const hasFilters = searchInput || quickFilter !== 'all' || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
+  const hasFilters = searchInput || quickFilter !== 'all' || activeKpi !== 'all' || filterDesig || filterCallStatus || filterDojConf || filterDept || filterSection || filterGender || dojFrom || dojTo;
 
   return (
     <div className="min-h-screen bg-[#F4F1EA] text-[#1E2D4E] flex flex-col font-sans">
@@ -1473,7 +1524,7 @@ export default function JoiningCallDeskPage() {
             </button>
 
             {hasFilters && (
-              <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
+              <button onClick={() => { setSearchInput(''); setQuickFilter('all'); setActiveKpi('all'); setFilterDesig(''); setFilterCallStatus(''); setFilterDojConf(''); setFilterDept(''); setFilterSection(''); setFilterGender(''); setDojFrom(''); setDojTo(''); }}
                 className="flex items-center gap-1 px-3 py-2 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-xs">
                 <X className="w-3.5 h-3.5" />Clear
               </button>
@@ -1484,6 +1535,17 @@ export default function JoiningCallDeskPage() {
           {hasFilters && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap pt-2 border-t border-[#e2dfd7]">
               <span className="text-[10px] font-black uppercase text-[#777] mr-1">Active Filters:</span>
+              {activeKpi !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E2D4E] text-white text-[10.5px] font-bold shadow-2xs">
+                  🎯 KPI: {
+                    activeKpi === 'call_done' ? 'Calls Done' :
+                    activeKpi === 'pending' ? 'Pending Calls' :
+                    activeKpi === 'no_answer' ? 'No Answer' :
+                    activeKpi === 'doj_confirmed' ? 'DOJ Confirmed' :
+                    activeKpi === 'unconfirmed_doj' ? 'Unconfirmed DOJ' : 'Total Employees'
+                  } <X className="w-3 h-3 cursor-pointer hover:text-amber-300" onClick={() => setActiveKpi('all')} />
+                </span>
+              )}
               {quickFilter !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1E2D4E] text-white text-[10.5px] font-bold">
                   ⚡ {quickFilter.toUpperCase()} ONLY <X className="w-3 h-3 cursor-pointer" onClick={() => setQuickFilter('all')} />
@@ -1574,13 +1636,13 @@ export default function JoiningCallDeskPage() {
             <div>
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#C9952A]">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Telecalling Operations Command Center</span>
+                <span>BSC SMG CRM · Telecalling Operations Command Center</span>
               </div>
               <h1 className="text-2xl font-black text-[#1E2D4E] tracking-tight mt-0.5">
                 Joining Confirmation Call Desk
               </h1>
               <p className="text-xs text-[#777] font-semibold mt-1">
-                Executive HR telecalling platform · Real-time status sync across Employee Directory & Offer Desk
+                Executive HR telecalling platform for BSC SMG CRM · Real-time status sync across Employee Directory & Offer Desk
               </p>
             </div>
 
@@ -1592,8 +1654,38 @@ export default function JoiningCallDeskPage() {
             </button>
           </div>
 
-          {/* Synchronized Analytics Header */}
-          <AnalyticsHeader analytics={analytics} loading={loading} />
+          {/* Synchronized Interactive Analytics Header */}
+          <AnalyticsHeader
+            analytics={analytics}
+            loading={loading}
+            activeKpi={activeKpi}
+            onSelectKpi={handleKpiCardClick}
+          />
+
+          {/* Active KPI Filter Feedback Bar */}
+          {activeKpi !== 'all' && (
+            <div className="card-glass p-3.5 rounded-2xl bg-[#1E2D4E] text-white border border-[#C9952A]/40 flex items-center justify-between shadow-xs animate-fade-in">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[#C9952A]" />
+                <span className="text-xs font-black">
+                  Showing {filteredEmployees.length} employee{filteredEmployees.length !== 1 ? 's' : ''} – {
+                    activeKpi === 'call_done' ? 'Calls Done' :
+                    activeKpi === 'pending' ? 'Pending Calls' :
+                    activeKpi === 'no_answer' ? 'No Answer' :
+                    activeKpi === 'doj_confirmed' ? 'DOJ Confirmed' :
+                    activeKpi === 'unconfirmed_doj' ? 'Unconfirmed DOJ' : 'Total Employees'
+                  }
+                </span>
+              </div>
+              <button
+                onClick={() => setActiveKpi('all')}
+                className="text-xs font-bold text-[#C9952A] hover:text-white underline flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                Reset KPI Filter
+              </button>
+            </div>
+          )}
 
           {/* Today's Operations Panel & Live Recent Activity Feed */}
           <TodaysOperationsPanel

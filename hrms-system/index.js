@@ -102,29 +102,51 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ── Favicon & Public Icon Route Handler (Early execution to prevent 403 / 404 / 503 errors) ──
-app.get(['/favicon.ico', '/favicon.png', '/logo.png'], (req, res) => {
-  const iconName = path.basename(req.path);
+// ── Favicon, PWA Manifest & Service Worker Handler ─────────────────────────────
+app.get([
+  '/manifest.json',
+  '/site.webmanifest',
+  '/sw.js',
+  '/favicon.ico',
+  '/favicon.png',
+  '/favicon-32x32.png',
+  '/logo.png',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/pwa-maskable-512x512.png',
+  '/apple-touch-icon.png'
+], (req, res) => {
+  const fileName = path.basename(req.path);
   const possiblePaths = [
-    path.join(APP_ROOT, 'dist', iconName),
-    path.join(APP_ROOT, 'client', 'dist', iconName),
-    path.join(APP_ROOT, 'client', 'public', iconName),
-    path.join(APP_ROOT, 'client', 'public', 'favicon.ico'),
-    path.join(APP_ROOT, 'client', 'public', 'logo.png'),
+    path.join(APP_ROOT, 'dist', fileName),
+    path.join(APP_ROOT, 'client', 'dist', fileName),
+    path.join(APP_ROOT, 'client', 'public', fileName),
     path.join(APP_ROOT, 'Main_logo.png')
   ];
+
   for (const p of possiblePaths) {
     try {
       if (fs.existsSync(p) && fs.statSync(p).isFile()) {
         const ext = path.extname(p).toLowerCase();
-        if (ext === '.ico') res.setHeader('Content-Type', 'image/x-icon');
-        else if (ext === '.png') res.setHeader('Content-Type', 'image/png');
-        res.setHeader('Cache-Control', 'public, max-age=86400');
+        if (ext === '.json' || fileName === 'manifest.json' || fileName === 'site.webmanifest') {
+          res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        } else if (fileName === 'sw.js' || ext === '.js') {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          res.setHeader('Service-Worker-Allowed', '/');
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (ext === '.ico') {
+          res.setHeader('Content-Type', 'image/x-icon');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else if (ext === '.png') {
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+        }
         return res.sendFile(p);
       }
     } catch (e) {}
   }
-  return res.status(204).end();
+  return res.status(404).json({ error: `PWA file ${fileName} not found` });
 });
 
 // ── Static Uploads ────────────────────────────────────────────────────────────
@@ -404,6 +426,7 @@ if (fs.existsSync(distDir)) {
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets') ||
         req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.endsWith('.ico') || req.path.endsWith('.png') || req.path.endsWith('.svg') ||
+        req.path.endsWith('.json') || req.path.endsWith('.webmanifest') || req.path === '/manifest.json' || req.path === '/sw.js' ||
         req.path === '/health' || req.path === '/db-status') return next();
     
     const fallback = path.join(distDir, 'index.html');

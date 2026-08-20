@@ -54,9 +54,9 @@ Options -Indexes +SymLinksIfOwnerMatch
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Exclude API, Uploads, Assets, and static files from SPA rewrite
-    RewriteCond %{REQUEST_URI} !^/(api|uploads|assets|health|db-status) [NC]
-    RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|pdf|doc|docx|woff|woff2)$ [NC]
+    # Exclude API, Uploads, Assets, PWA assets, and static files from SPA rewrite
+    RewriteCond %{REQUEST_URI} !^/(api|uploads|assets|health|db-status|manifest\.json|sw\.js) [NC]
+    RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|pdf|doc|docx|woff|woff2|json|webmanifest)$ [NC]
 
     # Fallback all client SPA routes (e.g. /login, /candidates, /candidate-entry) to index.html
     RewriteRule ^ index.html [L]
@@ -74,11 +74,15 @@ Options -Indexes +SymLinksIfOwnerMatch
     PassengerEnabled on
 </IfModule>
 
-# Allow Static Upload & Asset Access (Photos, Resumes, Documents, JS, CSS)
+# Allow Static Upload & Asset Access (Photos, Resumes, Documents, JS, CSS, PWA Manifest, SW)
 <IfModule mod_headers.c>
-    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|doc|docx|js|css|woff2?|ico)$">
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|pdf|doc|docx|js|css|woff2?|ico|json|webmanifest)$">
         Header set Access-Control-Allow-Origin "*"
         Header set Cache-Control "public, max-age=86400, must-revalidate"
+    </FilesMatch>
+    <FilesMatch "(sw\.js|manifest\.json)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Service-Worker-Allowed "/"
     </FilesMatch>
     # Security Headers
     Header always set X-Content-Type-Options "nosniff"

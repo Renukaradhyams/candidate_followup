@@ -21,6 +21,7 @@ const JoiningCallDesk = lazy(() => import('./pages/JoiningCallDesk'));
 const WorkforceAnalytics = lazy(() => import('./pages/WorkforceAnalytics'));
 const DOJPlanning = lazy(() => import('./pages/DOJPlanning'));
 import QuickActionCenter from './components/ui/QuickActionCenter';
+import PWAController from './components/PWAController';
 
 function PageFallback() {
   return (
@@ -36,6 +37,7 @@ function PageFallback() {
 export default function App() {
   return (
     <Router>
+      <PWAController />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />

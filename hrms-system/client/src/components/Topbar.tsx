@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Bell, Clock, ChevronRight, Search, Activity, Command } from 'lucide-react';
+import { Menu, Bell, Clock, ChevronRight, Search, Activity, Command, Download } from 'lucide-react';
 import { UserSession } from '../services/api';
 import { NotificationService } from '../services/notificationService';
 import NotificationDrawer from './ui/NotificationDrawer';
@@ -21,8 +21,21 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
   const [notifOpen, setNotifOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    const isStandaloneMode =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    setIsStandalone(isStandaloneMode);
+
+    const handlePrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+
     const updateTime = () => {
       const now = new Date();
       setClock(
@@ -39,10 +52,25 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
     });
 
     return () => {
+      window.removeEventListener('beforeinstallprompt', handlePrompt);
       clearInterval(interval);
       unsub();
     };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          setInstallPrompt(null);
+        }
+      } catch (e) {
+        console.error('Install error', e);
+      }
+    }
+  };
 
   return (
     <>
@@ -98,6 +126,17 @@ export default function Topbar({ title, breadcrumbs, session, onMenuClick, right
             <Clock className="w-3.5 h-3.5 text-[#C9952A]" />
             <span className="font-semibold">{clock}</span>
           </div>
+
+          {!isStandalone && installPrompt && (
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1E2D4E] hover:bg-[#152038] text-white text-xs font-bold rounded-xl shadow-xs transition-all border border-[#C9952A]/40 animate-fade-in"
+              title="Install BSC Candidate CRM as Desktop App"
+            >
+              <Download className="w-3.5 h-3.5 text-[#C9952A]" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+          )}
 
           {/* Activity Panel Trigger */}
           <button
