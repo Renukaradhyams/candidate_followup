@@ -467,15 +467,20 @@ export default function EmployeeMasterEditorPage() {
 
       {/* Sidebar Navigation */}
       <Sidebar
-        open={sidebarOpen}
+        session={session}
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        activeRoute="/employee-master"
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <Topbar
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           title="Employee Master & greytHR Pre-Onboarding Hub"
+          breadcrumbs={[
+            { label: 'Talent Management', href: '/employees' },
+            { label: 'Employee Master (greytHR)' }
+          ]}
+          session={session}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
 
         <main className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-5">
