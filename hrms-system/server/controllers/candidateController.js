@@ -24,8 +24,10 @@ class CandidateController {
 
   async updateCandidate(req, res) {
     try {
-      const { appNo, updates, doneBy } = req.body;
-      const user = doneBy || (req.user ? req.user.username : 'HR');
+      const appNo = req.body?.appNo || req.params?.appNo || req.params?.id || req.body?.updates?.appNo;
+      const updates = req.body?.updates || req.body || {};
+      const user = req.body?.doneBy || (req.user ? (req.user.username || req.user.full_name) : 'HR');
+      
       let result;
       if (updates.isFullEdit) {
         result = await candidateService.updateCandidateFull(appNo, updates, user);

@@ -51,13 +51,22 @@ class CandidateService {
       fromDate, toDate, q, page = 1, limit = 50000, sortDir = 'desc' 
     } = filters;
 
-    // Auto-synchronize candidate status to 'Joined' if offer status is 'Joined'
+    // Auto-synchronize candidate status to 'Joined' if offer status is 'Joined' and candidate not in store joined status
     try {
       await pool.query(`
         UPDATE candidates c
         JOIN selection_offers so ON c.app_no = so.app_no
         SET c.status = 'Joined'
-        WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+        WHERE LOWER(TRIM(so.status)) = 'joined' 
+          AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
+          AND LOWER(TRIM(c.status)) NOT LIKE '%joined store%'
+      `);
+      await pool.query(`
+        UPDATE selection_offers so
+        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        SET so.status = c.status
+        WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
       `);
     } catch (e) {}
 
@@ -338,6 +347,12 @@ class CandidateService {
     if (fields.length > 0) {
       values.push(appNo);
       await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+    }
+
+    if (updates.status) {
+      try {
+        await pool.query(`UPDATE selection_offers SET status = ?, updated_at = NOW() WHERE app_no = ?`, [updates.status, appNo]);
+      } catch (e) {}
     }
 
     const [cand] = await pool.query(`SELECT id FROM candidates WHERE app_no = ?`, [appNo]);
@@ -627,13 +642,22 @@ class CandidateService {
     try {
       const todayStr = new Date().toDateString();
 
-      // Auto-synchronize candidate status to Joined for any candidates marked Joined in selection_offers
+      // Auto-synchronize candidate status to Joined for any candidates marked Joined in selection_offers (if not already joined store)
       try {
         await pool.query(`
           UPDATE candidates c
           JOIN selection_offers so ON c.app_no = so.app_no
           SET c.status = 'Joined'
-          WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+          WHERE LOWER(TRIM(so.status)) = 'joined' 
+            AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
+            AND LOWER(TRIM(c.status)) NOT LIKE '%joined store%'
+        `);
+        await pool.query(`
+          UPDATE selection_offers so
+          JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+          SET so.status = c.status
+          WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
+            AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
         `);
       } catch (e) {}
 

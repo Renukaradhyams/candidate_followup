@@ -90,10 +90,19 @@ const getOffers = async (req, res) => {
         WHERE LOWER(TRIM(c.status)) = 'joined' AND LOWER(TRIM(so.status)) != 'joined'
       `);
       await db.query(`
+        UPDATE selection_offers so
+        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        SET so.status = c.status
+        WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
+      `);
+      await db.query(`
         UPDATE candidates c
         JOIN selection_offers so ON TRIM(so.app_no) = TRIM(c.app_no)
         SET c.status = 'Joined'
-        WHERE LOWER(TRIM(so.status)) = 'joined' AND LOWER(TRIM(c.status)) != 'joined'
+        WHERE LOWER(TRIM(so.status)) = 'joined' 
+          AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
+          AND LOWER(TRIM(c.status)) NOT LIKE '%joined store%'
       `);
     } catch (e) {}
 

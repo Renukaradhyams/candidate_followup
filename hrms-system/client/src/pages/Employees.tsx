@@ -16,6 +16,32 @@ import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
 import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
 import { formatName } from '../utils/formatName';
 
+function EmployeeAvatar({ photoUrl, initials, name, size = 'sm', onClick }: { photoUrl?: string | null; initials?: string; name: string; size?: 'sm' | 'lg'; onClick?: () => void }) {
+  const [error, setError] = useState(false);
+  const sizeClasses = size === 'lg' ? 'w-24 h-24 sm:w-28 sm:h-28 rounded-2xl text-2xl sm:text-3xl' : 'w-10 h-10 rounded-full text-xs';
+  const imgSize = size === 'lg' ? 'w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5' : 'w-10 h-10 rounded-full object-cover border-2 border-[#C9952A] shadow-xs flex-shrink-0 bg-white';
+  
+  if (photoUrl && !error) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        className={`${imgSize} ${onClick ? 'cursor-pointer group-hover:scale-105 transition-transform' : ''}`}
+        onError={() => setError(true)}
+        onClick={onClick}
+      />
+    );
+  }
+  return (
+    <div 
+      className={`${sizeClasses} bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black flex items-center justify-center shadow-xs flex-shrink-0 border-2 border-[#C9952A]`}
+      onClick={onClick}
+    >
+      {initials || (name ? name.slice(0, 2).toUpperCase() : 'EM')}
+    </div>
+  );
+}
+
 export default function EmployeesPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
@@ -625,20 +651,12 @@ export default function EmployeesPage() {
                       <td className="py-3.5 px-4 font-mono text-[#555555] font-bold">{emp.appNo}</td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3 group text-left">
-                          {fileUrl(emp.photoUrl) ? (
-                            <img
-                              src={fileUrl(emp.photoUrl)!}
-                              alt={emp.name}
-                              width={40}
-                              height={40}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-[#C9952A] shadow-xs flex-shrink-0 bg-white"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#1E2D4E] text-white font-black text-xs flex items-center justify-center shadow-xs flex-shrink-0">
-                              {emp.initials}
-                            </div>
-                          )}
+                          <EmployeeAvatar
+                            photoUrl={fileUrl(emp.photoUrl)}
+                            initials={emp.initials}
+                            name={emp.name}
+                            size="sm"
+                          />
                           <div>
                             <span className="font-extrabold text-[#1E2D4E] group-hover:underline block">{formatName(emp.name)}</span>
                             {emp.email && <span className="text-[10px] text-[#888888] font-semibold truncate max-w-[150px] block">{emp.email}</span>}
@@ -873,23 +891,13 @@ export default function EmployeesPage() {
             {/* Sticky Header */}
             <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
               <div className="flex items-center gap-3.5">
-                {fileUrl(drawerEmp.photoUrl) ? (
-                  <div className="relative group flex-shrink-0 cursor-pointer" onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)} title="Click to view full enlarged photo">
-                    <img
-                      src={fileUrl(drawerEmp.photoUrl)!}
-                      alt={drawerEmp.name}
-                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-3 border-[#C9952A] shadow-xl bg-white p-0.5 group-hover:scale-105 transition-transform"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    />
-                    <div className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-extrabold">
-                      🔍 Expand
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-[#1E2D4E] to-[#2A3F6D] text-white font-black text-2xl sm:text-3xl flex items-center justify-center border-3 border-[#C9952A] shadow-xl flex-shrink-0">
-                    {drawerEmp.initials || drawerEmp.name?.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
+                <EmployeeAvatar
+                  photoUrl={fileUrl(drawerEmp.photoUrl)}
+                  initials={drawerEmp.initials}
+                  name={drawerEmp.name}
+                  size="lg"
+                  onClick={() => fileUrl(drawerEmp.photoUrl) && setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)}
+                />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{formatName(drawerEmp.name)}</h2>
