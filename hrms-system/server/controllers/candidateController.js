@@ -327,7 +327,7 @@ class CandidateController {
           department: r.department || '',
           branch: r.branch || '',
           reportingManager: r.reporting_manager || '',
-          status: 'Joined',
+          status: r.status || r.offer_status || 'Joined',
           salary: salaryOffered,
           expectedSalary: r.expected_salary || '',
           previousSalary: r.current_salary || r.previous_salary || '',

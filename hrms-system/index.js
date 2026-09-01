@@ -194,37 +194,44 @@ if (fs.existsSync(parentUploadsDir)) {
 
 // Smart Uploads Fallback Handler (prevents 404 for photos & documents across subfolders)
 app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee-documents/*', '/:file(*.pdf)', '/:file(*.jpg)', '/:file(*.jpeg)', '/:file(*.png)', '/:file(*.doc)', '/:file(*.docx)'], (req, res, next) => {
-  const reqPath = req.params[0] || req.params.file || req.path.replace(/^\//, '');
-  const fileName = path.basename(reqPath);
-  const candidateAppNo = req.query.appNo || '';
+  const rawPath = req.params[0] || req.params.file || req.path.replace(/^\//, '');
+  const fileName = path.basename(rawPath);
+  const cleanSubPath = rawPath.replace(/^uploads[\/\\]/, '');
 
-  const possiblePaths = [
-    path.join(primaryUploadsDir, 'applicants', candidateAppNo, fileName),
-    path.join(primaryUploadsDir, fileName),
-    path.join(primaryUploadsDir, 'candidate-resumes', fileName),
-    path.join(primaryUploadsDir, 'candidate-photos', fileName),
-    path.join(primaryUploadsDir, 'employee-documents', fileName),
-    path.join(primaryUploadsDir, 'misc', fileName),
+  // Extract possible candidate App No from query, URL path, or filename (e.g., BSC-2026-0447_... -> BSC-2026-0447)
+  const appNoFromPath = rawPath.match(/(BSC-\d{4}-\d{4})/i)?.[1] || '';
+  const appNoFromQuery = req.query.appNo || '';
+  const candidateAppNo = appNoFromPath || appNoFromQuery;
 
-    path.join(parentUploadsDir, 'applicants', candidateAppNo, fileName),
-    path.join(parentUploadsDir, fileName),
-    path.join(parentUploadsDir, 'candidate-resumes', fileName),
-    path.join(parentUploadsDir, 'candidate-photos', fileName),
-    path.join(parentUploadsDir, 'employee-documents', fileName),
-    path.join(parentUploadsDir, 'misc', fileName),
-    
-    path.join(grandParentUploadsDir, 'applicants', candidateAppNo, fileName),
-    path.join(grandParentUploadsDir, fileName),
-    path.join(grandParentUploadsDir, 'candidate-resumes', fileName),
-    path.join(grandParentUploadsDir, 'candidate-photos', fileName),
-    path.join(grandParentUploadsDir, 'employee-documents', fileName),
-    path.join(grandParentUploadsDir, 'misc', fileName)
-  ];
+  const baseDirs = [primaryUploadsDir, parentUploadsDir, grandParentUploadsDir];
+  const possiblePaths = [];
+
+  for (const baseDir of baseDirs) {
+    if (!baseDir) continue;
+    // 1. Direct path as requested
+    possiblePaths.push(path.join(baseDir, cleanSubPath));
+    // 2. In applicants/<appNo>/<fileName>
+    if (candidateAppNo) {
+      possiblePaths.push(path.join(baseDir, 'applicants', candidateAppNo, fileName));
+      possiblePaths.push(path.join(baseDir, 'applicants', candidateAppNo.toUpperCase(), fileName));
+    }
+    // 3. In known subfolders
+    possiblePaths.push(path.join(baseDir, 'candidate-photos', fileName));
+    possiblePaths.push(path.join(baseDir, 'candidate-resumes', fileName));
+    possiblePaths.push(path.join(baseDir, 'employee-documents', fileName));
+    possiblePaths.push(path.join(baseDir, 'applicants', fileName));
+    possiblePaths.push(path.join(baseDir, 'misc', fileName));
+    possiblePaths.push(path.join(baseDir, fileName));
+  }
 
   for (const p of possiblePaths) {
-    if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-      try { fs.chmodSync(p, 0o644); } catch(e) {}
-      return res.sendFile(p);
+    if (fs.existsSync(p)) {
+      try {
+        if (fs.statSync(p).isFile()) {
+          try { fs.chmodSync(p, 0o644); } catch(e) {}
+          return res.sendFile(p);
+        }
+      } catch (e) {}
     }
   }
 
