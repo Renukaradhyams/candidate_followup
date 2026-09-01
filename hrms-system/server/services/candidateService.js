@@ -416,7 +416,10 @@ class CandidateService {
       const dataKey = map[key] || key;
       if (data[dataKey] !== undefined) {
         fields.push(`${key} = ?`);
-        values.push(Array.isArray(data[dataKey]) ? JSON.stringify(data[dataKey]) : data[dataKey]);
+        // Always serialize arrays and plain objects to JSON string for MySQL TEXT/JSON columns
+        const v = data[dataKey];
+        const shouldSerialize = Array.isArray(v) || (v !== null && typeof v === 'object');
+        values.push(shouldSerialize ? JSON.stringify(v) : v);
       }
     }
 

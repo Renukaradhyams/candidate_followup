@@ -375,7 +375,7 @@ class CandidateController {
           emergencyContact: r.emergency_contact || '',
           emergencyPhone: r.emergency_phone || '',
           permanentAddress: r.permanent_address || '',
-          documentsChecklist: r.documents_checklist_json ? (typeof r.documents_checklist_json === 'string' ? JSON.parse(r.documents_checklist_json) : r.documents_checklist_json) : null,
+          documentsChecklist: (() => { try { const raw = r.documents_checklist_json; if (!raw) return {}; if (typeof raw === 'object') return raw; const parsed = JSON.parse(raw); return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}; } catch(e) { return {}; } })(),
           greythrSynced: Boolean(r.greythr_synced),
           createdAt: r.created_at || null,
           rawDate,
