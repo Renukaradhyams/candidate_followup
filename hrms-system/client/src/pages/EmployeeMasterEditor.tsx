@@ -472,7 +472,7 @@ export default function EmployeeMasterEditorPage() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 lg:pl-64 flex flex-col min-w-0 min-h-screen">
         <Topbar
           title="Employee Master & greytHR Pre-Onboarding Hub"
           breadcrumbs={[
