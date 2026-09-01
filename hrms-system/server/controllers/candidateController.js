@@ -257,6 +257,16 @@ class CandidateController {
     try {
       const db = require('../config/db');
       
+      const storeOnly = req.query.storeOnly === 'true' || req.query.storeOnly === true;
+
+      const whereClause = storeOnly
+        ? `WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
+             OR LOWER(TRIM(c.status)) LIKE '%joined store%'
+             OR LOWER(TRIM(so.status)) IN ('successfully joined store', 'joined store')
+             OR LOWER(TRIM(so.status)) LIKE '%joined store%'`
+        : `WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired', 'successfully joined store', 'joined store')
+             OR LOWER(TRIM(so.status)) IN ('joined', 'successfully joined store', 'joined store')`;
+
       const [rows] = await db.query(
         `SELECT c.*, 
                 COALESCE(sa.section, '') as section,
@@ -269,8 +279,7 @@ class CandidateController {
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
          LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
-         WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired', 'successfully joined store', 'joined store')
-            OR LOWER(TRIM(so.status)) IN ('joined', 'successfully joined store', 'joined store')
+         ${whereClause}
          GROUP BY c.app_no
          ORDER BY LOWER(c.name) ASC`
       );

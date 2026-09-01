@@ -162,8 +162,9 @@ export const API = {
     const query = new URLSearchParams(filters).toString();
     return apiFetch(`/candidates?${query}`);
   },
-  async getEmployees() {
-    return apiFetch('/employees');
+  async getEmployees(params?: { storeOnly?: boolean }) {
+    const q = params?.storeOnly ? '?storeOnly=true' : '';
+    return apiFetch(`/employees${q}`);
   },
   async addCandidate(data: any) {
     // Legacy route uses /add or we just map it in our generic call

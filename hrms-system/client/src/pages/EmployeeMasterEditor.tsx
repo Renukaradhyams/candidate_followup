@@ -96,12 +96,19 @@ export default function EmployeeMasterEditorPage() {
            !emp.bankIfsc?.trim();
   }, []);
 
-  /* ── Data loading ── */
+  /* ── Data loading (ONLY Joined Store Employees) ── */
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const res  = await API.getEmployees();
-      const list = Array.isArray(res) ? res : (res?.employees || []);
+      const res  = await API.getEmployees({ storeOnly: true });
+      const rawList = Array.isArray(res) ? res : (res?.employees || []);
+      // Strictly include only employees who are in the Joined Store
+      const list = rawList.filter((e: any) => {
+        const s = (e.status || '').toLowerCase().trim();
+        const os = (e.offer_status || e.offerStatus || '').toLowerCase().trim();
+        return s.includes('store') || s === 'successfully joined store' || s === 'joined store' ||
+               os.includes('store') || os === 'successfully joined store' || os === 'joined store';
+      });
       setEmployees(list);
       if (selectedAppNo) {
         const cur = list.find((e: any) => e.appNo === selectedAppNo);
