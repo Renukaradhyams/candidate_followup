@@ -350,7 +350,21 @@ export default function JoinedStoreEmployeesPage() {
     XLSX.writeFile(wb, "Sample_Joined_Store_Import.xlsx");
   };
 
+  const handleQuickStatusChange = async (appNo: string, newStatus: string) => {
+    try {
+      await API.updateCandidate(appNo, { status: newStatus });
+      showToast(`Employee status updated to "${newStatus}"! 🎉`, 'success');
+      loadEmployees();
+      if (drawerEmp && drawerEmp.appNo === appNo) {
+        setDrawerEmp((prev: any) => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err: any) {
+      showToast('Failed to update status: ' + err.message, 'error');
+    }
+  };
+
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
+  const canEdit = session?.role !== 'Guest' && session?.role !== 'Employee';
   const uniqueDesigs = Array.from(new Set(employees.map(e => e.desig).filter(Boolean)));
   const uniqueSections = Array.from(new Set(employees.map(e => e.section).filter(Boolean)));
   const uniqueDepts = useMemo(() => {
@@ -666,12 +680,39 @@ export default function JoinedStoreEmployeesPage() {
                       <td className="py-3.5 px-4 font-bold text-[#666666]">
                         {emp.offeredDoj || emp.estDoj || emp.actualDoj || '—'}
                       </td>
-                      <td className="py-3.5 px-4">
-                        <StatusBadge status={emp.status || 'Successfully Joined Store'} size="sm" />
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col gap-1">
+                          <StatusBadge status={emp.status || 'Successfully Joined Store'} size="sm" />
+                          {canEdit && (
+                            <select
+                              value={emp.status || 'Successfully Joined Store'}
+                              onChange={(e) => handleQuickStatusChange(emp.appNo, e.target.value)}
+                              className="text-[10.5px] font-extrabold py-1 px-1.5 rounded-lg border border-[#e2dfd7] bg-white text-[#1E2D4E] cursor-pointer hover:border-[#1E2D4E] outline-none shadow-2xs"
+                              title="Quick Change Status"
+                            >
+                              <option value="Successfully Joined Store">🏪 Joined Store</option>
+                              <option value="Joined">Joined</option>
+                              <option value="Joined Store">Joined Store</option>
+                              <option value="Offer Accepted">Offer Accepted</option>
+                              <option value="Selected">Selected</option>
+                              <option value="Probation">Probation</option>
+                              <option value="Resigned">Resigned</option>
+                            </select>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          {isAdmin && (
+                          {canEdit && (emp.status || '').toLowerCase().trim() !== 'successfully joined store' && (emp.status || '').toLowerCase().trim() !== 'joined store' && (
+                            <button
+                              onClick={() => handleQuickStatusChange(emp.appNo, 'Successfully Joined Store')}
+                              className="px-2.5 py-1.5 rounded-xl bg-emerald-700 text-white font-extrabold text-[11px] hover:bg-emerald-800 transition-all shadow-xs flex items-center gap-1 whitespace-nowrap"
+                              title="Move Employee to Joined Store Directory"
+                            >
+                              <Store className="w-3.5 h-3.5" /> Move to Joined Store
+                            </button>
+                          )}
+                          {canEdit && (
                           <button
                             onClick={() => handleOpenEdit(emp)}
                             className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors shadow-xs"
@@ -853,9 +894,24 @@ export default function JoinedStoreEmployeesPage() {
                   </div>
                 )}
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{formatName(drawerEmp.name)}</h2>
                     <StatusBadge status={drawerEmp.status || 'Successfully Joined Store'} size="sm" />
+                    {canEdit && (
+                      <select
+                        value={drawerEmp.status || 'Successfully Joined Store'}
+                        onChange={(e) => handleQuickStatusChange(drawerEmp.appNo, e.target.value)}
+                        className="text-[10px] font-extrabold py-1 px-2 rounded-lg bg-white/10 border border-white/20 text-white cursor-pointer hover:bg-white/20 outline-none"
+                      >
+                        <option value="Successfully Joined Store" className="text-black">🏪 Successfully Joined Store</option>
+                        <option value="Joined" className="text-black">Joined</option>
+                        <option value="Joined Store" className="text-black">Joined Store</option>
+                        <option value="Offer Accepted" className="text-black">Offer Accepted</option>
+                        <option value="Selected" className="text-black">Selected</option>
+                        <option value="Probation" className="text-black">Probation</option>
+                        <option value="Resigned" className="text-black">Resigned</option>
+                      </select>
+                    )}
                   </div>
                   <div className="text-xs text-[#C9952A] font-extrabold font-mono mt-1.5 flex flex-wrap items-center gap-2">
                     <span>{drawerEmp.appNo}</span>
@@ -868,6 +924,14 @@ export default function JoinedStoreEmployeesPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {canEdit && (drawerEmp.status || '').toLowerCase().trim() !== 'successfully joined store' && (drawerEmp.status || '').toLowerCase().trim() !== 'joined store' && (
+                  <button
+                    onClick={() => handleQuickStatusChange(drawerEmp.appNo, 'Successfully Joined Store')}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-all shadow-md flex items-center gap-1.5"
+                  >
+                    <Store className="w-4 h-4" /> Move to Joined Store
+                  </button>
+                )}
                 <button
                   onClick={() => setDrawerEmp(null)}
                   className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/10"
