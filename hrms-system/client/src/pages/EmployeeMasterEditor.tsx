@@ -69,6 +69,7 @@ const EMPTY_FORM = {
   photoUrl: '', aadhaarUrl: '', resumeUrl: '',
   documentsChecklist: {} as Record<string, { received: boolean; date?: string; remarks?: string }>,
   greythrSynced: false,
+  greythrReady: false,
 };
 
 export default function EmployeeMasterEditorPage() {
@@ -180,6 +181,7 @@ export default function EmployeeMasterEditorPage() {
       resumeUrl: emp.resumeUrl || '',
       documentsChecklist: cl,
       greythrSynced: Boolean(emp.greythrSynced),
+      greythrReady: Boolean(emp.greythrReady),
     });
   };
 
@@ -248,6 +250,7 @@ export default function EmployeeMasterEditorPage() {
         expectedSalary: form.expectedSalary, noticePeriod: form.noticePeriod,
         languagesKnown: form.languagesKnown, remarks: form.remarks,
         documentsChecklist: form.documentsChecklist, greythrSynced: form.greythrSynced,
+        greythrReady: form.greythrReady,
       };
       await API.updateCandidate(form.appNo, payload);
       showToast(`Master profile for ${form.name} saved! 🎉`, 'success');
@@ -325,6 +328,7 @@ export default function EmployeeMasterEditorPage() {
         'Prior Retail Exp': emp.retailExperience || emp.retail_experience || '',
         'Previous Company': emp.previousCompany || emp.previous_company || '',
         'Previous Designation': emp.previousDesignation || emp.previous_designation || '',
+        'greytHR Onboarding Status': emp.greythrReady ? 'READY' : 'NOT READY',
         'greytHR Sync Status': emp.greythrSynced ? 'SYNCED' : 'PENDING',
         'Export Timestamp': new Date().toLocaleString('en-IN'),
       };
@@ -342,14 +346,14 @@ export default function EmployeeMasterEditorPage() {
     const matchQ = !q || (emp.name||'').toLowerCase().includes(q) || (emp.appNo||'').toLowerCase().includes(q) || (emp.phone||'').includes(q) || (emp.desig||'').toLowerCase().includes(q);
     const matchDept = !deptFilter || (emp.department||'').toLowerCase() === deptFilter.toLowerCase();
     let matchR = true;
-    if (readinessFilter === 'ready')   matchR = Boolean(emp.panNumber && emp.bankAccountNo && emp.bankIfsc && emp.dob && emp.offeredDoj);
-    if (readinessFilter === 'pending') matchR = !emp.panNumber || !emp.bankAccountNo || !emp.bankIfsc || !emp.dob || !emp.offeredDoj;
+    if (readinessFilter === 'ready')   matchR = Boolean(emp.greythrReady);
+    if (readinessFilter === 'pending') matchR = !emp.greythrReady;
     return matchQ && matchDept && matchR;
   }), [employees, searchQuery, deptFilter, readinessFilter]);
 
   const stats = useMemo(() => ({
     total: employees.length,
-    ready: employees.filter(e => e.panNumber && e.bankAccountNo && e.bankIfsc).length,
+    ready: employees.filter(e => Boolean(e.greythrReady)).length,
     docsComplete: employees.filter(e => {
       const cl = e.documentsChecklist;
       if (!cl || typeof cl !== 'object') return false;
@@ -457,7 +461,7 @@ export default function EmployeeMasterEditorPage() {
                   <div className="p-8 text-center text-xs text-[#888] font-bold">No matching employees.</div>
                 ) : filteredEmployees.map(emp => {
                   const isSel   = emp.appNo === selectedAppNo;
-                  const isReady = Boolean(emp.panNumber && emp.bankAccountNo && emp.bankIfsc && emp.dob);
+                  const isGReady = Boolean(emp.greythrReady);
                   return (
                     <div key={emp.appNo} onClick={() => handleSelectEmployee(emp)}
                       className={`px-4 py-3 cursor-pointer transition-all flex items-center gap-3 group ${isSel ? 'bg-[#1E2D4E]' : 'bg-white hover:bg-[#F9F7F4]'}`}>
@@ -470,9 +474,9 @@ export default function EmployeeMasterEditorPage() {
                       </div>
                       <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                         <StatusBadge status={emp.status || 'Joined'} size="sm" />
-                        {isReady
-                          ? <span className={`text-[9px] font-black uppercase flex items-center gap-0.5 ${isSel ? 'text-emerald-300' : 'text-emerald-700'}`}><CheckCircle2 className="w-2.5 h-2.5" /> Ready</span>
-                          : <span className={`text-[9px] font-bold uppercase flex items-center gap-0.5 ${isSel ? 'text-amber-300' : 'text-amber-700'}`}><AlertTriangle className="w-2.5 h-2.5" /> Incomplete</span>
+                        {isGReady
+                          ? <span className={`text-[9px] font-black uppercase flex items-center gap-0.5 ${isSel ? 'text-emerald-300' : 'text-emerald-600'}`}><CheckCircle2 className="w-2.5 h-2.5" /> gHR Ready</span>
+                          : <span className={`text-[9px] font-bold uppercase flex items-center gap-0.5 ${isSel ? 'text-slate-400' : 'text-slate-400'}`}>○ Not Ready</span>
                         }
                       </div>
                       <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 ${isSel ? 'text-white/40' : 'text-[#CCC] group-hover:text-[#1E2D4E]'} transition-colors`} />
@@ -617,6 +621,38 @@ export default function EmployeeMasterEditorPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            {/* ── greytHR Readiness Status Segmented Control ── */}
+            <div className="flex-shrink-0 bg-[#F0EDE8] border-b border-[#DDD9D0] px-5 py-2.5 flex items-center gap-4 flex-wrap">
+              <span className="text-[10px] font-black text-[#1E2D4E] uppercase tracking-widest flex-shrink-0">greytHR Onboarding Status</span>
+              <div className="flex items-center rounded-xl overflow-hidden border border-[#C9952A]/40 shadow-sm flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setForm({...form, greythrReady: true})}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[11px] font-black transition-all ${
+                    form.greythrReady
+                      ? 'bg-emerald-700 text-white'
+                      : 'bg-white text-[#666] hover:bg-emerald-50 hover:text-emerald-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Ready for greytHR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({...form, greythrReady: false})}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[11px] font-black transition-all border-l border-[#C9952A]/30 ${
+                    !form.greythrReady
+                      ? 'bg-[#1E2D4E] text-white'
+                      : 'bg-white text-[#666] hover:bg-slate-50 hover:text-slate-700'
+                  }`}
+                >
+                  <span className="w-3 h-3 inline-flex items-center justify-center rounded-full border-2 border-current text-[7px]">○</span>
+                  Not Ready
+                </button>
+              </div>
+              <span className="text-[10px] text-[#888] font-semibold hidden sm:block">Saved when you click "Save Changes"</span>
             </div>
 
             {/* Quick-fill bar */}

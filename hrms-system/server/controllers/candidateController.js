@@ -377,6 +377,7 @@ class CandidateController {
           permanentAddress: r.permanent_address || '',
           documentsChecklist: (() => { try { const raw = r.documents_checklist_json; if (!raw) return {}; if (typeof raw === 'object') return raw; const parsed = JSON.parse(raw); return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}; } catch(e) { return {}; } })(),
           greythrSynced: Boolean(r.greythr_synced),
+          greythrReady: Boolean(r.greythr_ready),
           createdAt: r.created_at || null,
           rawDate,
           date: joiningDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })

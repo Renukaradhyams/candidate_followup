@@ -377,7 +377,7 @@ class CandidateService {
       'mother_details','religion_caste','religion','caste','languages_known','resume_url','photo_url',
       'aadhaar_url','current_salary','expected_salary','salary','status','pan_number','bank_name',
       'bank_account_no','bank_ifsc','uan_number','esi_number','marital_status','emergency_contact',
-      'emergency_phone','permanent_address','documents_checklist_json','greythr_synced'
+      'emergency_phone','permanent_address','documents_checklist_json','greythr_synced','greythr_ready'
     ];
     
     const map = {
@@ -409,7 +409,8 @@ class CandidateService {
       emergency_phone: 'emergencyPhone',
       permanent_address: 'permanentAddress',
       documents_checklist_json: 'documentsChecklist',
-      greythr_synced: 'greythrSynced'
+      greythr_synced: 'greythrSynced',
+      greythr_ready: 'greythrReady'
     };
 
     for (const key of allowed) {
