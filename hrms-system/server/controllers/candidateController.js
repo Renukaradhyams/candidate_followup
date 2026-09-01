@@ -259,7 +259,7 @@ class CandidateController {
       
       const [rows] = await db.query(
         `SELECT c.*, 
-                COALESCE(NULLIF(c.section, ''), sa.section, '') as section,
+                COALESCE(sa.section, '') as section,
                 so.notice_period as offer_notice_pd, 
                 so.est_doj as offer_est_doj, 
                 so.actual_doj as offer_actual_doj,
