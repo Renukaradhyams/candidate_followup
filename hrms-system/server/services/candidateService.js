@@ -689,7 +689,7 @@ class CandidateService {
       const joined = candRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
         const os = (r.offer_status || '').toLowerCase().trim();
-        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        const isJoined = ['joined', 'hired', 'successfully joined store', 'joined store'].includes(s) || ['joined', 'successfully joined store', 'joined store'].includes(os);
         if (!isJoined) return false;
         return isDateInRange(getBusinessDate(r, 'JOINED'), range, fromDate, toDate);
       }).length;
@@ -734,7 +734,7 @@ class CandidateService {
       const femaleJoined = candRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
         const os = (r.offer_status || '').toLowerCase().trim();
-        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        const isJoined = ['joined', 'hired', 'successfully joined store', 'joined store'].includes(s) || ['joined', 'successfully joined store', 'joined store'].includes(os);
         if (!isJoined) return false;
         const g = (r.gender || '').toLowerCase().trim();
         const isFemale = ['f', 'female', 'girl', 'women', 'woman'].includes(g);
@@ -750,7 +750,7 @@ class CandidateService {
       const maleJoined = candRows.filter(r => {
         const s = (r.status || '').toLowerCase().trim();
         const os = (r.offer_status || '').toLowerCase().trim();
-        const isJoined = s === 'joined' || s === 'hired' || os === 'joined';
+        const isJoined = ['joined', 'hired', 'successfully joined store', 'joined store'].includes(s) || ['joined', 'successfully joined store', 'joined store'].includes(os);
         if (!isJoined) return false;
         const g = (r.gender || '').toLowerCase().trim();
         const isMale = ['m', 'male', 'boy', 'men', 'man'].includes(g);

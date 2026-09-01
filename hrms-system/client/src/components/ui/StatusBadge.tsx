@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Sparkles, Clock, Calendar, CheckCircle2, 
-  Send, AlertCircle, XCircle, UserCheck, Shield 
+  Send, AlertCircle, XCircle, UserCheck, Shield, Store
 } from 'lucide-react';
 
 interface StatusBadgeProps {
@@ -16,7 +16,10 @@ export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   let badgeClass = 'b-info';
   let Icon = Shield;
 
-  if (norm === 'new' || norm === 'applied' || norm === 'pending') {
+  if (norm.includes('store')) {
+    badgeClass = 'b-joined-store';
+    Icon = Store;
+  } else if (norm === 'new' || norm === 'applied' || norm === 'pending') {
     badgeClass = 'b-new';
     Icon = Sparkles;
   } else if (norm === 'shortlisted') {

@@ -16,7 +16,7 @@ import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
 import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
 import { formatName } from '../utils/formatName';
 
-export default function EmployeesPage() {
+export default function JoinedStoreEmployeesPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,7 +28,7 @@ export default function EmployeesPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const [sectionFilter, setSectionFilter] = useState('');
   const [genderFilter, setGenderFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('Successfully Joined Store');
   const [sortBy, setSortBy] = useState<'name' | 'newest' | 'salary'>('name');
 
   // Recruitment Analytics & Pipeline Date Range Filter State
@@ -79,22 +79,27 @@ export default function EmployeesPage() {
     return { base, incentive: 0, total: base, rawBase: str, rawIncentive: '' };
   };
 
-  const newestEmployee = useMemo(() => {
-    if (!employees || employees.length === 0) return null;
-    return [...employees].sort((a, b) => {
-      const dateA = a.actualDoj || a.offeredDoj || a.date ? new Date(a.actualDoj || a.offeredDoj || a.date).getTime() : 0;
-      const dateB = b.actualDoj || b.offeredDoj || b.date ? new Date(b.actualDoj || b.offeredDoj || b.date).getTime() : 0;
-      if (dateA !== dateB) return dateB - dateA;
-      return String(b.appNo || '').localeCompare(String(a.appNo || ''));
-    })[0];
-  }, [employees]);
-
   const storeJoinedCount = useMemo(() => {
     if (!employees) return 0;
     return employees.filter(e => {
       const s = (e.status || '').toLowerCase().trim();
       return s.includes('store') || s === 'successfully joined store' || s === 'joined store';
     }).length;
+  }, [employees]);
+
+  const newestEmployee = useMemo(() => {
+    if (!employees || employees.length === 0) return null;
+    const storeJoinedOnly = employees.filter(e => {
+      const s = (e.status || '').toLowerCase().trim();
+      return s.includes('store') || s === 'successfully joined store' || s === 'joined store';
+    });
+    const pool = storeJoinedOnly.length > 0 ? storeJoinedOnly : employees;
+    return [...pool].sort((a, b) => {
+      const dateA = a.actualDoj || a.offeredDoj || a.date ? new Date(a.actualDoj || a.offeredDoj || a.date).getTime() : 0;
+      const dateB = b.actualDoj || b.offeredDoj || b.date ? new Date(b.actualDoj || b.offeredDoj || b.date).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return String(b.appNo || '').localeCompare(String(a.appNo || ''));
+    })[0];
   }, [employees]);
 
   const loadEmployees = useCallback(async () => {
@@ -220,7 +225,7 @@ export default function EmployeesPage() {
       salary: parsedSal.rawBase || (parsedSal.base ? String(parsedSal.base) : ''),
       incentive: parsedSal.rawIncentive || (parsedSal.incentive ? String(parsedSal.incentive) : ''),
       offeredDoj: emp.offeredDoj || emp.estDoj || emp.actualDoj || '',
-      status: emp.status || 'Joined',
+      status: emp.status || 'Successfully Joined Store',
       branch: emp.branch || 'Main Branch (The Textile Mall)',
       reportingManager: emp.reportingManager || '',
       remarks: emp.remarks || ''
@@ -256,28 +261,28 @@ export default function EmployeesPage() {
         remarks: editForm.remarks
       });
 
-      showToast('Employee details updated successfully!', 'success');
+      showToast('Joined Store details updated successfully!', 'success');
       setEditModal({ open: false, emp: null });
       if (drawerEmp && drawerEmp.appNo === editModal.emp.appNo) {
         setDrawerEmp(null);
       }
       loadEmployees();
     } catch (err: any) {
-      showToast('Error updating employee: ' + err.message, 'error');
+      showToast('Error updating record: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteEmployee = async (appNo: string, empName: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete employee ${empName} (${appNo})?`)) return;
+    if (!window.confirm(`Are you sure you want to permanently delete record for ${empName} (${appNo})?`)) return;
     try {
       await API.deleteCandidate(appNo);
       showToast('Employee record deleted', 'success');
       setDrawerEmp(null);
       loadEmployees();
     } catch (err: any) {
-      showToast('Failed to delete employee: ' + err.message, 'error');
+      showToast('Failed to delete record: ' + err.message, 'error');
     }
   };
 
@@ -341,8 +346,8 @@ export default function EmployeesPage() {
       DOJ: '2023-01-15'
     }]);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Employees");
-    XLSX.writeFile(wb, "Sample_Employee_Import.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "JoinedStoreEmployees");
+    XLSX.writeFile(wb, "Sample_Joined_Store_Import.xlsx");
   };
 
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
@@ -375,8 +380,8 @@ export default function EmployeesPage() {
 
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         <Topbar
-          title="Employee Master Directory"
-          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Employees' }]}
+          title="Joined Store Directory"
+          breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Joined Store Directory' }]}
           session={session}
           onMenuClick={() => setSidebarOpen(true)}
         />
@@ -388,10 +393,10 @@ export default function EmployeesPage() {
               <div>
                 <h3 className="font-extrabold text-[#1E2D4E] text-base tracking-tight flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-[#C9952A]" />
-                  <span>Recruitment Analytics &amp; Pipeline</span>
+                  <span>Store Onboarding &amp; Join Metrics</span>
                 </h3>
                 <p className="text-xs text-[#777777] font-medium mt-0.5">
-                  Real-time candidate metrics, funnel conversion &amp; team performance.
+                  Track personnel who have successfully joined the store with verified records &amp; package details.
                 </p>
               </div>
 
@@ -455,10 +460,12 @@ export default function EmployeesPage() {
           <div className="card-glass p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-black text-[#1E2D4E] tracking-tight flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-[#1a8a84]" />
-                <span>Onboarded Staff Directory</span>
+                <Store className="w-6 h-6 text-emerald-600" />
+                <span>Joined Store Workforce Directory</span>
               </h2>
-              <p className="text-xs text-[#666666] font-medium mt-0.5 font-sans">Active company workforce records, offered DOJ, salary packages &amp; uploaded documents.</p>
+              <p className="text-xs text-[#666666] font-medium mt-0.5 font-sans">
+                Personnel who have successfully joined the store, active store roles, offered DOJ, salary packages &amp; documents.
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -481,7 +488,7 @@ export default function EmployeesPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search employee, phone, app no..."
+                  placeholder="Search store employee, phone..."
                   className="pl-9 pr-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E] w-56 shadow-xs"
                 />
               </div>
@@ -532,14 +539,13 @@ export default function EmployeesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-semibold text-[#1E2D4E]"
+                className="px-3 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
               >
-                <option value="">All Statuses</option>
-                <option value="Successfully Joined Store">Successfully Joined Store</option>
-                <option value="Joined">Joined</option>
-                <option value="Offer Accepted">Offer Accepted</option>
-                <option value="Probation">Probation</option>
-                <option value="Resigned">Resigned</option>
+                <option value="Successfully Joined Store">View: Successfully Joined Store</option>
+                <option value="">View: All Joined Personnel</option>
+                <option value="Joined">View: Joined</option>
+                <option value="Probation">View: Probation</option>
+                <option value="Resigned">View: Resigned</option>
               </select>
 
               <select
@@ -557,13 +563,6 @@ export default function EmployeesPage() {
           {/* Metric Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
-              title="Total Active Employees"
-              value={employees.length}
-              subtext="Fully onboarded staff"
-              icon={UserCheck}
-              color="teal"
-            />
-            <MetricCard
               title="Successfully Joined Store"
               value={storeJoinedCount}
               subtext="Verified store personnel"
@@ -571,14 +570,21 @@ export default function EmployeesPage() {
               color="emerald"
             />
             <MetricCard
-              title="Designations Covered"
+              title="Total Active Workforce"
+              value={employees.length}
+              subtext="All onboarded staff"
+              icon={UserCheck}
+              color="teal"
+            />
+            <MetricCard
+              title="Store Roles Covered"
               value={uniqueDesigs.length}
-              subtext="Active company roles"
+              subtext="Active store designations"
               icon={Briefcase}
               color="navy"
             />
             <MetricCard
-              title="Newest Joined"
+              title="Newest Joined Store Staff"
               value={newestEmployee ? newestEmployee.name : '—'}
               subtext={newestEmployee ? `DOJ: ${newestEmployee.actualDoj || newestEmployee.offeredDoj || 'Recent'}` : 'No records'}
               icon={Users}
@@ -586,7 +592,7 @@ export default function EmployeesPage() {
             />
           </div>
 
-          {/* Employee Directory DataGrid */}
+          {/* Joined Store Directory DataGrid */}
           <div className="card-glass p-5 space-y-4">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -661,7 +667,7 @@ export default function EmployeesPage() {
                         {emp.offeredDoj || emp.estDoj || emp.actualDoj || '—'}
                       </td>
                       <td className="py-3.5 px-4">
-                        <StatusBadge status={emp.status || 'Joined'} size="sm" />
+                        <StatusBadge status={emp.status || 'Successfully Joined Store'} size="sm" />
                       </td>
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
@@ -669,7 +675,7 @@ export default function EmployeesPage() {
                           <button
                             onClick={() => handleOpenEdit(emp)}
                             className="p-1.5 rounded-lg border border-emerald-600 text-emerald-700 font-bold hover:bg-emerald-50 transition-colors shadow-xs"
-                            title="Edit Employee Details"
+                            title="Edit Employee Details & Status"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
@@ -678,7 +684,7 @@ export default function EmployeesPage() {
                           <button
                             onClick={() => handleDeleteEmployee(emp.appNo, emp.name)}
                             className="p-1.5 rounded-lg border border-rose-200 text-rose-600 font-bold hover:bg-rose-50 transition-colors shadow-xs"
-                            title="Delete Employee Record"
+                            title="Delete Record"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -689,8 +695,8 @@ export default function EmployeesPage() {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-xs text-[#888888] font-semibold">
-                        No employees found.
+                      <td colSpan={10} className="py-12 text-center text-xs text-[#888888] font-semibold">
+                        No store joined employees found matching current filters.
                       </td>
                     </tr>
                   )}
@@ -706,7 +712,7 @@ export default function EmployeesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-2xl p-6 space-y-4 shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between border-b border-[#e2dfd7] pb-3">
-              <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Employee — {editModal.emp?.name}</h3>
+              <h3 className="font-extrabold text-[#1E2D4E] text-base">Edit Employee Status — {editModal.emp?.name}</h3>
               <button onClick={() => setEditModal({ open: false, emp: null })} className="text-[#888888]">
                 <X className="w-5 h-5" />
               </button>
@@ -775,11 +781,11 @@ export default function EmployeesPage() {
                   <select
                     value={editForm.status}
                     onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    className="select-modern font-bold"
+                    className="select-modern font-bold border-2 border-emerald-600 bg-emerald-50/40 text-emerald-900"
                   >
-                    <option value="Joined">Joined</option>
                     <option value="Successfully Joined Store">Successfully Joined Store</option>
                     <option value="Joined Store">Joined Store</option>
+                    <option value="Joined">Joined</option>
                     <option value="Offer Accepted">Offer Accepted</option>
                     <option value="Selected">Selected</option>
                     <option value="Offer Sent">Offer Sent</option>
@@ -801,14 +807,8 @@ export default function EmployeesPage() {
               </div>
 
               <div>
-                <label className="block font-bold text-[#1E2D4E] mb-1">Shortlisting & Recruiter Remarks</label>
-                <textarea
-                  rows={2}
-                  value={editForm.remarks}
-                  onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })}
-                  placeholder="Enter employee notes, HR remarks, or special package terms..."
-                  className="input-modern"
-                />
+                <label className="block font-bold text-[#1E2D4E] mb-1">Shortlisting & HR Remarks</label>
+                <textarea rows={2} value={editForm.remarks} onChange={(e) => setEditForm({ ...editForm, remarks: e.target.value })} placeholder="Enter employee notes, HR remarks, or store joining details..." className="input-modern" />
               </div>
             </div>
 
@@ -824,16 +824,19 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* 360° Complete Employee Detail Modal */}
+      {/* Drawer */}
       {drawerEmp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1E2D4E]/60 backdrop-blur-md transition-all animate-fade-in">
           <div className="relative w-full max-w-4xl max-h-[92vh] bg-white rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden border border-[#C9952A]/40">
-            
-            {/* Sticky Header */}
+            {/* Drawer Header */}
             <div className="bg-[#1E2D4E] text-white p-4 sm:p-5 flex items-center justify-between border-b border-[#C9952A]/30 sticky top-0 z-20">
               <div className="flex items-center gap-3.5">
                 {fileUrl(drawerEmp.photoUrl) ? (
-                  <div className="relative group flex-shrink-0 cursor-pointer" onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)} title="Click to view full enlarged photo">
+                  <div
+                    className="relative group flex-shrink-0 cursor-pointer"
+                    onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl))}
+                    title="Click to view full enlarged photo"
+                  >
                     <img
                       src={fileUrl(drawerEmp.photoUrl)!}
                       alt={drawerEmp.name}
@@ -852,7 +855,7 @@ export default function EmployeesPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="font-black text-white text-lg sm:text-xl tracking-tight leading-none">{formatName(drawerEmp.name)}</h2>
-                    <StatusBadge status={drawerEmp.status || 'Joined'} size="sm" />
+                    <StatusBadge status={drawerEmp.status || 'Successfully Joined Store'} size="sm" />
                   </div>
                   <div className="text-xs text-[#C9952A] font-extrabold font-mono mt-1.5 flex flex-wrap items-center gap-2">
                     <span>{drawerEmp.appNo}</span>
@@ -874,32 +877,30 @@ export default function EmployeesPage() {
               </div>
             </div>
 
-            {/* Tabs Navigation Bar */}
+            {/* Navigation Tabs */}
             <div className="flex items-center gap-1.5 p-2 sm:px-5 bg-[#F9F7F4] border-b border-[#e2dfd7] overflow-x-auto text-xs font-bold scrollbar-none sticky top-[80px] z-10">
               {[
                 { id: 'overview', label: '👤 Employment Overview' },
                 { id: 'personal', label: '📋 Personal & Contact' },
                 { id: 'professional', label: '💼 Professional Info' },
                 { id: 'documents', label: '📄 Verified Documents' }
-              ].map(tab => (
+              ].map((t) => (
                 <button
-                  key={tab.id}
-                  onClick={() => setDrawerTab(tab.id as any)}
+                  key={t.id}
+                  onClick={() => setDrawerTab(t.id as any)}
                   className={`px-3.5 py-2 rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 text-xs font-extrabold ${
-                    drawerTab === tab.id
+                    drawerTab === t.id
                       ? 'bg-[#1E2D4E] text-white shadow-sm'
                       : 'text-[#555555] hover:bg-white hover:text-[#1E2D4E]'
                   }`}
                 >
-                  <span>{tab.label}</span>
+                  <span>{t.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Scrollable Content Body */}
+            {/* Content Tab Panes */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs bg-[#EDE8DE]">
-              
-              {/* Tab 1: Employment Overview */}
               {drawerTab === 'overview' && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -911,19 +912,23 @@ export default function EmployeesPage() {
                     </div>
                     <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-black text-[#777777]">Date of Joining (DOJ)</span>
-                      <div className="text-base font-extrabold text-[#1E2D4E]">{drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}</div>
+                      <div className="text-base font-extrabold text-[#1E2D4E]">
+                        {drawerEmp.offeredDoj || drawerEmp.estDoj || drawerEmp.actualDoj || '—'}
+                      </div>
                     </div>
                     <div className="p-4 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-1">
                       <span className="text-[10px] uppercase font-black text-[#777777]">Recruitment Source</span>
-                      <div className="text-base font-extrabold text-[#C9952A]">{drawerEmp.source || '—'}</div>
+                      <div className="text-base font-extrabold text-[#C9952A]">
+                        {drawerEmp.source || '—'}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Salary & Offer Details */}
+                  {/* Compensation & Package Breakdown */}
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
                     <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-[#C9952A]" />
-                      <span>Compensation & Package Breakdown</span>
+                      <span>Compensation &amp; Package Breakdown</span>
                     </h4>
                     {(() => {
                       const sal = parseSalaryAndIncentive(drawerEmp.salary);
@@ -945,27 +950,60 @@ export default function EmployeesPage() {
                       );
                     })()}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div><span className="text-[#777777] block text-[10.5px]">Expected Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.expectedSalary ? `₹ ${drawerEmp.expectedSalary}` : '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Previous Salary</span><span className="font-extrabold text-[#1E2D4E] font-mono">{(drawerEmp.previousSalary || drawerEmp.currentSalary) ? `₹ ${drawerEmp.previousSalary || drawerEmp.currentSalary}` : '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Notice Period</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Allocated Department</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Designation Role</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.desig || drawerEmp.designation || '—'}</span></div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Expected Salary</span>
+                        <span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.expectedSalary ? `₹ ${drawerEmp.expectedSalary}` : '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Previous Salary</span>
+                        <span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.previousSalary || drawerEmp.currentSalary ? `₹ ${drawerEmp.previousSalary || drawerEmp.currentSalary}` : '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Notice Period</span>
+                        <span className="font-bold text-[#1E2D4E]">{drawerEmp.noticePeriod || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Allocated Department</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Designation Role</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.desig || drawerEmp.designation || '—'}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Work Experience Details */}
+                  {/* Work Experience */}
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
                     <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-[#C9952A]" />
                       <span>Work Experience Details</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Prior / Retail Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Previous Company / Employer</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Referrer Information</span><span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span></div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Total Work Experience</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Prior / Retail Experience</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Previous Company / Employer</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Highest Qualification</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Referrer Information</span>
+                        <span className="font-bold text-[#1E2D4E]">{drawerEmp.referrer ? `${drawerEmp.referrer} (${drawerEmp.referrerEmpNo || ''})` : '—'}</span>
+                      </div>
                     </div>
                     <div className="pt-2 border-t border-[#e2dfd7]/60">
                       <span className="text-[#777777] block text-[10.5px] mb-1 font-bold uppercase">Shortlisting &amp; HR Remarks:</span>
@@ -974,29 +1012,9 @@ export default function EmployeesPage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Optional Interview Questions & Evaluation Section */}
-                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-3">
-                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#C9952A]" />
-                      <span>Interview Questions &amp; Evaluation Notes (Optional)</span>
-                    </h4>
-                    <div className="space-y-2 text-xs">
-                      {drawerEmp.questionNotes || drawerEmp.evaluationNotes ? (
-                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#1E2D4E] font-medium whitespace-pre-wrap">
-                          {drawerEmp.questionNotes || drawerEmp.evaluationNotes}
-                        </div>
-                      ) : (
-                        <div className="p-3 rounded-xl bg-[#F9F7F4] border border-[#e2dfd7] text-[#777777] text-center font-medium italic">
-                          No interview question evaluations recorded (Optional).
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* Tab 2: Personal & Contact */}
               {drawerTab === 'personal' && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
@@ -1005,154 +1023,126 @@ export default function EmployeesPage() {
                       <span>Contact &amp; Demographics</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div><span className="text-[#777777] block text-[10.5px]">Mobile Phone</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Email Address</span><span className="font-extrabold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Gender</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Date of Birth</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Blood Group</span><span className="font-extrabold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Aadhaar Number</span><span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Religion</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.religion || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Caste / Category</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.caste || drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span></div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Mobile Phone</span>
+                        <span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.phone}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Email Address</span>
+                        <span className="font-extrabold text-[#1E2D4E] truncate block">{drawerEmp.email || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Gender</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.gender || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Date of Birth</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.dob ? drawerEmp.dob.split('T')[0] : '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Blood Group</span>
+                        <span className="font-extrabold text-rose-700">{drawerEmp.bloodGroup || drawerEmp.blood_group || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Aadhaar Number</span>
+                        <span className="font-extrabold text-[#1E2D4E] font-mono">{drawerEmp.aadhaarNumber || drawerEmp.aadhaar_number || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Religion</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.religion || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Caste / Category</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.caste || drawerEmp.religionCaste || drawerEmp.religion_caste || '—'}</span>
+                      </div>
                     </div>
                     <div className="pt-2 border-t border-[#e2dfd7]/60">
                       <span className="text-[#777777] block text-[10.5px] mb-0.5">Complete Residential Address:</span>
-                      <span className="font-semibold text-[#1E2D4E] block leading-relaxed bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]/50 mt-1">{drawerEmp.address || drawerEmp.cityState || '—'}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
-                    <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#C9952A]" />
-                      <span>Family &amp; Languages</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      <div><span className="text-[#777777] block text-[10.5px]">Father's Details</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.fatherDetails || drawerEmp.father_details || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Mother's Details</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.motherDetails || drawerEmp.mother_details || '—'}</span></div>
-                    </div>
-                    <div className="pt-2 border-t border-[#e2dfd7]/60">
-                      <span className="text-[#777777] block text-[10.5px] mb-1.5">Languages Known:</span>
-                      <div className="flex flex-wrap gap-2">
-                        {(Array.isArray(drawerEmp.languagesKnown) ? drawerEmp.languagesKnown : (drawerEmp.languagesKnown ? JSON.parse(drawerEmp.languagesKnown) : [])).map((lang: string) => (
-                          <span key={lang} className="px-3 py-1 rounded-lg bg-[#F9F7F4] border border-[#e2dfd7] font-extrabold text-[11px] text-[#1E2D4E] shadow-2xs">
-                            {lang}
-                          </span>
-                        )) || '—'}
-                      </div>
+                      <span className="font-semibold text-[#1E2D4E] block leading-relaxed bg-[#F9F7F4] p-3 rounded-xl border border-[#e2dfd7]/50 mt-1">
+                        {drawerEmp.address || drawerEmp.cityState || '—'}
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Tab 3: Professional Info */}
               {drawerTab === 'professional' && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4">
                     <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
                       <Briefcase className="w-4 h-4 text-[#C9952A]" />
-                      <span>Professional Experience &amp; Qualification</span>
+                      <span>Professional Store Profile</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div><span className="text-[#777777] block text-[10.5px]">Finalized Department</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Branch / Store</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.branch || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Reporting Manager</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.reportingManager || drawerEmp.reporting_manager || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Highest Qualification</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Total Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Prior Work Experience</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.retailExperience || drawerEmp.retail_experience || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Previous Employer / Store</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousCompany || drawerEmp.previous_company || '—'}</span></div>
-                      <div><span className="text-[#777777] block text-[10.5px]">Previous Role / Designation</span><span className="font-extrabold text-[#1E2D4E]">{drawerEmp.previousDesignation || drawerEmp.previous_designation || '—'}</span></div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Finalized Department</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Branch / Store</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.branch || 'Main Branch (The Textile Mall)'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Reporting Manager</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.reportingManager || drawerEmp.reporting_manager || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Highest Qualification</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.qualification || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Total Work Experience</span>
+                        <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.experience || '—'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Tab 4: Documents */}
               {drawerTab === 'documents' && (
                 <div className="p-5 rounded-2xl bg-white border border-[#e2dfd7] shadow-xs space-y-4 animate-fade-in">
                   <h4 className="font-extrabold text-[#1E2D4E] uppercase text-xs tracking-wider border-b border-[#e2dfd7] pb-2 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[#C9952A]" />
-                    <span>Verified Employee Documents</span>
+                    <FileText className="w-4 h-4 text-[#C9952A]" />
+                    <span>Verified Store Employee Documents</span>
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {fileUrl(drawerEmp.photoUrl) ? (
-                      <div className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] flex flex-col items-center gap-3 shadow-2xs">
-                        <img
-                          src={fileUrl(drawerEmp.photoUrl)!}
-                          alt="Employee Photo"
-                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)}
-                          className="w-36 h-36 object-cover rounded-2xl border-2 border-[#C9952A] shadow-md cursor-pointer hover:scale-105 transition-transform"
-                        />
-                        <span className="text-xs">Employee Passport Photo</span>
+                      <div className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] flex flex-col items-center gap-3 shadow-xs">
+                        <ImageIcon className="w-8 h-8 text-[#C9952A]" />
+                        <span>Employee Photo</span>
                         <button
-                          type="button"
-                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl)!)}
-                          className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white text-[11px] font-extrabold hover:bg-[#162340] transition-colors"
+                          onClick={() => setExpandedPhotoUrl(fileUrl(drawerEmp.photoUrl))}
+                          className="px-3 py-1 rounded-xl bg-[#1E2D4E] text-white text-[10px] font-bold hover:bg-[#162340]"
                         >
-                          🔍 Expand Photo
+                          View Lightbox
                         </button>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-2xl border border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 text-[#aaa] font-bold">
-                        <span>No Photo Uploaded</span>
-                      </div>
-                    )}
-
-                    {fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl) ? (
-                      <a href={fileUrl(drawerEmp.aadhaarUrl || drawerEmp.aadharUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
-                        <FileCheck className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-[#1E2D4E] text-xs">📄 Aadhaar</span>
-                      </a>
-                    ) : (
-                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
-                        <span className="font-bold text-[10px] uppercase">No Aadhaar</span>
+                      <div className="p-4 rounded-2xl border border-dashed border-[#e2dfd7] text-center text-[#888888] font-semibold text-xs">
+                        No Photo Uploaded
                       </div>
                     )}
 
                     {fileUrl(drawerEmp.resumeUrl) ? (
-                      <a href={fileUrl(drawerEmp.resumeUrl)!} target="_blank" rel="noreferrer" className="p-4 rounded-xl border-2 border-[#e2dfd7] bg-[#F9F7F4] hover:border-[#1E2D4E] hover:shadow-md transition-all flex flex-col items-center justify-center gap-2 group h-24">
-                        <FileText className="w-6 h-6 text-[#1E2D4E] group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-[#1E2D4E] text-xs">📑 Resume</span>
-                      </a>
+                      <div className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] text-center font-extrabold text-[#1E2D4E] flex flex-col items-center gap-3 shadow-xs">
+                        <FileCheck className="w-8 h-8 text-emerald-600" />
+                        <span>Resume / Bio-data</span>
+                        <a
+                          href={fileUrl(drawerEmp.resumeUrl)!}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1 rounded-xl bg-[#1E2D4E] text-white text-[10px] font-bold hover:bg-[#162340]"
+                        >
+                          View File
+                        </a>
+                      </div>
                     ) : (
-                      <div className="p-4 rounded-xl border-2 border-dashed border-[#e2dfd7] bg-black/5 text-center flex flex-col items-center justify-center gap-2 h-24 text-[#aaa]">
-                        <span className="font-bold text-[10px] uppercase">No Resume</span>
+                      <div className="p-4 rounded-2xl border border-dashed border-[#e2dfd7] text-center text-[#888888] font-semibold text-xs">
+                        No Resume Uploaded
                       </div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Sticky Action Footer */}
-            <div className="p-4 border-t border-[#e2dfd7] bg-[#F9F7F4] flex items-center justify-end gap-3 z-20 sticky bottom-0">
-              <button
-                onClick={() => setDrawerEmp(null)}
-                className="px-5 py-2.5 rounded-xl border-2 border-[#e2dfd7] bg-white text-[#555555] font-extrabold hover:bg-black/5 transition-colors"
-              >
-                Close
-              </button>
-              {isAdmin && (
-              <button
-                onClick={() => handleDeleteEmployee(drawerEmp.appNo, drawerEmp.name)}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-black hover:bg-rose-700 transition-colors shadow-md flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-              )}
-              {isAdmin && (
-              <button
-                onClick={() => handleOpenEdit(drawerEmp)}
-                className="px-5 py-2.5 rounded-xl bg-[#1E2D4E] text-white font-black hover:bg-[#162340] transition-colors shadow-md flex items-center gap-2"
-              >
-                <Edit3 className="w-4 h-4" /> Quick Edit
-              </button>
-              )}
-              {isAdmin && (
-              <button
-                onClick={() => navigate(`/candidate-entry?edit=${drawerEmp.appNo}`)}
-                className="px-5 py-2.5 rounded-xl bg-[#C9952A] text-white font-black hover:bg-[#b07d20] transition-colors shadow-md flex items-center gap-2"
-              >
-                <ExternalLink className="w-4 h-4" /> Edit Full Profile
-              </button>
               )}
             </div>
           </div>

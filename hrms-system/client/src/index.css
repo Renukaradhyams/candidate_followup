@@ -88,6 +88,7 @@ body {
 .b-hold { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
 .b-rej { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 .b-board { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.b-joined-store { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 .b-info { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
 /* Status Chips */

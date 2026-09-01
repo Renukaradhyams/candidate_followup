@@ -88,7 +88,7 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.designation
       `);
@@ -150,7 +150,7 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.app_no
         ORDER BY c.name ASC
@@ -210,7 +210,7 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired') OR LOWER(TRIM(so.status)) = 'joined')
+        WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
       `, [today, weekEndStr, today]);
 
@@ -262,8 +262,8 @@ class JoiningCallDeskController {
                so.status AS offer_status
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        WHERE LOWER(TRIM(c.status)) IN ('joined','hired')
-           OR LOWER(TRIM(so.status)) = 'joined'
+        WHERE LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store')
+           OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store')
         GROUP BY c.app_no
         ORDER BY LOWER(c.name) ASC
       `);
