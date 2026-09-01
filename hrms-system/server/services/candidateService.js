@@ -370,7 +370,15 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','department','section','branch','reporting_manager','remarks','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
+    const allowed = [
+      'name','email','phone','address','gender','blood_group','dob','offered_doj','designation',
+      'department','section','branch','reporting_manager','remarks','qualification','experience',
+      'retail_experience','previous_company','previous_designation','aadhaar_number','father_details',
+      'mother_details','religion_caste','religion','caste','languages_known','resume_url','photo_url',
+      'aadhaar_url','current_salary','expected_salary','salary','status','pan_number','bank_name',
+      'bank_account_no','bank_ifsc','uan_number','esi_number','marital_status','emergency_contact',
+      'emergency_phone','permanent_address','documents_checklist_json','greythr_synced'
+    ];
     
     const map = {
       blood_group: 'bloodGroup',
@@ -389,7 +397,19 @@ class CandidateService {
       photo_url: 'photoUrl',
       aadhaar_url: 'aadhaarUrl',
       current_salary: 'previousSalary',
-      expected_salary: 'expectedSalary'
+      expected_salary: 'expectedSalary',
+      pan_number: 'panNumber',
+      bank_name: 'bankName',
+      bank_account_no: 'bankAccountNo',
+      bank_ifsc: 'bankIfsc',
+      uan_number: 'uanNumber',
+      esi_number: 'esiNumber',
+      marital_status: 'maritalStatus',
+      emergency_contact: 'emergencyContact',
+      emergency_phone: 'emergencyPhone',
+      permanent_address: 'permanentAddress',
+      documents_checklist_json: 'documentsChecklist',
+      greythr_synced: 'greythrSynced'
     };
 
     for (const key of allowed) {
@@ -402,7 +422,29 @@ class CandidateService {
 
     if (fields.length > 0) {
       values.push(appNo);
-      await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+      try {
+        await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+      } catch (err) {
+        // If unknown column error on live production DB, automatically add missing column and retry
+        if (err.code === 'ER_BAD_FIELD_ERROR' || (err.message && err.message.includes('Unknown column'))) {
+          try {
+            const match = (err.message || '').match(/Unknown column '([^']+)'/) || (err.sqlMessage || '').match(/Unknown column '([^']+)'/);
+            const missingCol = match ? match[1] : null;
+            if (missingCol) {
+              const colType = (missingCol.includes('json') || missingCol.includes('address')) ? 'TEXT' : 'VARCHAR(150)';
+              await pool.query(`ALTER TABLE candidates ADD COLUMN \`${missingCol}\` ${colType} NULL`);
+              await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
+            } else {
+              throw err;
+            }
+          } catch (e2) {
+            console.error('[Candidate Update Auto-Recovery Error]', e2.message);
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
     }
 
     // Also sync selection_offers table if existing

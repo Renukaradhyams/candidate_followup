@@ -13,6 +13,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const EmployeeExit = lazy(() => import('./pages/EmployeeExit'));
 const Employees = lazy(() => import('./pages/Employees'));
 const JoinedStoreEmployees = lazy(() => import('./pages/JoinedStoreEmployees'));
+const EmployeeMasterEditor = lazy(() => import('./pages/EmployeeMasterEditor'));
 const Openings = lazy(() => import('./pages/Openings'));
 const Settings = lazy(() => import('./pages/Settings'));
 const BroadcastCenter = lazy(() => import('./pages/BroadcastCenter'));
@@ -60,6 +61,9 @@ export default function App() {
           <Route path="/onboarding.html" element={<Navigate to="/onboarding" replace />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/employees.html" element={<Navigate to="/employees" replace />} />
+          <Route path="/employee-master" element={<EmployeeMasterEditor />} />
+          <Route path="/employee-master.html" element={<Navigate to="/employee-master" replace />} />
+          <Route path="/pre-onboarding" element={<EmployeeMasterEditor />} />
           <Route path="/joined-store" element={<JoinedStoreEmployees />} />
           <Route path="/joined-store.html" element={<Navigate to="/joined-store" replace />} />
           <Route path="/department-hiring" element={<DepartmentHiring />} />

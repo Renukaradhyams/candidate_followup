@@ -8,7 +8,7 @@ import MetricCard from '../components/ui/MetricCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import {
   Users, Search, Filter, Phone, Mail, Calendar, MapPin, Briefcase,
-  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image as ImageIcon, FileCheck, Upload, Download, TrendingUp, Store
+  FileText, CheckCircle, Trash2, Edit3, X, ExternalLink, UserCheck, DollarSign, Image as ImageIcon, FileCheck, Upload, Download, TrendingUp, Store, FileSpreadsheet
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -966,6 +966,13 @@ export default function EmployeesPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/employee-master')}
+                  className="px-3 py-1.5 rounded-xl bg-[#C9952A] hover:bg-[#b08123] text-slate-950 font-black text-xs transition-all shadow-md flex items-center gap-1.5"
+                  title="Open Full Details & greytHR Pre-Onboarding Master Editor"
+                >
+                  <FileSpreadsheet className="w-4 h-4" /> greytHR Master Editor
+                </button>
                 {canEdit && (drawerEmp.status || '').toLowerCase().trim() !== 'successfully joined store' && (drawerEmp.status || '').toLowerCase().trim() !== 'joined store' && (
                   <button
                     onClick={() => handleQuickStatusChange(drawerEmp.appNo, 'Successfully Joined Store')}
