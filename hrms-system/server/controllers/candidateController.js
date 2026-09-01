@@ -259,6 +259,7 @@ class CandidateController {
       
       const [rows] = await db.query(
         `SELECT c.*, 
+                COALESCE(NULLIF(c.section, ''), sa.section, '') as section,
                 so.notice_period as offer_notice_pd, 
                 so.est_doj as offer_est_doj, 
                 so.actual_doj as offer_actual_doj,
@@ -267,6 +268,7 @@ class CandidateController {
                 so.updated_at as offer_updated_at
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
+         LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
          WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired', 'successfully joined store', 'joined store')
             OR LOWER(TRIM(so.status)) IN ('joined', 'successfully joined store', 'joined store')
          GROUP BY c.app_no
@@ -325,6 +327,7 @@ class CandidateController {
           desig: r.designation,
           designation: r.designation,
           department: r.department || '',
+          section: r.section || '',
           branch: r.branch || '',
           reportingManager: r.reporting_manager || '',
           status: r.status || r.offer_status || 'Joined',

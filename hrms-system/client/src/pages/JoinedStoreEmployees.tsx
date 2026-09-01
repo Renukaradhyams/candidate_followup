@@ -13,7 +13,7 @@ import {
 import * as XLSX from 'xlsx';
 
 import { isDateInRange, getBusinessDate } from '../utils/dateUtils';
-import { BSC_DEPARTMENTS, getUniqueDepartments } from '../utils/bscDepartments';
+import { BSC_DEPARTMENTS, getUniqueDepartments, getSectionsForDepartment, BSC_DEPARTMENT_SECTIONS } from '../utils/bscDepartments';
 import { formatName } from '../utils/formatName';
 
 function EmployeeAvatar({ photoUrl, initials, name, size = 'sm', onClick }: { photoUrl?: string | null; initials?: string; name: string; size?: 'sm' | 'lg'; onClick?: () => void }) {
@@ -801,24 +801,61 @@ export default function JoinedStoreEmployeesPage() {
                 </div>
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Department</label>
-                  <select value={editForm.department || ''} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="select-modern font-bold">
+                  <select 
+                    value={editForm.department || ''} 
+                    onChange={(e) => {
+                      const newDept = e.target.value;
+                      const secs = getSectionsForDepartment(newDept);
+                      setEditForm({ 
+                        ...editForm, 
+                        department: newDept,
+                        section: secs.includes(editForm.section) ? editForm.section : (secs[0] || '')
+                      });
+                    }} 
+                    className="select-modern font-bold"
+                  >
                     <option value="">Select Department</option>
-                    <option value="Ground Floor Saree">Ground Floor Saree</option>
-                    <option value="First Floor Saree">First Floor Saree</option>
-                    <option value="Art & Raw Silk Saree">Art & Raw Silk Saree</option>
-                    <option value="Ladies">Ladies</option>
-                    <option value="Kids">Kids</option>
-                    <option value="Mens">Mens</option>
-                    <option value="Home Furnishing">Home Furnishing</option>
-                    <option value="Others">Others</option>
+                    {BSC_DEPARTMENTS.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-[#1E2D4E] mb-1">Allocated Section / Floor Area</label>
-                  <input type="text" value={editForm.section || ''} onChange={(e) => setEditForm({ ...editForm, section: e.target.value })} placeholder="e.g. Counter 3" className="input-modern font-bold" />
+                  <label className="block font-bold text-[#1E2D4E] mb-1 flex items-center justify-between">
+                    <span>Allocated Section / Counter Area</span>
+                    <span className="text-[10px] text-emerald-700 font-extrabold uppercase">Department Section</span>
+                  </label>
+                  {(() => {
+                    const deptSecs = getSectionsForDepartment(editForm.department);
+                    return (
+                      <div className="space-y-1.5">
+                        <select
+                          value={editForm.section || ''}
+                          onChange={(e) => setEditForm({ ...editForm, section: e.target.value })}
+                          className="select-modern font-bold"
+                        >
+                          <option value="">-- Select Allocated Section --</option>
+                          {deptSecs.map(sec => (
+                            <option key={sec} value={sec}>{sec}</option>
+                          ))}
+                          {editForm.section && !deptSecs.includes(editForm.section) && (
+                            <option value={editForm.section}>{editForm.section} (Custom Section)</option>
+                          )}
+                        </select>
+                        <input
+                          type="text"
+                          value={editForm.section || ''}
+                          onChange={(e) => setEditForm({ ...editForm, section: e.target.value })}
+                          placeholder="Or type custom section..."
+                          className="input-modern text-xs font-semibold placeholder:text-[#999999]"
+                          title="Custom section name"
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block font-bold text-[#1E2D4E] mb-1">Offered Monthly Base Salary (₹)</label>
@@ -1033,6 +1070,20 @@ export default function JoinedStoreEmployeesPage() {
                       <div>
                         <span className="text-[#777777] block text-[10.5px]">Allocated Department</span>
                         <span className="font-extrabold text-[#1E2D4E]">{drawerEmp.department || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#777777] block text-[10.5px]">Allocated Section</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">{drawerEmp.section || 'Not Assigned'}</span>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleOpenEdit(drawerEmp)}
+                              className="text-[10px] text-emerald-700 font-bold hover:underline"
+                            >
+                              (Change Section)
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[#777777] block text-[10.5px]">Designation Role</span>

@@ -370,7 +370,7 @@ class CandidateService {
   async updateCandidateFull(appNo, data, doneBy = 'HR') {
     const fields = [];
     const values = [];
-    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','department','branch','reporting_manager','remarks','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
+    const allowed = ['name','email','phone','address','gender','blood_group','dob','offered_doj','designation','department','section','branch','reporting_manager','remarks','qualification','experience','retail_experience','previous_company','previous_designation','aadhaar_number','father_details','mother_details','religion_caste','languages_known', 'resume_url', 'photo_url', 'aadhaar_url', 'current_salary', 'expected_salary', 'salary', 'status'];
     
     const map = {
       blood_group: 'bloodGroup',
@@ -420,6 +420,21 @@ class CandidateService {
           );
         } catch (e2) {}
       }
+    }
+
+    // Also sync section_allocations table if section is provided
+    if (data.section !== undefined) {
+      try {
+        const [cand] = await pool.query('SELECT id, name, department, designation FROM candidates WHERE app_no = ?', [appNo]);
+        if (cand && cand.length > 0) {
+          await pool.query(
+            `INSERT INTO section_allocations (candidate_id, employee_id, app_no, candidate_name, department, designation, section, allocated_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE section = VALUES(section), department = VALUES(department), designation = VALUES(designation), updated_at = NOW()`,
+            [cand[0].id, cand[0].id, appNo, cand[0].name, data.department || cand[0].department, data.desig || cand[0].designation, data.section, doneBy]
+          );
+        }
+      } catch (e) {}
     }
 
     return { success: true };
