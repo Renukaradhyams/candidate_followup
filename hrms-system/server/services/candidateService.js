@@ -343,6 +343,16 @@ class CandidateService {
       fields.push('resume_url = ?');
       values.push(updates.resumeUrl);
     }
+    if (updates.greythrReady !== undefined) {
+      fields.push('greythr_ready = ?');
+      const isReady = updates.greythrReady === true || updates.greythrReady === 1 || updates.greythrReady === '1' || String(updates.greythrReady).toLowerCase() === 'true';
+      values.push(isReady ? 1 : 0);
+    }
+    if (updates.greythrSynced !== undefined) {
+      fields.push('greythr_synced = ?');
+      const isSynced = updates.greythrSynced === true || updates.greythrSynced === 1 || updates.greythrSynced === '1' || String(updates.greythrSynced).toLowerCase() === 'true';
+      values.push(isSynced ? 1 : 0);
+    }
 
     if (fields.length > 0) {
       values.push(appNo);
@@ -417,10 +427,15 @@ class CandidateService {
       const dataKey = map[key] || key;
       if (data[dataKey] !== undefined) {
         fields.push(`${key} = ?`);
-        // Always serialize arrays and plain objects to JSON string for MySQL TEXT/JSON columns
         const v = data[dataKey];
-        const shouldSerialize = Array.isArray(v) || (v !== null && typeof v === 'object');
-        values.push(shouldSerialize ? JSON.stringify(v) : v);
+        if (key === 'greythr_ready' || key === 'greythr_synced') {
+          const isTrue = v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
+          values.push(isTrue ? 1 : 0);
+        } else {
+          // Always serialize arrays and plain objects to JSON string for MySQL TEXT/JSON columns
+          const shouldSerialize = Array.isArray(v) || (v !== null && typeof v === 'object');
+          values.push(shouldSerialize ? JSON.stringify(v) : v);
+        }
       }
     }
 
@@ -435,7 +450,9 @@ class CandidateService {
             const match = (err.message || '').match(/Unknown column '([^']+)'/) || (err.sqlMessage || '').match(/Unknown column '([^']+)'/);
             const missingCol = match ? match[1] : null;
             if (missingCol) {
-              const colType = (missingCol.includes('json') || missingCol.includes('address')) ? 'TEXT' : 'VARCHAR(150)';
+              const colType = (missingCol.includes('json') || missingCol.includes('address')) ? 'TEXT' 
+                            : (missingCol.includes('ready') || missingCol.includes('synced')) ? 'TINYINT(1) DEFAULT 0'
+                            : 'VARCHAR(150)';
               await pool.query(`ALTER TABLE candidates ADD COLUMN \`${missingCol}\` ${colType} NULL`);
               await pool.query(`UPDATE candidates SET ${fields.join(', ')} WHERE app_no = ?`, values);
             } else {

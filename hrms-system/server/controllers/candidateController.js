@@ -385,8 +385,8 @@ class CandidateController {
           emergencyPhone: r.emergency_phone || '',
           permanentAddress: r.permanent_address || '',
           documentsChecklist: (() => { try { const raw = r.documents_checklist_json; if (!raw) return {}; if (typeof raw === 'object') return raw; const parsed = JSON.parse(raw); return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {}; } catch(e) { return {}; } })(),
-          greythrSynced: Boolean(r.greythr_synced),
-          greythrReady: Boolean(r.greythr_ready),
+          greythrSynced: (r.greythr_synced === 1 || r.greythr_synced === true || r.greythr_synced === '1' || String(r.greythr_synced).toLowerCase().trim() === 'true'),
+          greythrReady: (r.greythr_ready === 1 || r.greythr_ready === true || r.greythr_ready === '1' || String(r.greythr_ready).toLowerCase().trim() === 'true'),
           createdAt: r.created_at || null,
           rawDate,
           date: joiningDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })

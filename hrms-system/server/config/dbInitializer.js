@@ -457,6 +457,7 @@ async function autoInitializeDatabase(pool) {
       "ALTER TABLE candidates ADD COLUMN permanent_address TEXT NULL",
       "ALTER TABLE candidates ADD COLUMN documents_checklist_json TEXT NULL",
       "ALTER TABLE candidates ADD COLUMN greythr_synced BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE candidates ADD COLUMN greythr_ready TINYINT(1) DEFAULT 0",
       
       "ALTER TABLE users ADD COLUMN email VARCHAR(150) NULL",
       "ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL",

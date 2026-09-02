@@ -69,6 +69,8 @@ const EMPTY_FORM = {
   greythrReady: false,
 };
 
+const parseBool = (v: any): boolean => v === true || v === 1 || v === '1' || String(v).toLowerCase().trim() === 'true';
+
 export default function EmployeeMasterEditorPage() {
   const navigate = useNavigate();
   const [session, setSession]           = useState<UserSession | null>(null);
@@ -110,16 +112,12 @@ export default function EmployeeMasterEditorPage() {
                os.includes('store') || os === 'successfully joined store' || os === 'joined store';
       });
       setEmployees(list);
-      if (selectedAppNo) {
-        const cur = list.find((e: any) => e.appNo === selectedAppNo);
-        if (cur) populateForm(cur);
-      }
     } catch (err: any) {
       showToast('Error loading employees: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [selectedAppNo]);
+  }, []);
 
   useEffect(() => {
     if (!Auth.check()) { navigate('/login', { replace: true }); return; }
@@ -196,8 +194,8 @@ export default function EmployeeMasterEditorPage() {
       aadhaarUrl: emp.aadhaarUrl || '',
       resumeUrl: emp.resumeUrl || '',
       documentsChecklist: cl,
-      greythrSynced: Boolean(emp.greythrSynced),
-      greythrReady: Boolean(emp.greythrReady),
+      greythrSynced: parseBool(emp.greythrSynced),
+      greythrReady: parseBool(emp.greythrReady),
     });
   };
 
@@ -248,6 +246,8 @@ export default function EmployeeMasterEditorPage() {
       const combinedSalary = form.incentive && String(form.incentive).trim()
         ? `${String(form.salary).trim()}|${String(form.incentive).trim()}`
         : String(form.salary).trim();
+      const isReady = parseBool(form.greythrReady);
+      const isSynced = parseBool(form.greythrSynced);
       const payload = {
         isFullEdit: true,
         name: form.name, gender: form.gender, dob: form.dob, bloodGroup: form.bloodGroup,
@@ -266,12 +266,13 @@ export default function EmployeeMasterEditorPage() {
         previousDesignation: form.previousDesignation, previousSalary: form.previousSalary,
         expectedSalary: form.expectedSalary, noticePeriod: form.noticePeriod,
         languagesKnown: form.languagesKnown, remarks: form.remarks,
-        documentsChecklist: form.documentsChecklist, greythrSynced: form.greythrSynced,
-        greythrReady: form.greythrReady,
+        documentsChecklist: form.documentsChecklist,
+        greythrSynced: isSynced,
+        greythrReady: isReady,
       };
       await API.updateCandidate(form.appNo, payload);
       showToast(`Master profile for ${form.name} saved successfully! 🎉`, 'success');
-      setEmployees(prev => prev.map(e => e.appNo === form.appNo ? { ...e, ...payload } : e));
+      setEmployees(prev => prev.map(e => e.appNo === form.appNo ? { ...e, ...payload, greythrReady: isReady, greythrSynced: isSynced } : e));
     } catch (err: any) {
       showToast('Failed to save: ' + err.message, 'error');
     } finally {
@@ -369,8 +370,8 @@ export default function EmployeeMasterEditorPage() {
         'Prior Retail Exp': emp.retailExperience || emp.retail_experience || '',
         'Previous Company': emp.previousCompany || emp.previous_company || '',
         'Previous Designation': emp.previousDesignation || emp.previous_designation || '',
-        'greytHR Onboarding Status': emp.greythrReady ? 'READY' : 'NOT READY',
-        'greytHR Sync Status': emp.greythrSynced ? 'SYNCED' : 'PENDING',
+        'greytHR Onboarding Status': parseBool(emp.greythrReady) ? 'READY' : 'NOT READY',
+        'greytHR Sync Status': parseBool(emp.greythrSynced) ? 'SYNCED' : 'PENDING',
         'Export Timestamp': new Date().toLocaleString('en-IN'),
       };
     });
@@ -384,8 +385,8 @@ export default function EmployeeMasterEditorPage() {
   /* ── Stats Calculations (4 Primary KPIs, NO document percentages) ── */
   const stats = useMemo(() => ({
     total: employees.length,
-    ready: employees.filter(e => Boolean(e.greythrReady)).length,
-    notReady: employees.filter(e => !e.greythrReady).length,
+    ready: employees.filter(e => parseBool(e.greythrReady)).length,
+    notReady: employees.filter(e => !parseBool(e.greythrReady)).length,
     attention: employees.filter(e => needsAttention(e)).length,
   }), [employees, needsAttention]);
 
@@ -400,8 +401,8 @@ export default function EmployeeMasterEditorPage() {
     const matchDept = !deptFilter || (emp.department || '').toLowerCase() === deptFilter.toLowerCase();
 
     let matchKpi = true;
-    if (kpiFilter === 'ready')       matchKpi = Boolean(emp.greythrReady);
-    if (kpiFilter === 'not_ready')   matchKpi = !emp.greythrReady;
+    if (kpiFilter === 'ready')       matchKpi = parseBool(emp.greythrReady);
+    if (kpiFilter === 'not_ready')   matchKpi = !parseBool(emp.greythrReady);
     if (kpiFilter === 'attention')   matchKpi = needsAttention(emp);
 
     return matchQ && matchDept && matchKpi;
@@ -635,7 +636,7 @@ export default function EmployeeMasterEditorPage() {
             ) : (
               <div className="divide-y divide-[#F0EDE8]">
                 {filteredEmployees.map(emp => {
-                  const isGReady = Boolean(emp.greythrReady);
+                  const isGReady = parseBool(emp.greythrReady);
                   const isAttention = needsAttention(emp);
 
                   return (
@@ -783,7 +784,7 @@ export default function EmployeeMasterEditorPage() {
 
               {/* greytHR Status Badge in Header & Action Controls */}
               <div className="flex items-center gap-3 flex-shrink-0">
-                {form.greythrReady ? (
+                {parseBool(form.greythrReady) ? (
                   <span className="hidden sm:flex text-xs bg-emerald-500/20 text-emerald-300 font-extrabold px-3 py-1 rounded-full border border-emerald-500/30 items-center gap-1.5 shadow-sm">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 🟢 GREYTHR READY
                   </span>
@@ -821,9 +822,9 @@ export default function EmployeeMasterEditorPage() {
                 <div className="flex items-center rounded-xl overflow-hidden border border-[#C9952A]/40 shadow-sm bg-white">
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, greythrReady: true })}
+                    onClick={() => setForm((prev: any) => ({ ...prev, greythrReady: true }))}
                     className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-black transition-all cursor-pointer ${
-                      form.greythrReady
+                      parseBool(form.greythrReady)
                         ? 'bg-emerald-700 text-white shadow-sm'
                         : 'bg-white text-[#666] hover:bg-emerald-50 hover:text-emerald-800'
                     }`}
@@ -833,9 +834,9 @@ export default function EmployeeMasterEditorPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, greythrReady: false })}
+                    onClick={() => setForm((prev: any) => ({ ...prev, greythrReady: false }))}
                     className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-black transition-all border-l border-[#C9952A]/30 cursor-pointer ${
-                      !form.greythrReady
+                      !parseBool(form.greythrReady)
                         ? 'bg-[#1E2D4E] text-white shadow-sm'
                         : 'bg-white text-[#666] hover:bg-slate-50 hover:text-slate-700'
                     }`}
@@ -1155,8 +1156,8 @@ export default function EmployeeMasterEditorPage() {
                 <span className="text-[#AAA] mx-1.5">|</span>
                 <span className="font-mono text-[#C9952A] font-bold">{form.appNo}</span>
                 <span className="text-[#AAA] mx-1.5">|</span>
-                <span className={form.greythrReady ? 'text-emerald-700 font-black' : 'text-slate-600 font-bold'}>
-                  {form.greythrReady ? '🟢 Ready for greytHR' : '⚪ Not Ready'}
+                <span className={parseBool(form.greythrReady) ? 'text-emerald-700 font-black' : 'text-slate-600 font-bold'}>
+                  {parseBool(form.greythrReady) ? '🟢 Ready for greytHR' : '⚪ Not Ready'}
                 </span>
               </div>
 
