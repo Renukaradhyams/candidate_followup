@@ -55,13 +55,13 @@ class AuthService {
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role || user.roleName, fullName: user.fullName },
         process.env.JWT_SECRET || 'bsc_hrms_super_secret_jwt_key_2026',
-        { expiresIn: '24h' }
+        { expiresIn: '1h' }
       );
 
       const refreshToken = jwt.sign(
         { id: user.id, username: user.username },
         process.env.JWT_REFRESH_SECRET || 'bsc_hrms_super_secret_refresh_key_2026',
-        { expiresIn: '7d' }
+        { expiresIn: '1h' }
       );
 
       return {
@@ -92,7 +92,7 @@ class AuthService {
         const token = jwt.sign(
           { id: demoUser.id, username: demoUser.username, role: demoUser.role, fullName: demoUser.fullName },
           process.env.JWT_SECRET || 'bsc_hrms_super_secret_jwt_key_2026',
-          { expiresIn: '24h' }
+          { expiresIn: '1h' }
         );
         return {
           token,

@@ -19,16 +19,18 @@ export interface UserSession {
 export const Auth = {
   save(session: UserSession) {
     try {
-      localStorage.setItem('bsc_crm_session', JSON.stringify({
+      sessionStorage.setItem('bsc_crm_session', JSON.stringify({
         ...session,
         loginAt: Date.now()
       }));
+      // Remove from localStorage so closing and reopening tab always requires re-login
+      localStorage.removeItem('bsc_crm_session');
     } catch (e) {}
   },
 
   get(): (UserSession & { loginAt: number }) | null {
     try {
-      const data = localStorage.getItem('bsc_crm_session');
+      const data = sessionStorage.getItem('bsc_crm_session');
       return data ? JSON.parse(data) : null;
     } catch {
       return null;
@@ -41,8 +43,9 @@ export const Auth = {
       this.clear();
       return false;
     }
-    // 24h expiration
-    if (Date.now() - session.loginAt > 24 * 60 * 60 * 1000) {
+    // Strict 1-hour session expiration (60 minutes)
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    if (Date.now() - session.loginAt > ONE_HOUR_MS) {
       this.clear();
       return false;
     }
@@ -51,6 +54,7 @@ export const Auth = {
 
   clear() {
     try {
+      sessionStorage.removeItem('bsc_crm_session');
       localStorage.removeItem('bsc_crm_session');
     } catch (e) {}
   },

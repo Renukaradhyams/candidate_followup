@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Auth } from './services/api';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -36,10 +37,34 @@ function PageFallback() {
   );
 }
 
+function SessionWatchdog() {
+  useEffect(() => {
+    const checkSession = () => {
+      const path = window.location.pathname;
+      const isPublic = path === '/login' || path === '/' || path.includes('/public/') || path.includes('/candidate-entry') || path.includes('/interview-form');
+      if (!isPublic) {
+        if (!Auth.check()) {
+          Auth.logout();
+        }
+      }
+    };
+
+    // Immediate check
+    checkSession();
+
+    // Check periodically every 15 seconds
+    const interval = setInterval(checkSession, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   return (
     <Router>
       <PWAController />
+      <SessionWatchdog />
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
