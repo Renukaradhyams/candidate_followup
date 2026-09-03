@@ -6,12 +6,14 @@ const { logAction } = require('../utils/logger');
 
 const getUsers = async (req, res) => {
   try {
-    const [rows] = await db.query(`SELECT username, role, active, full_name as fullName FROM users ORDER BY created_at ASC`);
+    const [rows] = await db.query(`SELECT id, username, role, active, full_name as fullName, email FROM users ORDER BY created_at ASC`);
     const users = rows.map((r) => ({
+      id: r.id,
       username: r.username,
       role: r.role,
       active: !!r.active,
-      fullName: r.fullName || r.role
+      fullName: r.fullName || r.role,
+      email: r.email || ''
     }));
     return res.json({ users });
   } catch (err) {
@@ -26,7 +28,7 @@ const addUser = async (req, res) => {
       return errorRes(res, 'Username, password, and role are required', [], 400);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
     await db.query(
       `INSERT INTO users (username, password, role, full_name, active) VALUES (?, ?, ?, ?, TRUE)
        ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role), full_name = VALUES(full_name), active = TRUE`,
@@ -43,10 +45,10 @@ const addUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { username, active, password, role } = req.body;
-    if (!username) return errorRes(res, 'Username is required', [], 400);
+    const { id, username, active, password, role } = req.body;
+    if (!id && !username) return errorRes(res, 'User ID or Username is required', [], 400);
 
-    const cleanUsername = username.trim();
+    const cleanUsername = (username || '').trim();
     const aliases = [
       cleanUsername.toLowerCase(),
       cleanUsername.toLowerCase().replace(/@bsctextiles\.com$/i, ''),
@@ -64,8 +66,8 @@ const updateUser = async (req, res) => {
       updFields.push('role = ?');
       params.push(role);
     }
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
+    if (password && password.trim()) {
+      const hashedPassword = await bcrypt.hash(password.trim(), 10);
       updFields.push('password = ?');
       params.push(hashedPassword);
     }
@@ -74,16 +76,24 @@ const updateUser = async (req, res) => {
       return res.json({ success: true, message: 'No fields to update' });
     }
 
-    const [result] = await db.query(
-      `UPDATE users SET ${updFields.join(', ')} 
-       WHERE LOWER(TRIM(username)) IN (?) 
-          OR (email IS NOT NULL AND LOWER(TRIM(email)) IN (?))`,
-      [...params, aliases, aliases]
-    );
+    let result;
+    if (id) {
+      [result] = await db.query(
+        `UPDATE users SET ${updFields.join(', ')} WHERE id = ?`,
+        [...params, id]
+      );
+    } else {
+      [result] = await db.query(
+        `UPDATE users SET ${updFields.join(', ')} 
+         WHERE LOWER(TRIM(username)) IN (?) 
+            OR (email IS NOT NULL AND LOWER(TRIM(email)) IN (?))`,
+        [...params, aliases, aliases]
+      );
+    }
 
-    if (result.affectedRows === 0 && password) {
+    if ((!result || result.affectedRows === 0) && password && password.trim()) {
       // If user doesn't exist in users table yet (e.g. was a fallback user), insert them now
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password.trim(), 10);
       const emailVal = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@bsctextiles.com`;
       await db.query(
         `INSERT INTO users (username, password, role, full_name, email, active) VALUES (?, ?, ?, ?, ?, ?)
@@ -92,7 +102,7 @@ const updateUser = async (req, res) => {
       );
     }
 
-    await logAction(req.user ? req.user.username : 'Admin', 'UPDATE_USER', 'SETTINGS', { username: cleanUsername, active, role });
+    await logAction(req.user ? req.user.username : 'Admin', 'UPDATE_USER', 'SETTINGS', { id, username: cleanUsername, active, role, passwordUpdated: !!password });
 
     return res.json({ success: true, message: 'User updated successfully' });
   } catch (err) {

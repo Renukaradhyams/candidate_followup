@@ -141,7 +141,7 @@ export default function SettingsPage() {
     try {
       setResetSubmitting(true);
       setResetError('');
-      await API.updateUser({ username: resetTargetUser.username, password: pwd });
+      await API.updateUser({ id: resetTargetUser.id, username: resetTargetUser.username, password: pwd });
       showToast(`Password for ${resetTargetUser.fullName || resetTargetUser.username} updated successfully! 🎉`, 'success');
       setResetModalOpen(false);
       loadAll();

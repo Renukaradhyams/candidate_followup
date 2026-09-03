@@ -35,17 +35,24 @@ class AuthService {
       }
 
       let isMatch = false;
-      try {
-        isMatch = await bcrypt.compare(rawPass, user.password);
-      } catch (e) {}
+      const isHashed = typeof user.password === 'string' && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$'));
 
-      if (!isMatch && user.password === rawPass) {
-        isMatch = true;
-      }
-
-      // Emergency master key fallback
-      if (!isMatch && rawPass === 'bsc@2026') {
-        isMatch = true;
+      if (isHashed) {
+        try {
+          isMatch = await bcrypt.compare(rawPass, user.password);
+        } catch (e) {
+          isMatch = false;
+        }
+      } else {
+        // Legacy plaintext comparison only if password in database was stored in unhashed format
+        if (user.password === rawPass) {
+          isMatch = true;
+          // Auto-upgrade legacy plaintext password to bcrypt hash on successful login
+          try {
+            const upgradedHash = await bcrypt.hash(rawPass, 10);
+            await pool.query('UPDATE users SET password = ? WHERE id = ?', [upgradedHash, user.id]);
+          } catch (e) {}
+        }
       }
 
       if (!isMatch) {
