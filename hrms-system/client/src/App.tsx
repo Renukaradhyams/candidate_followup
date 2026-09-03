@@ -21,6 +21,7 @@ const BroadcastCenter = lazy(() => import('./pages/BroadcastCenter'));
 const DepartmentHiring = lazy(() => import('./pages/DepartmentHiring'));
 const SectionAllocation = lazy(() => import('./pages/SectionAllocation'));
 const JoiningCallDesk = lazy(() => import('./pages/JoiningCallDesk'));
+const NotJoinedDesk = lazy(() => import('./pages/NotJoinedDesk'));
 const WorkforceAnalytics = lazy(() => import('./pages/WorkforceAnalytics'));
 const DOJPlanning = lazy(() => import('./pages/DOJPlanning'));
 import QuickActionCenter from './components/ui/QuickActionCenter';
@@ -99,6 +100,8 @@ export default function App() {
           <Route path="/employee-exit.html" element={<Navigate to="/employee-exit" replace />} />
           <Route path="/joining-call-desk" element={<JoiningCallDesk />} />
           <Route path="/joining-call-desk.html" element={<Navigate to="/joining-call-desk" replace />} />
+          <Route path="/not-joined" element={<NotJoinedDesk />} />
+          <Route path="/not-joined.html" element={<Navigate to="/not-joined" replace />} />
           <Route path="/doj-planning" element={<DOJPlanning />} />
           <Route path="/date-of-joining" element={<Navigate to="/doj-planning" replace />} />
           <Route path="/doj-planning.html" element={<Navigate to="/doj-planning" replace />} />

@@ -395,6 +395,15 @@ export const API = {
     return apiFetch(`/joining-call-desk/by-designation/${encodeURIComponent(designation)}`);
   },
   async getCallDeskAnalytics() { return apiFetch('/joining-call-desk/analytics'); },
+
+  // Not Joined Desk (Non-Joiners Tracking)
+  async getNotJoinedSummary() { return apiFetch('/not-joined-desk/summary'); },
+  async getNotJoinedByDesignation(designation: string) {
+    return apiFetch(`/not-joined-desk/by-designation/${encodeURIComponent(designation)}`);
+  },
+  async getNotJoinedAnalytics() { return apiFetch('/not-joined-desk/analytics'); },
+  async getNotJoinedAll() { return apiFetch('/not-joined-desk/all'); },
+
   // Workforce Analytics
   async getWorkforceAnalytics(filters: any = {}) {
     const query = new URLSearchParams(filters).toString();

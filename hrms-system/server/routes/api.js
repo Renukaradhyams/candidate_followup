@@ -144,6 +144,12 @@ router.post('/joining-call-desk/update-status', authenticate, joiningCallDeskCon
 router.get('/joining-call-desk/history/:appNo', authenticate, joiningCallDeskController.getHistory);
 router.post('/joining-call-desk/update-doj', authenticate, joiningCallDeskController.updateDoj);
 
+// ── Not Joined Desk Routes (Non-Joiners & Pre-Joining Follow-up) ─────────────
+router.get('/not-joined-desk/summary', authenticate, joiningCallDeskController.getNotJoinedSummary);
+router.get('/not-joined-desk/analytics', authenticate, joiningCallDeskController.getNotJoinedAnalytics);
+router.get('/not-joined-desk/by-designation/:designation', authenticate, joiningCallDeskController.getNotJoinedByDesignation);
+router.get('/not-joined-desk/all', authenticate, joiningCallDeskController.getNotJoinedAll);
+
 // ── Workforce Analytics Route (NEW) ──────────────────────────────────────────
 router.get('/workforce-analytics', workforceAnalyticsController.getAnalytics);
 router.post('/dept-hiring/sections/add', deptHiringController.addDepartmentSection);

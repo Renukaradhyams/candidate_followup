@@ -422,6 +422,254 @@ class JoiningCallDeskController {
       conn.release();
     }
   }
+
+  // ─── GET /api/not-joined-desk/summary ──────────────────────────────────────
+  async getNotJoinedSummary(req, res) {
+    try {
+      await ensureTables();
+
+      const [rows] = await pool.query(`
+        SELECT
+          c.designation,
+          COUNT(DISTINCT c.app_no) AS total,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call done'         THEN 1 ELSE 0 END) AS call_done,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending'            THEN 1 ELSE 0 END) AS pending,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call not received'  THEN 1 ELSE 0 END) AS not_received,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Wrong number'       THEN 1 ELSE 0 END) AS wrong_number,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Rescheduled'        THEN 1 ELSE 0 END) AS rescheduled,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        GROUP BY c.designation
+      `);
+
+      const sumMap = new Map();
+      rows.forEach(r => {
+        const normDesig = normalizeDesignation(r.designation);
+        if (!sumMap.has(normDesig)) {
+          sumMap.set(normDesig, {
+            designation: normDesig,
+            total: 0,
+            callDone: 0,
+            pending: 0,
+            notReceived: 0,
+            wrongNumber: 0,
+            rescheduled: 0,
+            dojConfirmed: 0,
+            dojNotConfirmed: 0,
+          });
+        }
+        const obj = sumMap.get(normDesig);
+        obj.total += Number(r.total);
+        obj.callDone += Number(r.call_done);
+        obj.pending += Number(r.pending);
+        obj.notReceived += Number(r.not_received);
+        obj.wrongNumber += Number(r.wrong_number);
+        obj.rescheduled += Number(r.rescheduled);
+        obj.dojConfirmed += Number(r.doj_confirmed);
+        obj.dojNotConfirmed += Number(r.doj_not_confirmed);
+      });
+
+      const summaries = Array.from(sumMap.values()).sort((a, b) => a.designation.localeCompare(b.designation));
+
+      return res.json({ success: true, summaries, total: summaries.reduce((a, s) => a + s.total, 0) });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getNotJoinedSummary]', err);
+      return errorRes(res, 'Failed to load not-joined summaries: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/not-joined-desk/by-designation/:designation ─────────────────
+  async getNotJoinedByDesignation(req, res) {
+    try {
+      await ensureTables();
+      const { designation } = req.params;
+      const desig = decodeURIComponent(designation || '');
+      if (!desig) return errorRes(res, 'designation is required', [], 400);
+
+      const targetNorm = normalizeDesignation(desig);
+
+      const [empRows] = await pool.query(`
+        SELECT c.*,
+               COALESCE(sa.section, '') AS sa_section,
+               so.est_doj  AS offer_est_doj,
+               so.actual_doj AS offer_actual_doj,
+               so.status   AS offer_status,
+               d.call_status, d.doj_confirmation, d.notes,
+               d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        GROUP BY c.app_no
+        ORDER BY c.name ASC
+      `);
+
+      const employees = empRows
+        .filter(r => normalizeDesignation(r.designation) === targetNorm)
+        .map(r => ({
+          appNo:           r.app_no,
+          name:            r.name || '',
+          phone:           r.phone || '',
+          email:           r.email || '',
+          gender:          r.gender || '',
+          department:      normalizeDepartment(r.department),
+          section:         normalizeSection(r.sa_section || r.section),
+          designation:     normalizeDesignation(r.designation),
+          candidateStatus: r.status || r.offer_status || 'Selected',
+          offeredDoj:      fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj),
+          photoUrl:        r.photo_url || '',
+          callStatus:      r.call_status || 'Pending',
+          dojConfirmation: r.doj_confirmation || 'Pending confirmation',
+          notes:           r.notes || '',
+          followUpDate:    fmtDate(r.follow_up_date),
+          lastCallDate:    fmtDate(r.last_call_date),
+          updatedBy:       r.updated_by || '',
+          updatedAt:       r.desk_updated_at || null,
+        }));
+
+      return res.json({ success: true, employees });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getNotJoinedByDesignation]', err);
+      return errorRes(res, 'Failed to load not-joined employees: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/not-joined-desk/all ──────────────────────────────────────────
+  async getNotJoinedAll(req, res) {
+    try {
+      await ensureTables();
+      const [empRows] = await pool.query(`
+        SELECT c.*,
+               COALESCE(sa.section, '') AS sa_section,
+               so.est_doj AS offer_est_doj,
+               so.actual_doj AS offer_actual_doj,
+               so.status AS offer_status
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
+        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        GROUP BY c.app_no
+        ORDER BY LOWER(c.name) ASC
+      `);
+      const [deskRows] = await pool.query(`SELECT * FROM joining_call_desk`);
+      const deskMap = {};
+      for (const row of deskRows) { deskMap[row.app_no] = row; }
+
+      const employees = empRows.map(r => {
+        const d = deskMap[r.app_no] || {};
+        const offeredDoj = fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj);
+        return {
+          appNo:           r.app_no,
+          name:            r.name || '',
+          phone:           r.phone || '',
+          email:           r.email || '',
+          gender:          r.gender || '',
+          department:      normalizeDepartment(r.department),
+          section:         normalizeSection(r.sa_section || r.section),
+          designation:     normalizeDesignation(r.designation),
+          candidateStatus: r.status || r.offer_status || 'Selected',
+          offeredDoj,
+          photoUrl:        r.photo_url || '',
+          callStatus:      d.call_status || 'Pending',
+          dojConfirmation: d.doj_confirmation || 'Pending confirmation',
+          notes:           d.notes || '',
+          followUpDate:    fmtDate(d.follow_up_date),
+          lastCallDate:    fmtDate(d.last_call_date),
+          updatedBy:       d.updated_by || '',
+          updatedAt:       d.updated_at || null,
+        };
+      });
+      const withDoj = employees.filter(e => e.offeredDoj);
+      return res.json({ success: true, employees: withDoj, total: withDoj.length });
+    } catch (err) {
+      return errorRes(res, 'Failed to load not-joined data: ' + err.message, [err.message], 500);
+    }
+  }
+
+  // ─── GET /api/not-joined-desk/analytics ───────────────────────────────────
+  async getNotJoinedAnalytics(req, res) {
+    try {
+      await ensureTables();
+      const today = new Date().toISOString().slice(0, 10);
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const weekEndStr = weekEnd.toISOString().slice(0, 10);
+
+      const [[overall]] = await pool.query(`
+        SELECT
+          COUNT(DISTINCT c.app_no) AS total,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call done'         THEN 1 ELSE 0 END) AS call_done,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending'            THEN 1 ELSE 0 END) AS pending,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Call not received'  THEN 1 ELSE 0 END) AS not_received,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Wrong number'       THEN 1 ELSE 0 END) AS wrong_number,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Rescheduled'        THEN 1 ELSE 0 END) AS rescheduled,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
+          SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed,
+          SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) < ? THEN 1 ELSE 0 END) AS overdue_doj,
+          SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) BETWEEN ? AND ? THEN 1 ELSE 0 END) AS joining_this_week,
+          SUM(CASE WHEN COALESCE(d.follow_up_date, NULL) < ? AND COALESCE(d.call_status,'Pending') != 'Call done' THEN 1 ELSE 0 END) AS overdue_followups
+        FROM candidates c
+        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
+          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+      `, [today, today, weekEndStr, today]);
+
+      const [todayHistory] = await pool.query(`
+        SELECT action_type, COUNT(*) AS cnt
+        FROM joining_call_history
+        WHERE DATE(created_at) = ?
+        GROUP BY action_type
+      `, [today]);
+
+      const todayMap = {};
+      for (const h of todayHistory) { todayMap[h.action_type] = Number(h.cnt); }
+
+      return res.json({
+        success: true,
+        total:            Number(overall.total || 0),
+        callDone:         Number(overall.call_done || 0),
+        pending:          Number(overall.pending || 0),
+        notReceived:      Number(overall.not_received || 0),
+        wrongNumber:      Number(overall.wrong_number || 0),
+        rescheduled:      Number(overall.rescheduled || 0),
+        dojConfirmed:     Number(overall.doj_confirmed || 0),
+        dojNotConfirmed:  Number(overall.doj_not_confirmed || 0),
+        overdueDoj:       Number(overall.overdue_doj || 0),
+        joiningThisWeek:  Number(overall.joining_this_week || 0),
+        overdueFollowUps: Number(overall.overdue_followups || 0),
+        today: {
+          callsDone:      (todayMap['call_status'] || 0),
+          dojConfirmed:   (todayMap['doj_confirmation'] || 0),
+          dojChanged:     (todayMap['doj_changed'] || 0),
+          notesAdded:     (todayMap['note_added'] || 0),
+        }
+      });
+    } catch (err) {
+      console.error('[JoiningCallDesk.getNotJoinedAnalytics]', err);
+      return errorRes(res, 'Failed to load not-joined analytics: ' + err.message, [err.message], 500);
+    }
+  }
 }
 
 module.exports = new JoiningCallDeskController();
