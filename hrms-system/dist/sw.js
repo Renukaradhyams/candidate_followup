@@ -8,7 +8,7 @@
  *   manifest, and JS/CSS bundles required for standalone PWA launching and performance.
  * ============================================================================== */
 
-const CACHE_NAME = 'bsc-crm-shell-v1.0.0';
+const CACHE_NAME = 'bsc-crm-shell-v1.0.1';
 
 // Core static assets required for App Shell startup
 const STATIC_ASSETS = [
@@ -64,6 +64,11 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
+  // Ignore non-http/https schemes (e.g., chrome-extension://, devtools://)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   // 1. NEVER CACHE API requests, authentication, DB endpoints, or uploaded candidate/employee documents
   const isApiRequest = url.pathname.startsWith('/api/') || url.pathname.startsWith('/api/v1/');
   const isUploadRequest = url.pathname.startsWith('/uploads/') ||
@@ -106,7 +111,7 @@ self.addEventListener('fetch', (event) => {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseToCache);
-            });
+            }).catch(() => {});
           }
         }).catch(() => {
           // Ignore network errors in background revalidation
@@ -133,9 +138,12 @@ self.addEventListener('fetch', (event) => {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
-          });
+          }).catch(() => {});
         }
         return networkResponse;
+      }).catch((err) => {
+        console.warn('[ServiceWorker] Fetch failed for:', request.url, err.message);
+        return new Response('', { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );
