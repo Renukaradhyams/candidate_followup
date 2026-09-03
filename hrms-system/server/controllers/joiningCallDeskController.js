@@ -442,11 +442,16 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
-          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        WHERE (
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+        )
+        AND (
+          LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+        )
         GROUP BY c.designation
       `);
 
@@ -508,11 +513,16 @@ class JoiningCallDeskController {
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
-          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        WHERE (
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+        )
+        AND (
+          LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+        )
         GROUP BY c.app_no
         ORDER BY c.name ASC
       `);
@@ -560,11 +570,16 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
-          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        WHERE (
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+        )
+        AND (
+          LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+        )
         GROUP BY c.app_no
         ORDER BY LOWER(c.name) ASC
       `);
@@ -596,8 +611,7 @@ class JoiningCallDeskController {
           updatedAt:       d.updated_at || null,
         };
       });
-      const withDoj = employees.filter(e => e.offeredDoj);
-      return res.json({ success: true, employees: withDoj, total: withDoj.length });
+      return res.json({ success: true, employees, total: employees.length });
     } catch (err) {
       return errorRes(res, 'Failed to load not-joined data: ' + err.message, [err.message], 500);
     }
@@ -628,11 +642,16 @@ class JoiningCallDeskController {
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
-        WHERE (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
-          AND (LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
-               AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%')
+        WHERE (
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+        )
+        AND (
+          LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
+          AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+        )
       `, [today, today, weekEndStr, today]);
 
       const [todayHistory] = await pool.query(`
