@@ -46,6 +46,13 @@ const updateUser = async (req, res) => {
     const { username, active, password, role } = req.body;
     if (!username) return errorRes(res, 'Username is required', [], 400);
 
+    const cleanUsername = username.trim();
+    const aliases = [
+      cleanUsername.toLowerCase(),
+      cleanUsername.toLowerCase().replace(/@bsctextiles\.com$/i, ''),
+      `${cleanUsername.toLowerCase()}@bsctextiles.com`
+    ];
+
     const updFields = [];
     const params = [];
 
@@ -67,23 +74,25 @@ const updateUser = async (req, res) => {
       return res.json({ success: true, message: 'No fields to update' });
     }
 
-    params.push(username.trim());
     const [result] = await db.query(
-      `UPDATE users SET ${updFields.join(', ')} WHERE LOWER(TRIM(username)) = LOWER(TRIM(?))`,
-      params
+      `UPDATE users SET ${updFields.join(', ')} 
+       WHERE LOWER(TRIM(username)) IN (?) 
+          OR (email IS NOT NULL AND LOWER(TRIM(email)) IN (?))`,
+      [...params, aliases, aliases]
     );
 
     if (result.affectedRows === 0 && password) {
       // If user doesn't exist in users table yet (e.g. was a fallback user), insert them now
       const hashedPassword = await bcrypt.hash(password, 10);
+      const emailVal = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@bsctextiles.com`;
       await db.query(
-        `INSERT INTO users (username, password, role, full_name, active) VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO users (username, password, role, full_name, email, active) VALUES (?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role), active = VALUES(active)`,
-        [username.trim(), hashedPassword, role || 'Admin', username.trim(), active !== undefined ? (active ? 1 : 0) : 1]
+        [cleanUsername, hashedPassword, role || 'Admin', cleanUsername, emailVal, active !== undefined ? (active ? 1 : 0) : 1]
       );
     }
 
-    await logAction(req.user ? req.user.username : 'Admin', 'UPDATE_USER', 'SETTINGS', { username, active, role });
+    await logAction(req.user ? req.user.username : 'Admin', 'UPDATE_USER', 'SETTINGS', { username: cleanUsername, active, role });
 
     return res.json({ success: true, message: 'User updated successfully' });
   } catch (err) {
