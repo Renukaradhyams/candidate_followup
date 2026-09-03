@@ -441,16 +441,21 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (
-          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
-          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
         )
         AND (
           LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+          AND (emp.id IS NULL OR (
+            LOWER(TRIM(COALESCE(emp.status, ''))) NOT IN ('successfully joined store', 'joined store')
+            AND LOWER(TRIM(COALESCE(emp.status, ''))) NOT LIKE '%joined store%'
+          ))
         )
         GROUP BY c.designation
       `);
@@ -511,17 +516,22 @@ class JoiningCallDeskController {
                d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (
-          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
-          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
         )
         AND (
           LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+          AND (emp.id IS NULL OR (
+            LOWER(TRIM(COALESCE(emp.status, ''))) NOT IN ('successfully joined store', 'joined store')
+            AND LOWER(TRIM(COALESCE(emp.status, ''))) NOT LIKE '%joined store%'
+          ))
         )
         GROUP BY c.app_no
         ORDER BY c.name ASC
@@ -569,16 +579,21 @@ class JoiningCallDeskController {
                so.status AS offer_status
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
         WHERE (
-          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
-          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
         )
         AND (
           LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+          AND (emp.id IS NULL OR (
+            LOWER(TRIM(COALESCE(emp.status, ''))) NOT IN ('successfully joined store', 'joined store')
+            AND LOWER(TRIM(COALESCE(emp.status, ''))) NOT LIKE '%joined store%'
+          ))
         )
         GROUP BY c.app_no
         ORDER BY LOWER(c.name) ASC
@@ -637,22 +652,30 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed,
           SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) < ? THEN 1 ELSE 0 END) AS overdue_doj,
+          SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) = ? THEN 1 ELSE 0 END) AS joining_today,
+          SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) > ? THEN 1 ELSE 0 END) AS upcoming_doj,
           SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) BETWEEN ? AND ? THEN 1 ELSE 0 END) AS joining_this_week,
-          SUM(CASE WHEN COALESCE(d.follow_up_date, NULL) < ? AND COALESCE(d.call_status,'Pending') != 'Call done' THEN 1 ELSE 0 END) AS overdue_followups
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending' OR (d.follow_up_date IS NOT NULL AND d.follow_up_date <= ?) THEN 1 ELSE 0 END) AS follow_up_required,
+          SUM(CASE WHEN COALESCE(d.call_status,'Pending') IN ('Call not received', 'Wrong number') THEN 1 ELSE 0 END) AS no_answer
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
         LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
         WHERE (
-          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired')
-          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired')
+          LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
+          OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
         )
         AND (
           LOWER(TRIM(COALESCE(c.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(c.status, ''))) NOT LIKE '%joined store%'
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(COALESCE(so.status, ''))) NOT LIKE '%joined store%'
+          AND (emp.id IS NULL OR (
+            LOWER(TRIM(COALESCE(emp.status, ''))) NOT IN ('successfully joined store', 'joined store')
+            AND LOWER(TRIM(COALESCE(emp.status, ''))) NOT LIKE '%joined store%'
+          ))
         )
-      `, [today, today, weekEndStr, today]);
+      `, [today, today, today, today, weekEndStr, today]);
 
       const [todayHistory] = await pool.query(`
         SELECT action_type, COUNT(*) AS cnt
@@ -675,8 +698,11 @@ class JoiningCallDeskController {
         dojConfirmed:     Number(overall.doj_confirmed || 0),
         dojNotConfirmed:  Number(overall.doj_not_confirmed || 0),
         overdueDoj:       Number(overall.overdue_doj || 0),
+        joiningToday:     Number(overall.joining_today || 0),
+        upcomingDoj:      Number(overall.upcoming_doj || 0),
         joiningThisWeek:  Number(overall.joining_this_week || 0),
-        overdueFollowUps: Number(overall.overdue_followups || 0),
+        followUpRequired: Number(overall.follow_up_required || 0),
+        noAnswer:         Number(overall.no_answer || 0),
         today: {
           callsDone:      (todayMap['call_status'] || 0),
           dojConfirmed:   (todayMap['doj_confirmation'] || 0),
