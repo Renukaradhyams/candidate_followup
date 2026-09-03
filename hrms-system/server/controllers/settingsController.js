@@ -28,7 +28,8 @@ const addUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await db.query(
-      `INSERT INTO users (username, password, role, full_name, active) VALUES (?, ?, ?, ?, TRUE)`,
+      `INSERT INTO users (username, password, role, full_name, active) VALUES (?, ?, ?, ?, TRUE)
+       ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role), full_name = VALUES(full_name), active = TRUE`,
       [username.trim(), hashedPassword, role, fullName || role]
     );
 
@@ -62,12 +63,29 @@ const updateUser = async (req, res) => {
       params.push(hashedPassword);
     }
 
-    params.push(username);
-    await db.query(`UPDATE users SET ${updFields.join(', ')} WHERE username = ?`, params);
+    if (updFields.length === 0) {
+      return res.json({ success: true, message: 'No fields to update' });
+    }
+
+    params.push(username.trim());
+    const [result] = await db.query(
+      `UPDATE users SET ${updFields.join(', ')} WHERE LOWER(TRIM(username)) = LOWER(TRIM(?))`,
+      params
+    );
+
+    if (result.affectedRows === 0 && password) {
+      // If user doesn't exist in users table yet (e.g. was a fallback user), insert them now
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await db.query(
+        `INSERT INTO users (username, password, role, full_name, active) VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role), active = VALUES(active)`,
+        [username.trim(), hashedPassword, role || 'Admin', username.trim(), active !== undefined ? (active ? 1 : 0) : 1]
+      );
+    }
 
     await logAction(req.user ? req.user.username : 'Admin', 'UPDATE_USER', 'SETTINGS', { username, active, role });
 
-    return res.json({ success: true });
+    return res.json({ success: true, message: 'User updated successfully' });
   } catch (err) {
     return errorRes(res, 'Failed to update user', [err.message], 500);
   }

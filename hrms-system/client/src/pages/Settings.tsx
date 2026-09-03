@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { Settings, Users, Eye, HelpCircle, Tag, Plus, Trash2, Key, Shield, Check, X } from 'lucide-react';
+import { Settings, Users, Eye, EyeOff, HelpCircle, Tag, Plus, Trash2, Key, Shield, Check, X, RefreshCw } from 'lucide-react';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -101,15 +101,55 @@ export default function SettingsPage() {
     }
   };
 
-  const handleResetUserPassword = async (username: string) => {
-    const newPassword = window.prompt(`Enter new password for user ${username}:`);
-    if (!newPassword || !newPassword.trim()) return;
+  // Reset Password Modal State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetTargetUser, setResetTargetUser] = useState<any>(null);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const handleOpenResetModal = (user: any) => {
+    setResetTargetUser(user);
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
+    setShowPassword(false);
+    setResetError('');
+    setResetModalOpen(true);
+  };
+
+  const handleConfirmResetPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!resetTargetUser) return;
+    const pwd = newPasswordInput.trim();
+    const conf = confirmPasswordInput.trim();
+
+    if (!pwd) {
+      setResetError('Please enter a new password');
+      return;
+    }
+    if (pwd.length < 4) {
+      setResetError('Password must be at least 4 characters');
+      return;
+    }
+    if (pwd !== conf) {
+      setResetError('Passwords do not match');
+      return;
+    }
+
     try {
-      await API.updateUser({ username, password: newPassword.trim() });
-      showToast(`Password for user ${username} updated successfully!`, 'success');
+      setResetSubmitting(true);
+      setResetError('');
+      await API.updateUser({ username: resetTargetUser.username, password: pwd });
+      showToast(`Password for ${resetTargetUser.fullName || resetTargetUser.username} updated successfully! 🎉`, 'success');
+      setResetModalOpen(false);
       loadAll();
-    } catch (e: any) {
-      showToast('Error resetting password: ' + e.message, 'error');
+    } catch (err: any) {
+      setResetError(err.message || 'Failed to update password');
+      showToast('Error resetting password: ' + err.message, 'error');
+    } finally {
+      setResetSubmitting(false);
     }
   };
 
@@ -321,10 +361,10 @@ export default function SettingsPage() {
                                 {u.active ? 'Deactivate' : 'Activate'}
                               </button>
                               <button
-                                onClick={() => handleResetUserPassword(u.username)}
-                                className="px-3 py-1.5 rounded-xl border border-[#1E2D4E] text-[#1E2D4E] font-bold text-[11px] hover:bg-[#1E2D4E] hover:text-white transition-all flex items-center gap-1 shadow-xs"
+                                onClick={() => handleOpenResetModal(u)}
+                                className="px-3 py-1.5 rounded-xl border border-[#1E2D4E] text-[#1E2D4E] font-bold text-[11px] hover:bg-[#1E2D4E] hover:text-white transition-all flex items-center gap-1 shadow-xs cursor-pointer"
                               >
-                                <Key className="w-3.5 h-3.5" /> Reset Password
+                                <Key className="w-3.5 h-3.5 text-[#C9952A]" /> Reset Password
                               </button>
                             </div>
                           </td>
@@ -451,6 +491,113 @@ export default function SettingsPage() {
           )}
         </main>
       </div>
+
+      {/* ── Reset Password Modal ── */}
+      {resetModalOpen && resetTargetUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setResetModalOpen(false); }}
+        >
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-[#e2dfd7] overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="bg-[#1E2D4E] p-5 text-white flex items-center justify-between border-b border-[#C9952A]/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#C9952A] text-slate-900 flex items-center justify-center font-black shadow-md">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base leading-tight">Reset User Password</h3>
+                  <p className="text-[11px] text-[#C9952A] font-semibold mt-0.5">Admin Security Control</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Target User Info Banner */}
+            <div className="bg-[#F9F7F4] px-6 py-3.5 border-b border-[#e2dfd7] flex items-center justify-between">
+              <div>
+                <div className="text-xs font-black text-[#1E2D4E]">{resetTargetUser.fullName || resetTargetUser.username}</div>
+                <div className="text-[11px] text-[#777] font-mono font-semibold">@{resetTargetUser.username}</div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#1E2D4E]/10 text-[#1E2D4E] border border-[#1E2D4E]/20">
+                {resetTargetUser.role}
+              </span>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleConfirmResetPassword} className="p-6 space-y-4">
+              {resetError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                  <X className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black uppercase tracking-wider text-[#1E2D4E]">
+                  New Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPasswordInput}
+                    onChange={(e) => { setNewPasswordInput(e.target.value); setResetError(''); }}
+                    placeholder="Enter at least 4 characters"
+                    className="w-full text-xs font-semibold pl-4 pr-10 py-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-[#1E2D4E] focus:outline-none focus:border-[#C9952A] focus:bg-white transition-all shadow-xs"
+                    autoFocus
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#777] hover:text-[#1E2D4E] transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black uppercase tracking-wider text-[#1E2D4E]">
+                  Confirm New Password *
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPasswordInput}
+                  onChange={(e) => { setConfirmPasswordInput(e.target.value); setResetError(''); }}
+                  placeholder="Re-enter new password"
+                  className="w-full text-xs font-semibold px-4 py-3 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-[#1E2D4E] focus:outline-none focus:border-[#C9952A] focus:bg-white transition-all shadow-xs"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e2dfd7]">
+                <button
+                  type="button"
+                  onClick={() => setResetModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-[#e2dfd7] text-xs font-bold text-[#555] hover:bg-[#F9F7F4] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetSubmitting}
+                  className="btn-primary text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer"
+                >
+                  {resetSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  {resetSubmitting ? 'Updating...' : 'Set New Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
