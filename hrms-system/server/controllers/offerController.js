@@ -51,7 +51,7 @@ const getOffers = async (req, res) => {
           NOW(),
           NOW()
         FROM candidates c
-        LEFT JOIN selection_offers so ON TRIM(c.app_no) = TRIM(so.app_no)
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
         WHERE so.id IS NULL 
           AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
       `);
@@ -75,7 +75,7 @@ const getOffers = async (req, res) => {
             NOW(),
             NOW()
           FROM candidates c
-          LEFT JOIN selection_offers so ON TRIM(c.app_no) = TRIM(so.app_no)
+          LEFT JOIN selection_offers so ON c.app_no = so.app_no
           WHERE so.id IS NULL 
             AND LOWER(TRIM(c.status)) IN ('offer sent', 'shortlisted', 'offer accepted', 'accepted', 'joined', 'pending accept')
         `);
@@ -85,20 +85,20 @@ const getOffers = async (req, res) => {
     try {
       await db.query(`
         UPDATE selection_offers so
-        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        JOIN candidates c ON so.app_no = c.app_no
         SET so.status = 'Joined'
         WHERE LOWER(TRIM(c.status)) = 'joined' AND LOWER(TRIM(so.status)) != 'joined'
       `);
       await db.query(`
         UPDATE selection_offers so
-        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        JOIN candidates c ON so.app_no = c.app_no
         SET so.status = c.status
         WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
           AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
       `);
       await db.query(`
         UPDATE candidates c
-        JOIN selection_offers so ON TRIM(so.app_no) = TRIM(c.app_no)
+        JOIN selection_offers so ON so.app_no = c.app_no
         SET c.status = 'Joined'
         WHERE LOWER(TRIM(so.status)) = 'joined' 
           AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
@@ -121,8 +121,8 @@ const getOffers = async (req, res) => {
           c.offered_doj as cand_offered_doj,
           c.notice_period as cand_notice_period
         FROM selection_offers so
-        LEFT JOIN hr_evaluations he ON TRIM(so.app_no) = TRIM(he.app_no)
-        LEFT JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
+        LEFT JOIN hr_evaluations he ON so.app_no = he.app_no
+        LEFT JOIN candidates c ON so.app_no = c.app_no
         ORDER BY so.created_at DESC
       `);
       rows = dbRows || [];

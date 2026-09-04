@@ -36,8 +36,10 @@ Options -Indexes +SymLinksIfOwnerMatch
     SetEnv nolog off
     SetEnv noabort 1
     SetEnv nbytes 0
+    SetEnv LSAPI_MAX_EXEC_TIME 300
+    SetEnv LSAPI_AVOID_FORK 1
     RewriteEngine On
-    RewriteRule .* - [E=verifycaptcha:off,E=noabort:1]
+    RewriteRule .* - [E=verifycaptcha:off,E=noabort:1,E=nbytes:0,E=connection:keep-alive]
 </IfModule>
 
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
