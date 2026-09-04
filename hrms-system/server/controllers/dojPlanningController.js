@@ -31,8 +31,6 @@ ensureTables();
 class DOJPlanningController {
   async getOverview(req, res) {
     try {
-      await ensureTables();
-
       // Query all candidates with potential offer/joining information
       const [rows] = await pool.query(`
         SELECT c.id,
@@ -58,9 +56,9 @@ class DOJPlanningController {
                d.updated_by,
                d.updated_at AS desk_updated_at
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (LOWER(TRIM(c.status)) IN ('joined', 'hired', 'successfully joined store', 'joined store') OR LOWER(TRIM(so.status)) IN ('joined', 'successfully joined store', 'joined store'))
         GROUP BY c.app_no
         ORDER BY c.name ASC

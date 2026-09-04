@@ -72,7 +72,6 @@ class JoiningCallDeskController {
   // ─── GET /api/joining-call-desk/summary ────────────────────────────────────
   async getSummary(req, res) {
     try {
-      await ensureTables();
 
       const [rows] = await pool.query(`
         SELECT
@@ -86,8 +85,8 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.designation
@@ -133,7 +132,6 @@ class JoiningCallDeskController {
   // ─── GET /api/joining-call-desk/by-designation/:designation ───────────────
   async getByDesignation(req, res) {
     try {
-      await ensureTables();
       const { designation } = req.params;
       const desig = decodeURIComponent(designation || '');
       if (!desig) return errorRes(res, 'designation is required', [], 400);
@@ -148,8 +146,8 @@ class JoiningCallDeskController {
                d.call_status, d.doj_confirmation, d.notes,
                d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
         GROUP BY c.app_no
@@ -208,8 +206,8 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(c.offered_doj, so.est_doj) BETWEEN ? AND ?     THEN 1 ELSE 0 END) AS joining_this_week,
           SUM(CASE WHEN COALESCE(d.follow_up_date, NULL) < ? AND COALESCE(d.call_status,'Pending') != 'Call done' THEN 1 ELSE 0 END) AS overdue_followups
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store') OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store'))
           AND (c.offered_doj IS NOT NULL OR so.est_doj IS NOT NULL OR so.actual_doj IS NOT NULL)
       `, [today, weekEndStr, today]);
@@ -254,14 +252,13 @@ class JoiningCallDeskController {
   // ─── GET /api/joining-call-desk (backward compat — used by V1 references) ─
   async getAll(req, res) {
     try {
-      await ensureTables();
       const [empRows] = await pool.query(`
         SELECT c.*,
                so.est_doj AS offer_est_doj,
                so.actual_doj AS offer_actual_doj,
                so.status AS offer_status
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
         WHERE LOWER(TRIM(c.status)) IN ('joined','hired','successfully joined store','joined store')
            OR LOWER(TRIM(so.status)) IN ('joined','successfully joined store','joined store')
         GROUP BY c.app_no
@@ -294,7 +291,6 @@ class JoiningCallDeskController {
   // ─── POST /api/joining-call-desk/update-status ────────────────────────────
   async updateStatus(req, res) {
     try {
-      await ensureTables();
       const { appNo, callStatus, dojConfirmation, notes, followUpDate, doneBy } = req.body;
       const user = doneBy || (req.user ? req.user.username : 'HR');
       if (!appNo) return errorRes(res, 'appNo is required', [], 400);
@@ -360,7 +356,6 @@ class JoiningCallDeskController {
   // ─── GET /api/joining-call-desk/history/:appNo ────────────────────────────
   async getHistory(req, res) {
     try {
-      await ensureTables();
       const { appNo } = req.params;
       if (!appNo) return errorRes(res, 'appNo is required', [], 400);
       const [rows] = await pool.query(
@@ -378,7 +373,6 @@ class JoiningCallDeskController {
   async updateDoj(req, res) {
     const conn = await pool.getConnection();
     try {
-      await ensureTables();
       const { appNo, newDoj, doneBy } = req.body;
       const user = doneBy || (req.user ? req.user.username : 'HR');
       if (!appNo || !newDoj) return errorRes(res, 'appNo and newDoj are required', [], 400);
@@ -426,7 +420,6 @@ class JoiningCallDeskController {
   // ─── GET /api/not-joined-desk/summary ──────────────────────────────────────
   async getNotJoinedSummary(req, res) {
     try {
-      await ensureTables();
 
       const [rows] = await pool.query(`
         SELECT
@@ -440,9 +433,9 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Confirmed'     THEN 1 ELSE 0 END) AS doj_confirmed,
           SUM(CASE WHEN COALESCE(d.doj_confirmation,'Pending confirmation') = 'Not confirmed' THEN 1 ELSE 0 END) AS doj_not_confirmed
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN employees emp ON c.app_no = emp.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (
           LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
           OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
@@ -499,7 +492,6 @@ class JoiningCallDeskController {
   // ─── GET /api/not-joined-desk/by-designation/:designation ─────────────────
   async getNotJoinedByDesignation(req, res) {
     try {
-      await ensureTables();
       const { designation } = req.params;
       const desig = decodeURIComponent(designation || '');
       if (!desig) return errorRes(res, 'designation is required', [], 400);
@@ -515,10 +507,10 @@ class JoiningCallDeskController {
                d.call_status, d.doj_confirmation, d.notes,
                d.follow_up_date, d.last_call_date, d.updated_by, d.updated_at AS desk_updated_at
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN employees emp ON c.app_no = emp.app_no
+        LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (
           LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
           OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
@@ -570,7 +562,6 @@ class JoiningCallDeskController {
   // ─── GET /api/not-joined-desk/all ──────────────────────────────────────────
   async getNotJoinedAll(req, res) {
     try {
-      await ensureTables();
       const [empRows] = await pool.query(`
         SELECT c.*,
                COALESCE(sa.section, '') AS sa_section,
@@ -578,9 +569,9 @@ class JoiningCallDeskController {
                so.actual_doj AS offer_actual_doj,
                so.status AS offer_status
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN section_allocations sa ON c.app_no COLLATE utf8mb4_unicode_ci = sa.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN employees emp ON c.app_no = emp.app_no
+        LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
         WHERE (
           LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
           OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
@@ -635,7 +626,6 @@ class JoiningCallDeskController {
   // ─── GET /api/not-joined-desk/analytics ───────────────────────────────────
   async getNotJoinedAnalytics(req, res) {
     try {
-      await ensureTables();
       const today = new Date().toISOString().slice(0, 10);
       const weekEnd = new Date();
       weekEnd.setDate(weekEnd.getDate() + 7);
@@ -658,9 +648,9 @@ class JoiningCallDeskController {
           SUM(CASE WHEN COALESCE(d.call_status,'Pending') = 'Pending' OR (d.follow_up_date IS NOT NULL AND d.follow_up_date <= ?) THEN 1 ELSE 0 END) AS follow_up_required,
           SUM(CASE WHEN COALESCE(d.call_status,'Pending') IN ('Call not received', 'Wrong number') THEN 1 ELSE 0 END) AS no_answer
         FROM candidates c
-        LEFT JOIN selection_offers so ON c.app_no COLLATE utf8mb4_unicode_ci = so.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN employees emp ON c.app_no COLLATE utf8mb4_unicode_ci = emp.app_no COLLATE utf8mb4_unicode_ci
-        LEFT JOIN joining_call_desk d ON c.app_no COLLATE utf8mb4_unicode_ci = d.app_no COLLATE utf8mb4_unicode_ci
+        LEFT JOIN selection_offers so ON c.app_no = so.app_no
+        LEFT JOIN employees emp ON c.app_no = emp.app_no
+        LEFT JOIN joining_call_desk d ON c.app_no = d.app_no
         WHERE (
           LOWER(TRIM(COALESCE(c.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')
           OR LOWER(TRIM(COALESCE(so.status, ''))) IN ('joined', 'hired', 'offer accepted', 'accepted', 'selected')

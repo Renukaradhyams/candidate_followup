@@ -27,15 +27,17 @@ Options -Indexes +SymLinksIfOwnerMatch
     SecRequestBodyAccess Off
 </IfModule>
 
-# Completely Disable LiteSpeed Web Server Anti-Bot / Anti-DDoS Challenge & Captcha Filters
+# Completely Disable LiteSpeed Web Server Anti-Bot / Anti-DDoS Challenge & Captcha Filters & Prevent Premature Aborts
 <IfModule LiteSpeed>
     CacheLookup off
     SetEnv verifycaptcha off
     SetEnv reaptcha off
     SetEnv no-security off
     SetEnv nolog off
+    SetEnv noabort 1
+    SetEnv nbytes 0
     RewriteEngine On
-    RewriteRule .* - [E=verifycaptcha:off]
+    RewriteRule .* - [E=verifycaptcha:off,E=noabort:1]
 </IfModule>
 
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)

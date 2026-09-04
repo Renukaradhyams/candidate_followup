@@ -7,37 +7,42 @@ const { normalizeDepartment, normalizeDesignation } = require('../utils/normaliz
 class CandidateService {
   async generateCandidateCode() {
     const year = new Date().getFullYear();
-    const [rows] = await pool.query(`SELECT id, app_no FROM candidates`);
-
-    if (!rows || rows.length === 0) {
-      return {
-        appNo: `BSC-${year}-0001`
-      };
-    }
+    const prefix = `BSC-${year}-`;
+    const [rows] = await pool.query(
+      `SELECT app_no FROM candidates WHERE app_no LIKE ? ORDER BY id DESC LIMIT 100`,
+      [`${prefix}%`]
+    );
 
     let maxNum = 0;
-    const existing = new Set();
-
-    for (const r of rows) {
-      if (!r.app_no) continue;
-      existing.add(r.app_no);
-
-      const matches = r.app_no.match(/\d+/g);
-      if (matches && matches.length > 0) {
-        const lastNum = parseInt(matches[matches.length - 1], 10);
-        if (!isNaN(lastNum) && lastNum > maxNum) {
-          maxNum = lastNum;
+    if (rows && rows.length > 0) {
+      for (const r of rows) {
+        if (!r.app_no) continue;
+        const parts = r.app_no.split('-');
+        if (parts.length >= 3) {
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    } else {
+      const [allRecent] = await pool.query(`SELECT app_no FROM candidates ORDER BY id DESC LIMIT 100`);
+      if (allRecent && allRecent.length > 0) {
+        for (const r of allRecent) {
+          if (!r.app_no) continue;
+          const matches = r.app_no.match(/\d+/g);
+          if (matches && matches.length > 0) {
+            const lastNum = parseInt(matches[matches.length - 1], 10);
+            if (!isNaN(lastNum) && lastNum > maxNum) {
+              maxNum = lastNum;
+            }
+          }
         }
       }
     }
 
-    let nextNum = maxNum > 0 ? maxNum + 1 : 1;
-    let candidateCode = `BSC-${year}-${String(nextNum).padStart(4, '0')}`;
-
-    while (existing.has(candidateCode)) {
-      nextNum++;
-      candidateCode = `BSC-${year}-${String(nextNum).padStart(4, '0')}`;
-    }
+    const nextNum = maxNum > 0 ? maxNum + 1 : 1;
+    const candidateCode = `${prefix}${String(nextNum).padStart(4, '0')}`;
 
     return {
       appNo: candidateCode
@@ -50,47 +55,6 @@ class CandidateService {
       minSalary, maxSalary, minExp, maxExp,
       fromDate, toDate, q, page = 1, limit = 50000, sortDir = 'desc' 
     } = filters;
-
-    // Auto-synchronize candidate status to 'Joined' if offer status is 'Joined' and candidate not in store joined status
-    try {
-      await pool.query(`
-        UPDATE candidates c
-        JOIN selection_offers so ON c.app_no = so.app_no
-        SET c.status = 'Joined'
-        WHERE LOWER(TRIM(so.status)) = 'joined' 
-          AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
-          AND LOWER(TRIM(c.status)) NOT LIKE '%joined store%'
-      `);
-      await pool.query(`
-        UPDATE selection_offers so
-        JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
-        SET so.status = c.status
-        WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
-          AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
-      `);
-    } catch (e) {}
-
-    try {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS employees (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          employee_id VARCHAR(100) NULL UNIQUE,
-          app_no VARCHAR(50) NULL,
-          name VARCHAR(255) NOT NULL,
-          email VARCHAR(150) NULL,
-          phone VARCHAR(20) NULL,
-          department VARCHAR(150) NULL,
-          designation VARCHAR(150) NULL,
-          section VARCHAR(150) NULL,
-          branch VARCHAR(150) NULL,
-          status VARCHAR(50) DEFAULT 'Joined',
-          joining_date DATE NULL,
-          salary DECIMAL(10,2) NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
-    } catch (e) {}
 
     let query = `
       SELECT c.*, 

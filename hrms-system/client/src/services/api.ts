@@ -84,15 +84,27 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const apiBase = getApiBase();
   const url = endpoint.startsWith('http') ? endpoint : `${apiBase}${endpoint}`;
 
+  // 30-second client-side request timeout controller
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const signal = options.signal || controller.signal;
+
   try {
     const res = await fetch(url, {
       ...options,
-      headers
+      headers,
+      signal
     });
+    clearTimeout(timeoutId);
+
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      const errorMsg = errorData.message || `HTTP ${res.status}`;
-      if (res.status === 403) {
+      let errorMsg = errorData.message || `HTTP ${res.status}`;
+
+      if (res.status === 408) {
+        errorMsg = 'Server request timed out (408 Request Timeout). The operation took too long to respond. Please try again.';
+        console.error(`[408 TIMEOUT ERROR] Request timed out for URL: ${url}`);
+      } else if (res.status === 403) {
         console.error(`[403 FORBIDDEN ERROR] Access denied for URL: ${url}`, {
           url,
           status: res.status,
@@ -102,13 +114,18 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         });
       } else if (res.status === 401 && !endpoint.includes('/auth/login')) {
         console.warn(`[401 UNAUTHORIZED] Token expired or invalid for URL: ${url}`);
-        // Clear invalid or expired session to prevent continuous 401/403 loop on mobile devices
         Auth.clear();
       }
       throw new Error(errorMsg);
     }
     return await res.json();
   } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      const timeoutMsg = 'Request timed out after 30 seconds. Please check your connection and try again.';
+      console.warn(`[API Fetch Timeout: ${endpoint}]`, timeoutMsg);
+      throw new Error(timeoutMsg);
+    }
     console.warn(`[API Fetch Error: ${endpoint}]`, err.message);
     throw err;
   }

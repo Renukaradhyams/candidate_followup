@@ -631,6 +631,81 @@ async function autoInitializeDatabase(pool) {
       logDebug(`[Auto DB Initializer Warning for new modules]:`, e.message);
     }
 
+    // ------------------
+    // Performance Indexes & Table Collation Standardization
+    // ------------------
+    try {
+      // 1. Ensure joining_call_desk and joining_call_history tables exist
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS joining_call_desk (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          app_no VARCHAR(50) NOT NULL UNIQUE,
+          call_status ENUM('Pending','Call done','Call not received','Wrong number','Rescheduled') DEFAULT 'Pending',
+          doj_confirmation ENUM('Pending confirmation','Confirmed','Not confirmed') DEFAULT 'Pending confirmation',
+          notes TEXT,
+          follow_up_date DATE,
+          last_call_date DATE,
+          updated_by VARCHAR(100),
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS joining_call_history (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          app_no VARCHAR(50) NOT NULL,
+          action_type VARCHAR(80),
+          old_value TEXT,
+          new_value TEXT,
+          notes TEXT,
+          done_by VARCHAR(100),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_jch_app_no (app_no)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 2. Align collations across tables to utf8mb4_unicode_ci so string joins on app_no can use indexes
+      const collateTables = ['candidates', 'selection_offers', 'section_allocations', 'joining_call_desk', 'employees'];
+      for (const tbl of collateTables) {
+        try {
+          await connection.query(`ALTER TABLE \`${tbl}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+        } catch (e) {}
+      }
+
+      // 3. Add high-performance indexes on frequently joined/queried columns
+      const indexStatements = [
+        "CREATE INDEX idx_cand_app_no ON candidates (app_no)",
+        "CREATE INDEX idx_cand_status ON candidates (status)",
+        "CREATE INDEX idx_cand_created_at ON candidates (created_at)",
+        "CREATE INDEX idx_cand_phone ON candidates (phone)",
+        "CREATE INDEX idx_cand_desig ON candidates (designation)",
+        "CREATE INDEX idx_cand_dept ON candidates (department)",
+        "CREATE INDEX idx_so_app_no ON selection_offers (app_no)",
+        "CREATE INDEX idx_so_status ON selection_offers (status)",
+        "CREATE INDEX idx_sa_app_no ON section_allocations (app_no)",
+        "CREATE INDEX idx_jcd_app_no ON joining_call_desk (app_no)",
+        "CREATE INDEX idx_emp_app_no ON employees (app_no)",
+        "CREATE INDEX idx_emp_status ON employees (status)",
+        "CREATE INDEX idx_emp_phone ON employees (phone)",
+        "CREATE INDEX idx_ca_app_no ON candidate_activities (app_no)",
+        "CREATE INDEX idx_isch_app_no ON interview_schedules (app_no)",
+        "CREATE INDEX idx_mr_desig ON manpower_requisitions (designation)"
+      ];
+
+      for (const idxSql of indexStatements) {
+        try {
+          await connection.query(idxSql);
+        } catch (e) {
+          // Ignore duplicate index errors silently
+        }
+      }
+
+      logDebug(`[Auto DB Initializer] Performance indexes and table collations applied successfully`);
+    } catch (idxErr) {
+      logDebug(`[Auto DB Indexing Warning]:`, idxErr.message);
+    }
+
     const [finalTables] = await connection.query(`SHOW TABLES`);
     logDebug(`====================================================`);
     logDebug(`  [Auto DB Initializer] DATABASE FULLY INITIALIZED!`);
