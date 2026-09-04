@@ -45,6 +45,7 @@ Options -Indexes +SymLinksIfOwnerMatch
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule .* - [E=noabort:1,E=nbytes:0,E=dontlog:1,E=connection:keep-alive,E=verifycaptcha:off]
 
     # Cleanly return 200 OK for HTTP OPTIONS Preflight CORS requests from mobile browsers
     RewriteCond %{REQUEST_METHOD} OPTIONS

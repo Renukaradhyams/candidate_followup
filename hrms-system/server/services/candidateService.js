@@ -62,7 +62,7 @@ class CandidateService {
              emp.id as employee_id
       FROM candidates c 
       LEFT JOIN selection_offers so ON c.app_no = so.app_no 
-      LEFT JOIN employees emp ON (c.app_no = emp.app_no OR (c.phone IS NOT NULL AND c.phone != '' AND c.phone = emp.phone))
+      LEFT JOIN employees emp ON c.app_no = emp.app_no
       WHERE 1=1
     `;
     const params = [];
@@ -683,25 +683,6 @@ class CandidateService {
   async getKPIs(range, fromDate, toDate) {
     try {
       const todayStr = new Date().toDateString();
-
-      // Auto-synchronize candidate status to Joined for any candidates marked Joined in selection_offers (if not already joined store)
-      try {
-        await pool.query(`
-          UPDATE candidates c
-          JOIN selection_offers so ON c.app_no = so.app_no
-          SET c.status = 'Joined'
-          WHERE LOWER(TRIM(so.status)) = 'joined' 
-            AND LOWER(TRIM(c.status)) NOT IN ('joined', 'successfully joined store', 'joined store')
-            AND LOWER(TRIM(c.status)) NOT LIKE '%joined store%'
-        `);
-        await pool.query(`
-          UPDATE selection_offers so
-          JOIN candidates c ON TRIM(so.app_no) = TRIM(c.app_no)
-          SET so.status = c.status
-          WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
-            AND LOWER(TRIM(so.status)) != LOWER(TRIM(c.status))
-        `);
-      } catch (e) {}
 
       const [candRows] = await pool.query(`
         SELECT c.id, c.app_no, c.gender, c.status, c.created_at, c.updated_at, so.actual_doj, so.status as offer_status
