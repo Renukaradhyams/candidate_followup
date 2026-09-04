@@ -102,6 +102,21 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// ── Performance & Request Diagnostic Logger ───────────────────────────
+app.use('/api', (req, res, next) => {
+  const startTime = Date.now();
+  const reqId = Math.random().toString(36).substring(2, 8);
+  console.log(`[PERF START] [${reqId}] ${req.method} ${req.originalUrl} at ${new Date().toISOString()}`);
+
+  res.on('finish', () => {
+    const elapsed = Date.now() - startTime;
+    const level = elapsed > 2000 ? 'SLOW WARNING' : 'OK';
+    console.log(`[PERF ${level}] [${reqId}] ${req.method} ${req.originalUrl} -> Status ${res.statusCode} in ${elapsed}ms`);
+  });
+
+  next();
+});
+
 // ── Favicon, PWA Manifest & Service Worker Handler ─────────────────────────────
 app.get([
   '/manifest.json',

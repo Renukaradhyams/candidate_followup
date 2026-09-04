@@ -108,42 +108,28 @@ const getCallStatus = async (req, res) => {
 const getInterviews = async (req, res) => {
   try {
     const [candRows] = await db.query(
-      `SELECT app_no, name as candidate_name, designation, status, created_at FROM candidates WHERE status IN ('Interview Scheduled', 'Interviewed') ORDER BY updated_at DESC`
+      `SELECT c.app_no, c.name as candidate_name, c.designation, c.status, c.created_at,
+              he.hr_score_json, he.assigned_score_json, he.is_new_role, he.suggested_designation, he.suggestion_reason,
+              it.token, it.assigned_name, it.assigned_designation, it.status as token_status
+       FROM candidates c
+       LEFT JOIN hr_evaluations he ON c.app_no = he.app_no
+       LEFT JOIN interview_tokens it ON c.app_no = it.app_no
+       WHERE c.status IN ('Interview Scheduled', 'Interviewed')
+       ORDER BY c.updated_at DESC`
     );
 
-    const [evalRows] = await db.query(`SELECT * FROM hr_evaluations`);
-    const scoreMap = {};
-    evalRows.forEach((r) => {
-      scoreMap[r.app_no] = {
-        hrScore: r.hr_score_json ? JSON.parse(r.hr_score_json) : null,
-        assignedScore: r.assigned_score_json ? JSON.parse(r.assigned_score_json) : null,
-        isNewRole: !!r.is_new_role,
-        suggestedDesig: r.suggested_designation || null,
-        suggestionReason: r.suggestion_reason || null
-      };
-    });
-
-    const [tokenRows] = await db.query(`SELECT * FROM interview_tokens`);
-    const tokenMap = {};
-    tokenRows.forEach((r) => {
-      tokenMap[r.app_no] = {
-        token: r.token,
-        assignedName: r.assigned_name,
-        assignedDesig: r.assigned_designation,
-        tokenStatus: r.status
-      };
-    });
-
     const interviews = candRows.map((r) => {
-      const sc = scoreMap[r.app_no] || {};
-      const tk = tokenMap[r.app_no] || {};
+      let hrScore = null;
+      let assignedScore = null;
+      try { if (r.hr_score_json) hrScore = JSON.parse(r.hr_score_json); } catch(e) {}
+      try { if (r.assigned_score_json) assignedScore = JSON.parse(r.assigned_score_json); } catch(e) {}
+
       const colors = ['navy', 'gold', 'green', 'red', 'purple', 'teal'];
-      const colorIndex = (r.candidate_name.charCodeAt(0) + (r.candidate_name.charCodeAt(1) || 0)) % colors.length;
-      const initials = r.candidate_name.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
+      const nameStr = (r.candidate_name || 'Candidate').trim();
+      const colorIndex = (nameStr.charCodeAt(0) + (nameStr.charCodeAt(1) || 0)) % colors.length;
+      const initials = nameStr.split(' ').slice(0, 2).map((w) => w[0] || '').join('').toUpperCase();
 
       const fmt = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
-
-      const createdDate = new Date(r.created_at || Date.now());
 
       return {
         appNo: r.app_no,
@@ -158,17 +144,17 @@ const getInterviews = async (req, res) => {
         interviewDate: fmt(r.created_at),
         interviewRemarks: '',
         status: r.status,
-        hrScore: sc.hrScore || null,
-        assignedScore: sc.assignedScore || null,
-        isNewRole: sc.isNewRole || false,
-        suggestedDesig: sc.suggestedDesig || null,
-        suggestionReason: sc.suggestionReason || null,
-        assignedName: tk.assignedName || '',
-        assignedDesig: tk.assignedDesig || '',
-        tokenStatus: tk.tokenStatus || '',
-        token: tk.token || '',
+        hrScore,
+        assignedScore,
+        isNewRole: !!r.is_new_role,
+        suggestedDesig: r.suggested_designation || null,
+        suggestionReason: r.suggestion_reason || null,
+        assignedName: r.assigned_name || '',
+        assignedDesig: r.assigned_designation || '',
+        tokenStatus: r.token_status || '',
+        token: r.token || '',
         createdAt: r.created_at || null,
-        rawDate: isNaN(createdDate.getTime()) ? Date.now() : createdDate.getTime()
+        rawDate: r.created_at ? new Date(r.created_at).getTime() : Date.now()
       };
     });
 
