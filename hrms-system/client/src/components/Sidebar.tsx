@@ -35,12 +35,12 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
   const role = session?.role || 'HR';
 
   const roleNavMap: Record<string, string[]> = {
-    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
-    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'settings', 'broadcast'],
-    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast'],
+    'Super Admin': ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan', 'exit', 'form', 'settings', 'broadcast'],
+    'Admin':       ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan', 'exit', 'form', 'settings', 'broadcast'],
+    'HR':          ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan', 'exit', 'form', 'broadcast'],
     'Recruiter':   ['dashboard', 'candidates', 'interview', 'form', 'broadcast'],
     'Interviewer': ['interview', 'candidates'],
-    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'broadcast'],
+    'Manager':     ['dashboard', 'candidates', 'interview', 'offer', 'openings', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan', 'broadcast'],
     'Employee':    ['dashboard', 'onboarding'],
     'Guest':       ['form']
   };
@@ -56,7 +56,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
       if (settingsObj && Object.keys(settingsObj).length > 0) {
         const allKeys = [
           'dashboard', 'candidates', 'interview', 'offer', 'openings', 
-          'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 
+          'onboarding', 'employees', 'joined_store', 'employee_master', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan',
           'exit', 'form', 'broadcast', 'settings'
         ];
         
@@ -102,6 +102,7 @@ export default function Sidebar({ session, isOpen, onClose }: SidebarProps) {
     { key: 'workforce_analytics', href: '/workforce-analytics', label: 'Employee Workforce Analytics', icon: PieChart, section: 'Talent Management' },
     { key: 'dept_hiring', href: '/department-hiring', label: 'Department Hiring Status', icon: Briefcase, section: 'Talent Management' },
     { key: 'section_allocation', href: '/section-allocation', label: 'Section Allocation', icon: UserCheck, section: 'Talent Management' },
+    { key: 'batch_plan', href: '/batch-plan', label: 'BSC Batch Plan', icon: Users, section: 'Talent Management' },
     { key: 'exit', href: '/employee-exit', label: 'Exit & FnF Desk', icon: DoorOpen, section: 'Talent Management' },
     { key: 'form', href: '/candidate-entry', label: 'Applicant Registration', icon: ClipboardList, section: 'Public Portal', target: '_blank' },
     { key: 'broadcast', href: '/broadcast-center', label: 'Broadcast Center', icon: Megaphone, section: 'Administration' },

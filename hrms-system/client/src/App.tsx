@@ -24,6 +24,7 @@ const JoiningCallDesk = lazy(() => import('./pages/JoiningCallDesk'));
 const NotJoinedDesk = lazy(() => import('./pages/NotJoinedDesk'));
 const WorkforceAnalytics = lazy(() => import('./pages/WorkforceAnalytics'));
 const DOJPlanning = lazy(() => import('./pages/DOJPlanning'));
+const BatchPlan = lazy(() => import('./pages/BatchPlan'));
 import QuickActionCenter from './components/ui/QuickActionCenter';
 import PWAController from './components/PWAController';
 
@@ -96,6 +97,8 @@ export default function App() {
           <Route path="/department-hiring.html" element={<Navigate to="/department-hiring" replace />} />
           <Route path="/section-allocation" element={<SectionAllocation />} />
           <Route path="/section-allocation.html" element={<Navigate to="/section-allocation" replace />} />
+          <Route path="/batch-plan" element={<BatchPlan />} />
+          <Route path="/batch-plan.html" element={<Navigate to="/batch-plan" replace />} />
           <Route path="/employee-exit" element={<EmployeeExit />} />
           <Route path="/employee-exit.html" element={<Navigate to="/employee-exit" replace />} />
           <Route path="/joining-call-desk" element={<JoiningCallDesk />} />

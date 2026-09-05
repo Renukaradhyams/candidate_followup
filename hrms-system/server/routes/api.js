@@ -15,6 +15,7 @@ const deptHiringController = require('../controllers/deptHiringController');
 const joiningCallDeskController = require('../controllers/joiningCallDeskController');
 const workforceAnalyticsController = require('../controllers/workforceAnalyticsController');
 const dojPlanningController = require('../controllers/dojPlanningController');
+const batchPlanController = require('../controllers/batchPlanController');
 
 // ── Auth Routes ──────────────────────────────────────────────
 router.post('/auth/login', authController.login);
@@ -167,6 +168,18 @@ router.get('/legacy', async (req, res) => {
   }
   return res.json({ status: 'BSC HRMS API v5 Online' });
 });
+
+// ── BSC Batch Plan Routes ──────────────────────────────────────
+router.get('/batch-plan/data', batchPlanController.getBatchPlanData);
+router.post('/batch-plan/batches', authenticate, batchPlanController.createBatch);
+router.put('/batch-plan/batches/:id', authenticate, batchPlanController.updateBatch);
+router.post('/batch-plan/assign-batch-leader', authenticate, batchPlanController.assignBatchLeader);
+router.post('/batch-plan/groups', authenticate, batchPlanController.createGroup);
+router.put('/batch-plan/groups/:id', authenticate, batchPlanController.updateGroup);
+router.post('/batch-plan/assign-group-leader', authenticate, batchPlanController.assignGroupLeader);
+router.post('/batch-plan/add-member', authenticate, batchPlanController.addMemberToGroup);
+router.post('/batch-plan/move-member', authenticate, batchPlanController.moveMemberGroup);
+router.post('/batch-plan/remove-member', authenticate, batchPlanController.removeMemberFromGroup);
 
 router.post('/legacy', async (req, res) => {
   const { action } = req.body;

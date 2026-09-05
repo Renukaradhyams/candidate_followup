@@ -433,6 +433,18 @@ export const API = {
     return apiFetch(`/doj-planning${query ? '?' + query : ''}`);
   },
 
+  // BSC Batch Plan Service
+  async getBatchPlanData() { return apiFetch('/batch-plan/data'); },
+  async createBatch(payload: any) { return apiFetch('/batch-plan/batches', { method: 'POST', body: JSON.stringify(payload) }); },
+  async updateBatch(id: number | string, payload: any) { return apiFetch(`/batch-plan/batches/${id}`, { method: 'PUT', body: JSON.stringify(payload) }); },
+  async assignBatchLeader(payload: any) { return apiFetch('/batch-plan/assign-batch-leader', { method: 'POST', body: JSON.stringify(payload) }); },
+  async createGroup(payload: any) { return apiFetch('/batch-plan/groups', { method: 'POST', body: JSON.stringify(payload) }); },
+  async updateGroup(id: number | string, payload: any) { return apiFetch(`/batch-plan/groups/${id}`, { method: 'PUT', body: JSON.stringify(payload) }); },
+  async assignGroupLeader(payload: any) { return apiFetch('/batch-plan/assign-group-leader', { method: 'POST', body: JSON.stringify(payload) }); },
+  async addMemberToGroup(payload: any) { return apiFetch('/batch-plan/add-member', { method: 'POST', body: JSON.stringify(payload) }); },
+  async moveMemberGroup(payload: any) { return apiFetch('/batch-plan/move-member', { method: 'POST', body: JSON.stringify(payload) }); },
+  async removeMemberFromGroup(payload: any) { return apiFetch('/batch-plan/remove-member', { method: 'POST', body: JSON.stringify(payload) }); },
+
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {
     if (!url) return null;

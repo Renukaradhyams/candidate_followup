@@ -632,6 +632,134 @@ async function autoInitializeDatabase(pool) {
     }
 
     // ------------------
+    // BSC Batch Plan Tables Initialization
+    // ------------------
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS batch_plans (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          batch_code VARCHAR(50) NOT NULL UNIQUE,
+          name VARCHAR(150) NOT NULL,
+          type VARCHAR(50) DEFAULT 'Regular',
+          description TEXT,
+          capacity INT DEFAULT 80,
+          batch_leader_app_no VARCHAR(50) NULL,
+          status VARCHAR(50) DEFAULT 'Active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS batch_groups (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          group_code VARCHAR(50) NOT NULL,
+          batch_id INT NOT NULL,
+          name VARCHAR(150) NOT NULL,
+          group_leader_app_no VARCHAR(50) NULL,
+          max_members INT DEFAULT 9,
+          description TEXT,
+          status VARCHAR(50) DEFAULT 'Active',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_bg_batch (batch_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS batch_group_members (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          candidate_app_no VARCHAR(50) NOT NULL UNIQUE,
+          batch_id INT NOT NULL,
+          group_id INT NULL,
+          assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          assigned_by VARCHAR(150),
+          INDEX idx_bgm_batch (batch_id),
+          INDEX idx_bgm_group (group_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS batch_activity_logs (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          action_type VARCHAR(100) NOT NULL,
+          description TEXT NOT NULL,
+          by_user VARCHAR(150) DEFAULT 'System',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
+      // Seed Initial Batches if batch_plans is empty
+      const [bpRows] = await connection.query(`SELECT COUNT(*) as cnt FROM batch_plans`);
+      if (bpRows[0].cnt === 0) {
+        const initialBatches = [
+          ['B-STAR', 'B*', 'Senior', 'BSC Senior Management & Store Operations Core Batch', 80, 'Active'],
+          ['B-ALPHA', 'B-Alpha', 'Regular', 'BSC Showroom Alpha Batch (8 Groups)', 80, 'Active'],
+          ['B-BETA', 'B-Beta', 'Regular', 'BSC Showroom Beta Batch (8 Groups)', 80, 'Active']
+        ];
+
+        for (const [code, name, type, desc, cap, stat] of initialBatches) {
+          await connection.query(
+            `INSERT INTO batch_plans (batch_code, name, type, description, capacity, status) VALUES (?, ?, ?, ?, ?, ?)`,
+            [code, name, type, desc, cap, stat]
+          );
+        }
+
+        // Get Batch IDs for Alpha & Beta
+        const [alphaBatch] = await connection.query(`SELECT id FROM batch_plans WHERE batch_code = 'B-ALPHA'`);
+        const [betaBatch] = await connection.query(`SELECT id FROM batch_plans WHERE batch_code = 'B-BETA'`);
+
+        if (alphaBatch.length > 0) {
+          const alphaId = alphaBatch[0].id;
+          for (let i = 1; i <= 8; i++) {
+            const gNum = String(i).padStart(2, '0');
+            await connection.query(
+              `INSERT INTO batch_groups (group_code, batch_id, name, max_members, status) VALUES (?, ?, ?, ?, ?)`,
+              [`ALPHA-G${gNum}`, alphaId, `Group ${gNum}`, 9, 'Active']
+            );
+          }
+        }
+
+        if (betaBatch.length > 0) {
+          const betaId = betaBatch[0].id;
+          for (let i = 1; i <= 8; i++) {
+            const gNum = String(i).padStart(2, '0');
+            await connection.query(
+              `INSERT INTO batch_groups (group_code, batch_id, name, max_members, status) VALUES (?, ?, ?, ?, ?)`,
+              [`BETA-G${gNum}`, betaId, `Group ${gNum}`, 9, 'Active']
+            );
+          }
+        }
+
+        await connection.query(
+          `INSERT INTO batch_activity_logs (action_type, description, by_user) VALUES (?, ?, ?)`,
+          ['Initial Seed', 'Initial B*, B-Alpha, B-Beta batches and 16 groups initialized in BSC Batch Plan system', 'System Admin']
+        );
+
+        logDebug(`[Auto DB Initializer] Seeded BSC Batch Plan initial batches (B*, B-Alpha, B-Beta) and 16 groups`);
+      }
+
+      // Add default page visibility for batch_plan
+      const bpVisibility = [
+        ['HR_batch-plan', 'HR', 'batch_plan', true],
+        ['Manager_batch-plan', 'Manager', 'batch_plan', true],
+        ['Admin_batch-plan', 'Admin', 'batch_plan', true]
+      ];
+      for (const [key, role, page, allowed] of bpVisibility) {
+        await connection.query(
+          `INSERT INTO page_visibility (role_page_key, role, page_key, allowed)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE allowed = allowed`,
+          [key, role, page, allowed ? 1 : 0]
+        );
+      }
+
+      logDebug(`[Auto DB Initializer] Verified BSC Batch Plan database tables`);
+    } catch (e) {
+      logDebug(`[Auto DB Initializer Warning for Batch Plan]:`, e.message);
+    }
+
+    // ------------------
     // Performance Indexes & Table Collation Standardization
     // ------------------
     try {
