@@ -173,11 +173,14 @@ router.get('/legacy', async (req, res) => {
 router.get('/batch-plan/data', batchPlanController.getBatchPlanData);
 router.post('/batch-plan/batches', authenticate, batchPlanController.createBatch);
 router.put('/batch-plan/batches/:id', authenticate, batchPlanController.updateBatch);
+router.delete('/batch-plan/batches/:id', authenticate, batchPlanController.deleteBatch);
 router.post('/batch-plan/assign-batch-leader', authenticate, batchPlanController.assignBatchLeader);
 router.post('/batch-plan/groups', authenticate, batchPlanController.createGroup);
 router.put('/batch-plan/groups/:id', authenticate, batchPlanController.updateGroup);
+router.delete('/batch-plan/groups/:id', authenticate, batchPlanController.deleteGroup);
 router.post('/batch-plan/assign-group-leader', authenticate, batchPlanController.assignGroupLeader);
 router.post('/batch-plan/add-member', authenticate, batchPlanController.addMemberToGroup);
+router.post('/batch-plan/bulk-add-members', authenticate, batchPlanController.bulkAddMembers);
 router.post('/batch-plan/move-member', authenticate, batchPlanController.moveMemberGroup);
 router.post('/batch-plan/remove-member', authenticate, batchPlanController.removeMemberFromGroup);
 

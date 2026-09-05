@@ -31,17 +31,23 @@ class BatchPlanController {
         groupMembers = [];
       }
 
-      // 4. Fetch Candidates/Employees (all joined or available employees)
+      // 4. Fetch Candidates/Employees ONLY FROM JOINED STORE DIRECTORY
       let candidates = [];
       try {
         const [rows] = await pool.query(`
           SELECT c.id, c.app_no, c.name, c.phone, c.email, c.department, c.designation, 
-                 c.photo_url, c.status, c.created_at,
+                 c.photo_url, c.status, c.created_at, c.offered_doj,
                  COALESCE(sa.section, '') as section,
-                 so.status as offer_status
+                 so.status as offer_status,
+                 so.actual_doj
           FROM candidates c
           LEFT JOIN selection_offers so ON c.app_no = so.app_no
           LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
+          WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store', 'joined', 'hired')
+             OR LOWER(TRIM(c.status)) LIKE '%joined store%'
+             OR LOWER(TRIM(so.status)) IN ('successfully joined store', 'joined store', 'joined')
+             OR LOWER(TRIM(so.status)) LIKE '%joined store%'
+          GROUP BY c.app_no
           ORDER BY LOWER(c.name) ASC
         `);
         candidates = rows || [];
@@ -61,15 +67,12 @@ class BatchPlanController {
         activities = [];
       }
 
-      // Process Joined Store status tag for candidates
+      // Format candidates with Joined Store labels
       const candidateList = candidates.map(c => {
-        const st = (c.status || '').toLowerCase().trim();
-        const ost = (c.offer_status || '').toLowerCase().trim();
-        const isJoinedStore = st.includes('joined store') || ost.includes('joined store') || st === 'joined' || st === 'hired';
         return {
           ...c,
-          isJoinedStore,
-          storeStatusLabel: isJoinedStore ? 'Joined Store' : (c.status || 'Active')
+          isJoinedStore: true,
+          storeStatusLabel: 'Joined Store'
         };
       });
 
@@ -143,6 +146,39 @@ class BatchPlanController {
       return res.json({ success: true, message: 'Batch updated successfully' });
     } catch (err) {
       console.error('[updateBatch Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // DELETE /api/batch-plan/batches/:id (Deactivate or delete batch safely)
+  async deleteBatch(req, res) {
+    try {
+      const batchId = req.params.id;
+      const byUser = req.user?.fullName || req.user?.username || 'Admin';
+
+      // Check if batch has members or groups
+      const [gRows] = await pool.query(`SELECT COUNT(*) as cnt FROM batch_groups WHERE batch_id = ?`, [batchId]);
+      const [mRows] = await pool.query(`SELECT COUNT(*) as cnt FROM batch_group_members WHERE batch_id = ?`, [batchId]);
+
+      if (gRows[0].cnt > 0 || mRows[0].cnt > 0) {
+        // Deactivate batch instead of hard deletion to protect group assignments
+        await pool.query(`UPDATE batch_plans SET status = 'Inactive' WHERE id = ?`, [batchId]);
+        await pool.query(`
+          INSERT INTO batch_activity_logs (action_type, description, by_user)
+          VALUES (?, ?, ?)
+        `, ['Deactivate Batch', `Batch ID ${batchId} deactivated`, byUser]);
+        return res.json({ success: true, message: 'Batch deactivated successfully' });
+      }
+
+      await pool.query(`DELETE FROM batch_plans WHERE id = ?`, [batchId]);
+      await pool.query(`
+        INSERT INTO batch_activity_logs (action_type, description, by_user)
+        VALUES (?, ?, ?)
+      `, ['Delete Batch', `Batch ID ${batchId} deleted`, byUser]);
+
+      return res.json({ success: true, message: 'Batch deleted successfully' });
+    } catch (err) {
+      console.error('[deleteBatch Error]', err);
       return res.status(500).json({ success: false, error: err.message });
     }
   }
@@ -235,6 +271,28 @@ class BatchPlanController {
     }
   }
 
+  // DELETE /api/batch-plan/groups/:id
+  async deleteGroup(req, res) {
+    try {
+      const groupId = req.params.id;
+      const byUser = req.user?.fullName || req.user?.username || 'Admin';
+
+      // Clear member assignments for this group
+      await pool.query(`DELETE FROM batch_group_members WHERE group_id = ?`, [groupId]);
+      await pool.query(`DELETE FROM batch_groups WHERE id = ?`, [groupId]);
+
+      await pool.query(`
+        INSERT INTO batch_activity_logs (action_type, description, by_user)
+        VALUES (?, ?, ?)
+      `, ['Delete Group', `Group ID ${groupId} deleted (members unassigned)`, byUser]);
+
+      return res.json({ success: true, message: 'Group deleted successfully' });
+    } catch (err) {
+      console.error('[deleteGroup Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   // POST /api/batch-plan/assign-group-leader
   async assignGroupLeader(req, res) {
     try {
@@ -292,6 +350,40 @@ class BatchPlanController {
       return res.json({ success: true, message: 'Member added to group successfully' });
     } catch (err) {
       console.error('[addMemberToGroup Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // POST /api/batch-plan/bulk-add-members
+  async bulkAddMembers(req, res) {
+    try {
+      const { candidateAppNos, batchId, groupId, groupName } = req.body;
+      if (!Array.isArray(candidateAppNos) || candidateAppNos.length === 0 || !batchId || !groupId) {
+        return res.status(400).json({ success: false, error: 'Candidate App Nos array, Batch ID and Group ID are required' });
+      }
+
+      const byUser = req.user?.fullName || req.user?.username || 'Admin';
+
+      for (const appNo of candidateAppNos) {
+        await pool.query(`
+          INSERT INTO batch_group_members (candidate_app_no, batch_id, group_id, assigned_by)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            batch_id = VALUES(batch_id),
+            group_id = VALUES(group_id),
+            assigned_by = VALUES(assigned_by),
+            assigned_at = CURRENT_TIMESTAMP
+        `, [appNo, batchId, groupId, byUser]);
+      }
+
+      await pool.query(`
+        INSERT INTO batch_activity_logs (action_type, description, by_user)
+        VALUES (?, ?, ?)
+      `, ['Bulk Add Members', `${candidateAppNos.length} employees bulk assigned to ${groupName || 'Group'}`, byUser]);
+
+      return res.json({ success: true, message: `${candidateAppNos.length} employees assigned successfully` });
+    } catch (err) {
+      console.error('[bulkAddMembers Error]', err);
       return res.status(500).json({ success: false, error: err.message });
     }
   }

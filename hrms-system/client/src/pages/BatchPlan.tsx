@@ -34,7 +34,10 @@ import {
   BadgeCheck,
   Store,
   RefreshCw,
-  FolderTree
+  FolderTree,
+  MoreVertical,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface Candidate {
@@ -50,6 +53,8 @@ interface Candidate {
   status: string;
   isJoinedStore?: boolean;
   storeStatusLabel?: string;
+  offered_doj?: string;
+  actual_doj?: string;
 }
 
 interface BatchPlan {
@@ -114,9 +119,16 @@ export default function BatchPlan() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBatch, setFilterBatch] = useState('All');
   const [filterGroup, setFilterGroup] = useState('All');
+  const [filterDept, setFilterDept] = useState('All');
+  const [filterDesig, setFilterDesig] = useState('All');
+  const [filterAssignmentStatus, setFilterAssignmentStatus] = useState<'All' | 'Assigned' | 'Unassigned'>('All');
   const [filterLeaderStatus, setFilterLeaderStatus] = useState('All');
-  const [filterMemberStatus, setFilterMemberStatus] = useState('All');
-  const [joinedStoreOnlyFilter, setJoinedStoreOnlyFilter] = useState(false);
+
+  // Bulk Selection State
+  const [selectedAppNos, setSelectedAppNos] = useState<string[]>([]);
+  const [bulkAssignModalOpen, setBulkAssignModalOpen] = useState(false);
+  const [bulkTargetBatchId, setBulkTargetBatchId] = useState<number | null>(null);
+  const [bulkTargetGroupId, setBulkTargetGroupId] = useState<number | null>(null);
 
   // Modals state
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -125,21 +137,25 @@ export default function BatchPlan() {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<BatchGroup | null>(null);
 
-  const [leaderAssignModal, setLeaderAssignModal] = useState<{
+  // Searchable Employee Selector Modal
+  const [employeeSelectorModal, setEmployeeSelectorModal] = useState<{
     open: boolean;
-    type: 'batch' | 'group';
-    targetId: number | null;
-    currentLeaderAppNo?: string | null;
     title: string;
-  }>({ open: false, type: 'batch', targetId: null, title: '' });
+    type: 'batch_leader' | 'group_leader' | 'add_member';
+    targetBatchId?: number | null;
+    targetGroupId?: number | null;
+    targetGroupName?: string;
+  }>({ open: false, title: '', type: 'add_member' });
 
-  const [addMemberModal, setAddMemberModal] = useState<{
+  // Duplicate Warning Modal
+  const [duplicateWarningModal, setDuplicateWarningModal] = useState<{
     open: boolean;
-    batchId: number | null;
-    groupId: number | null;
-    groupName: string;
-  }>({ open: false, batchId: null, groupId: null, groupName: '' });
+    candidate: Candidate | null;
+    existingBatchName: string;
+    existingGroupName: string;
+  }>({ open: false, candidate: null, existingBatchName: '', existingGroupName: '' });
 
+  // Move Member Modal
   const [moveMemberModal, setMoveMemberModal] = useState<{
     open: boolean;
     candidateAppNo: string;
@@ -149,17 +165,22 @@ export default function BatchPlan() {
     currentBatchId: number;
   }>({ open: false, candidateAppNo: '', memberName: '', currentGroupId: 0, currentGroupName: '', currentBatchId: 0 });
 
+  // Member Profile Modal
   const [memberProfileModal, setMemberProfileModal] = useState<{
     open: boolean;
     candidate: Candidate | null;
   }>({ open: false, candidate: null });
 
+  // Confirmation Modal
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     title: string;
     message: string;
     onConfirm: () => void;
   }>({ open: false, title: '', message: '', onConfirm: () => {} });
+
+  // Dropdown menu state
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Load Data
   const loadData = useCallback(async () => {
@@ -196,6 +217,22 @@ export default function BatchPlan() {
     return map;
   }, [candidates]);
 
+  // Map of candidate_app_no -> { batchName, groupName, batchId, groupId }
+  const memberAssignmentMap = useMemo(() => {
+    const map = new Map<string, { batchId: number; groupId: number; batchName: string; groupName: string }>();
+    groupMembers.forEach(m => {
+      const b = batches.find(x => x.id === m.batch_id);
+      const g = groups.find(x => x.id === m.group_id);
+      map.set(m.candidate_app_no, {
+        batchId: m.batch_id,
+        groupId: m.group_id,
+        batchName: b ? b.name : 'Batch',
+        groupName: g ? g.name : 'Group'
+      });
+    });
+    return map;
+  }, [groupMembers, batches, groups]);
+
   // Assigned Candidate App Nos set
   const assignedAppNoSet = useMemo(() => {
     return new Set(groupMembers.map(m => m.candidate_app_no));
@@ -230,22 +267,46 @@ export default function BatchPlan() {
     return map;
   }, [groups]);
 
+  // Unique Departments & Designations from Joined Store Candidates
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    candidates.forEach(c => {
+      if (c.department) set.add(c.department);
+    });
+    return Array.from(set).sort();
+  }, [candidates]);
+
+  const designations = useMemo(() => {
+    const set = new Set<string>();
+    candidates.forEach(c => {
+      if (c.designation) set.add(c.designation);
+    });
+    return Array.from(set).sort();
+  }, [candidates]);
+
   // Dynamic Dashboard KPIs (Never hardcoded!)
   const totalBatches = useMemo(() => batches.filter(b => b.status === 'Active').length, [batches]);
-  const totalMembers = useMemo(() => candidates.length, [candidates]);
+  const totalJoinedEmployees = useMemo(() => candidates.length, [candidates]);
+  const totalAssignedEmployees = useMemo(() => assignedAppNoSet.size, [assignedAppNoSet]);
+  const unassignedMembersCount = useMemo(() => candidates.filter(c => !assignedAppNoSet.has(c.app_no)).length, [candidates, assignedAppNoSet]);
   const totalBatchLeaders = useMemo(() => batches.filter(b => b.batch_leader_app_no).length, [batches]);
   const totalGroups = useMemo(() => groups.filter(g => g.status === 'Active').length, [groups]);
   const totalGroupLeaders = useMemo(() => groups.filter(g => g.group_leader_app_no).length, [groups]);
-  const unassignedMembersCount = useMemo(() => candidates.filter(c => !assignedAppNoSet.has(c.app_no)).length, [candidates, assignedAppNoSet]);
 
-  // Filtered Candidates for Allocation Modals
-  const unassignedCandidates = useMemo(() => {
+  // Filtered Candidates for Searchable Selector & Unassigned List
+  const filteredCandidatesForSelector = useMemo(() => {
     return candidates.filter(c => {
-      const isUnassigned = !assignedAppNoSet.has(c.app_no);
-      if (!isUnassigned) return false;
+      // Assignment Status Filter
+      if (filterAssignmentStatus === 'Unassigned' && assignedAppNoSet.has(c.app_no)) return false;
+      if (filterAssignmentStatus === 'Assigned' && !assignedAppNoSet.has(c.app_no)) return false;
 
-      if (joinedStoreOnlyFilter && !c.isJoinedStore) return false;
+      // Department Filter
+      if (filterDept !== 'All' && c.department !== filterDept) return false;
 
+      // Designation Filter
+      if (filterDesig !== 'All' && c.designation !== filterDesig) return false;
+
+      // Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matches =
@@ -259,13 +320,13 @@ export default function BatchPlan() {
       }
       return true;
     });
-  }, [candidates, assignedAppNoSet, searchQuery, joinedStoreOnlyFilter]);
+  }, [candidates, assignedAppNoSet, filterAssignmentStatus, filterDept, filterDesig, searchQuery]);
 
   // Health helpers
   const getBatchHealth = (b: BatchPlan) => {
     const bGroups = groups.filter(g => g.batch_id === b.id);
     if (bGroups.length === 0) {
-      return b.batch_leader_app_no ? { status: 'READY', color: 'green', text: 'Ready' } : { status: 'PARTIALLY ASSIGNED', color: 'amber', text: 'Leader Pending' };
+      return b.batch_leader_app_no ? { status: 'READY', color: 'emerald', text: 'Ready' } : { status: 'PARTIALLY ASSIGNED', color: 'amber', text: 'Leader Pending' };
     }
     const missingLeaders = bGroups.filter(g => !g.group_leader_app_no).length;
     if (!b.batch_leader_app_no || missingLeaders > 0) {
@@ -279,14 +340,17 @@ export default function BatchPlan() {
     const hasLeader = !!g.group_leader_app_no;
     const isFull = count >= g.max_members;
 
+    if (count === 0 && !hasLeader) {
+      return { label: 'GROUP EMPTY', color: 'rose', icon: AlertTriangle };
+    }
     if (!hasLeader) {
-      return { label: 'Leader Not Assigned', color: 'rose', icon: AlertTriangle };
+      return { label: 'Leader Not Assigned', color: 'amber', icon: AlertTriangle };
     }
     if (isFull) {
-      return { label: 'Complete', color: 'emerald', icon: CheckCircle2 };
+      return { label: '✓ GROUP FULL', color: 'emerald', icon: CheckCircle2 };
     }
     const slots = g.max_members - count;
-    return { label: `${slots} Slot${slots > 1 ? 's' : ''} Available`, color: 'amber', icon: AlertTriangle };
+    return { label: `${slots} SLOT${slots > 1 ? 'S' : ''} AVAILABLE`, color: 'sky', icon: AlertTriangle };
   };
 
   // Helper formatting
@@ -329,6 +393,18 @@ export default function BatchPlan() {
     }
   };
 
+  const handleDeleteBatch = async (batchId: number, batchName: string) => {
+    try {
+      const res = await API.deleteBatch(batchId);
+      if (res && res.success !== false) {
+        showToast(res.message || `Batch "${batchName}" processed`, 'success');
+        loadData();
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to delete/deactivate batch', 'error');
+    }
+  };
+
   const handleSaveGroup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedBatchId && !editingGroup) {
@@ -363,48 +439,115 @@ export default function BatchPlan() {
     }
   };
 
-  const handleConfirmLeaderAssign = async (candAppNo: string | null) => {
-    const cand = candAppNo ? candidateMap.get(candAppNo) : null;
-    const leaderName = cand ? cand.name : 'Unassigned';
-
+  const handleDeleteGroup = async (groupId: number, groupName: string) => {
     try {
-      if (leaderAssignModal.type === 'batch' && leaderAssignModal.targetId) {
-        await API.assignBatchLeader({
-          batchId: leaderAssignModal.targetId,
-          batchLeaderAppNo: candAppNo,
-          leaderName
-        });
-        showToast(`Batch Leader updated to ${leaderName}`, 'success');
-      } else if (leaderAssignModal.type === 'group' && leaderAssignModal.targetId) {
-        await API.assignGroupLeader({
-          groupId: leaderAssignModal.targetId,
-          groupLeaderAppNo: candAppNo,
-          leaderName
-        });
-        showToast(`Group Leader updated to ${leaderName}`, 'success');
+      const res = await API.deleteGroup(groupId);
+      if (res && res.success !== false) {
+        showToast(`Group "${groupName}" deleted. Members set to UNASSIGNED`, 'success');
+        loadData();
       }
-      setLeaderAssignModal({ open: false, type: 'batch', targetId: null, title: '' });
-      loadData();
     } catch (err: any) {
-      showToast(err.message || 'Failed to assign leader', 'error');
+      showToast(err.message || 'Failed to delete group', 'error');
     }
   };
 
-  const handleAddMemberSubmit = async (candAppNo: string) => {
-    if (!addMemberModal.batchId || !addMemberModal.groupId) return;
-    const cand = candidateMap.get(candAppNo);
+  // Selection Modal Handler for Batch Leader, Group Leader, or Group Member
+  const handleSelectEmployeeForRole = async (cand: Candidate) => {
+    const { type, targetBatchId, targetGroupId, targetGroupName } = employeeSelectorModal;
+
+    // Check Duplicate Assignment check for group members
+    if (type === 'add_member') {
+      const existingAssign = memberAssignmentMap.get(cand.app_no);
+      if (existingAssign && existingAssign.groupId !== targetGroupId) {
+        setDuplicateWarningModal({
+          open: true,
+          candidate: cand,
+          existingBatchName: existingAssign.batchName,
+          existingGroupName: existingAssign.groupName
+        });
+        return;
+      }
+    }
+
     try {
-      await API.addMemberToGroup({
-        candidateAppNo: candAppNo,
-        batchId: addMemberModal.batchId,
-        groupId: addMemberModal.groupId,
-        memberName: cand ? cand.name : candAppNo,
-        groupName: addMemberModal.groupName
-      });
-      showToast(`${cand ? cand.name : 'Member'} added to ${addMemberModal.groupName}`, 'success');
+      if (type === 'batch_leader' && targetBatchId) {
+        await API.assignBatchLeader({
+          batchId: targetBatchId,
+          batchLeaderAppNo: cand.app_no,
+          leaderName: cand.name
+        });
+        showToast(`${cand.name} assigned as Batch Leader`, 'success');
+      } else if (type === 'group_leader' && targetGroupId) {
+        await API.assignGroupLeader({
+          groupId: targetGroupId,
+          groupLeaderAppNo: cand.app_no,
+          leaderName: cand.name
+        });
+        showToast(`${cand.name} assigned as Group Leader`, 'success');
+      } else if (type === 'add_member' && targetBatchId && targetGroupId) {
+        // Capacity check warning
+        const currentGroup = groups.find(g => g.id === targetGroupId);
+        const currentCount = groupMemberCountMap.get(targetGroupId) || 0;
+        if (currentGroup && currentCount >= currentGroup.max_members) {
+          setConfirmModal({
+            open: true,
+            title: 'Capacity Warning',
+            message: `Group capacity is ${currentGroup.max_members} members. Continue adding ${cand.name} anyway?`,
+            onConfirm: async () => {
+              await API.addMemberToGroup({
+                candidateAppNo: cand.app_no,
+                batchId: targetBatchId,
+                groupId: targetGroupId,
+                memberName: cand.name,
+                groupName: targetGroupName || 'Group'
+              });
+              showToast(`${cand.name} added to ${targetGroupName}`, 'success');
+              setEmployeeSelectorModal({ open: false, title: '', type: 'add_member' });
+              loadData();
+            }
+          });
+          return;
+        }
+
+        await API.addMemberToGroup({
+          candidateAppNo: cand.app_no,
+          batchId: targetBatchId,
+          groupId: targetGroupId,
+          memberName: cand.name,
+          groupName: targetGroupName || 'Group'
+        });
+        showToast(`${cand.name} added to ${targetGroupName}`, 'success');
+      }
+
+      setEmployeeSelectorModal({ open: false, title: '', type: 'add_member' });
       loadData();
     } catch (err: any) {
-      showToast(err.message || 'Failed to add member', 'error');
+      showToast(err.message || 'Failed to update assignment', 'error');
+    }
+  };
+
+  const handleBulkAssignSubmit = async () => {
+    if (selectedAppNos.length === 0 || !bulkTargetBatchId || !bulkTargetGroupId) {
+      showToast('Please select employees, target batch, and target group', 'error');
+      return;
+    }
+
+    const targetGroup = groups.find(g => g.id === bulkTargetGroupId);
+    const targetGroupName = targetGroup ? targetGroup.name : 'Group';
+
+    try {
+      await API.bulkAddMembers({
+        candidateAppNos: selectedAppNos,
+        batchId: bulkTargetBatchId,
+        groupId: bulkTargetGroupId,
+        groupName: targetGroupName
+      });
+      showToast(`Assigned ${selectedAppNos.length} employees to ${targetGroupName} successfully`, 'success');
+      setSelectedAppNos([]);
+      setBulkAssignModalOpen(false);
+      loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Bulk assignment failed', 'error');
     }
   };
 
@@ -509,7 +652,7 @@ export default function BatchPlan() {
         const cand = candidateMap.get(gm.candidate_app_no);
         const parentBatch = batches.find(b => b.id === gm.batch_id)?.name || 'Unknown';
         const parentGroup = groups.find(g => g.id === gm.group_id)?.name || 'Batch Direct';
-        xml += `\n  <Row><Cell><Data ss:Type="String">${gm.candidate_app_no}</Data></Cell><Cell><Data ss:Type="String">${cand?.name || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.phone || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.department || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.designation || '-'}</Data></Cell><Cell><Data ss:Type="String">${parentBatch}</Data></Cell><Cell><Data ss:Type="String">${parentGroup}</Data></Cell><Cell><Data ss:Type="String">${cand?.storeStatusLabel || 'Assigned'}</Data></Cell></Row>`;
+        xml += `\n  <Row><Cell><Data ss:Type="String">${gm.candidate_app_no}</Data></Cell><Cell><Data ss:Type="String">${cand?.name || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.phone || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.department || '-'}</Data></Cell><Cell><Data ss:Type="String">${cand?.designation || '-'}</Data></Cell><Cell><Data ss:Type="String">${parentBatch}</Data></Cell><Cell><Data ss:Type="String">${parentGroup}</Data></Cell><Cell><Data ss:Type="String">${cand?.storeStatusLabel || 'Joined Store'}</Data></Cell></Row>`;
       });
       xml += `\n </Table></Worksheet>`;
 
@@ -517,7 +660,7 @@ export default function BatchPlan() {
       xml += `\n <Worksheet ss:Name="Unassigned Members"><Table>`;
       xml += `\n  <Row><Cell ss:StyleID="Header"><Data ss:Type="String">App No / Emp ID</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Name</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Phone</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Department</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Designation</Data></Cell><Cell ss:StyleID="Header"><Data ss:Type="String">Status</Data></Cell></Row>`;
       candidates.filter(c => !assignedAppNoSet.has(c.app_no)).forEach(c => {
-        xml += `\n  <Row><Cell><Data ss:Type="String">${c.app_no}</Data></Cell><Cell><Data ss:Type="String">${c.name}</Data></Cell><Cell><Data ss:Type="String">${c.phone || '-'}</Data></Cell><Cell><Data ss:Type="String">${c.department || '-'}</Data></Cell><Cell><Data ss:Type="String">${c.designation || '-'}</Data></Cell><Cell><Data ss:Type="String">${c.storeStatusLabel}</Data></Cell></Row>`;
+        xml += `\n  <Row><Cell><Data ss:Type="String">${c.app_no}</Data></Cell><Cell><Data ss:Type="String">${c.name}</Data></Cell><Cell><Data ss:Type="String">${c.phone || '-'}</Data></Cell><Cell><Data ss:Type="String">${c.department || '-'}</Data></Cell><Cell><Data ss:Type="String">${c.designation || '-'}</Data></Cell><Cell><Data ss:Type="String">Joined Store (Unassigned)</Data></Cell></Row>`;
       });
       xml += `\n </Table></Worksheet>`;
 
@@ -591,7 +734,7 @@ export default function BatchPlan() {
                 </div>
               </div>
               <p className="text-xs text-[#555555] font-semibold mt-2 max-w-3xl">
-                Create batches, assign Batch Leaders, create groups, assign Group Leaders, and manage members under each group. Centralized team structure management.
+                Create batches, assign Batch Leaders, create groups, assign Group Leaders, and manage members under each group. Employee source: <strong className="text-[#1E2D4E]">JOINED STORE DIRECTORY ONLY</strong>.
               </p>
             </div>
 
@@ -631,42 +774,88 @@ export default function BatchPlan() {
             <p className="text-sm text-gray-600">Generated on: {new Date().toLocaleDateString()} | Confidential HR Report</p>
           </div>
 
-          {/* TOP DASHBOARD SUMMARY (Dynamic KPI Cards) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-            <div className="card-glass p-4 border-l-4 border-l-[#1E2D4E] bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">TOTAL BATCHES</div>
-              <div className="text-2xl font-black text-[#1E2D4E] mt-1">{totalBatches}</div>
-              <div className="text-[10px] text-gray-500 font-bold mt-0.5">Active Batches</div>
+          {/* TOP DASHBOARD SUMMARY (Dynamic KPI Cards with Click-to-Filter interactivity) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 print:grid-cols-4">
+            <div
+              onClick={() => {
+                setActiveTab('batches');
+                setFilterBatch('All');
+                setSelectedBatchId(null);
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-[#1E2D4E] bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">TOTAL BATCHES</div>
+              <div className="text-xl font-black text-[#1E2D4E] mt-1">{totalBatches}</div>
+              <div className="text-[9.5px] text-gray-400 font-extrabold mt-0.5">Active Batches</div>
             </div>
 
-            <div className="card-glass p-4 border-l-4 border-l-[#C9952A] bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">TOTAL MEMBERS</div>
-              <div className="text-2xl font-black text-[#C9952A] mt-1">{totalMembers}</div>
-              <div className="text-[10px] text-gray-500 font-bold mt-0.5">Total System Members</div>
+            <div
+              onClick={() => {
+                setActiveTab('unassigned');
+                setFilterAssignmentStatus('All');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-[#C9952A] bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">JOINED EMPLOYEES</div>
+              <div className="text-xl font-black text-[#C9952A] mt-1">{totalJoinedEmployees}</div>
+              <div className="text-[9.5px] text-[#C9952A] font-extrabold mt-0.5">Joined Store Directory</div>
             </div>
 
-            <div className="card-glass p-4 border-l-4 border-l-indigo-600 bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">BATCH LEADERS</div>
-              <div className="text-2xl font-black text-indigo-900 mt-1">{totalBatchLeaders}</div>
-              <div className="text-[10px] text-indigo-700 font-bold mt-0.5">{totalBatches - totalBatchLeaders} Unassigned</div>
+            <div
+              onClick={() => {
+                setActiveTab('batches');
+                setFilterAssignmentStatus('Assigned');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-emerald-600 bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">ASSIGNED EMPLOYEES</div>
+              <div className="text-xl font-black text-emerald-800 mt-1">{totalAssignedEmployees}</div>
+              <div className="text-[9.5px] text-emerald-700 font-extrabold mt-0.5">Assigned to Groups</div>
             </div>
 
-            <div className="card-glass p-4 border-l-4 border-l-purple-600 bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">TOTAL GROUPS</div>
-              <div className="text-2xl font-black text-purple-900 mt-1">{totalGroups}</div>
-              <div className="text-[10px] text-purple-700 font-bold mt-0.5">Configured Groups</div>
+            <div
+              onClick={() => {
+                setActiveTab('unassigned');
+                setFilterAssignmentStatus('Unassigned');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-rose-500 bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">UNASSIGNED EMPLOYEES</div>
+              <div className="text-xl font-black text-rose-600 mt-1">{unassignedMembersCount}</div>
+              <div className="text-[9.5px] text-rose-700 font-extrabold mt-0.5">Click to view & assign</div>
             </div>
 
-            <div className="card-glass p-4 border-l-4 border-l-emerald-600 bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">GROUP LEADERS</div>
-              <div className="text-2xl font-black text-emerald-900 mt-1">{totalGroupLeaders}</div>
-              <div className="text-[10px] text-emerald-700 font-bold mt-0.5">{totalGroups - totalGroupLeaders} Unassigned</div>
+            <div
+              onClick={() => {
+                setActiveTab('leadership');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-indigo-600 bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">BATCH LEADERS</div>
+              <div className="text-xl font-black text-indigo-900 mt-1">{totalBatchLeaders}</div>
+              <div className="text-[9.5px] text-indigo-700 font-extrabold mt-0.5">{totalBatches - totalBatchLeaders} Pending</div>
             </div>
 
-            <div className="card-glass p-4 border-l-4 border-l-rose-500 bg-white/90">
-              <div className="text-[10px] font-black text-[#555555] uppercase tracking-wider">UNASSIGNED MEMBERS</div>
-              <div className="text-2xl font-black text-rose-600 mt-1">{unassignedMembersCount}</div>
-              <div className="text-[10px] text-rose-700 font-bold mt-0.5">Need Group Assignment</div>
+            <div
+              onClick={() => {
+                setActiveTab('batches');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-purple-600 bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">GROUPS</div>
+              <div className="text-xl font-black text-purple-900 mt-1">{totalGroups}</div>
+              <div className="text-[9.5px] text-purple-700 font-extrabold mt-0.5">Configured Groups</div>
+            </div>
+
+            <div
+              onClick={() => {
+                setActiveTab('leadership');
+              }}
+              className="card-glass p-3.5 border-l-4 border-l-emerald-600 bg-white cursor-pointer hover:shadow-md transition-all"
+            >
+              <div className="text-[9.5px] font-black text-gray-500 uppercase tracking-wider">GROUP LEADERS</div>
+              <div className="text-xl font-black text-emerald-900 mt-1">{totalGroupLeaders}</div>
+              <div className="text-[9.5px] text-emerald-700 font-extrabold mt-0.5">{totalGroups - totalGroupLeaders} Pending</div>
             </div>
           </div>
 
@@ -713,7 +902,7 @@ export default function BatchPlan() {
                     activeTab === 'unassigned' ? 'bg-rose-600 text-white shadow-xs' : 'bg-white text-[#1E2D4E] hover:bg-[#F9F7F4]'
                   }`}
                 >
-                  <span>Unassigned Pool</span>
+                  <span>Unassigned Joined Pool</span>
                   <span className="px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black">
                     {unassignedMembersCount}
                   </span>
@@ -749,7 +938,7 @@ export default function BatchPlan() {
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search member, leader, ID, phone..."
+                    placeholder="Search joined employee, ID, phone..."
                     className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
                   />
                 </div>
@@ -770,47 +959,44 @@ export default function BatchPlan() {
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Group Filter</label>
+                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Department</label>
                 <select
-                  value={filterGroup}
-                  onChange={e => setFilterGroup(e.target.value)}
+                  value={filterDept}
+                  onChange={e => setFilterDept(e.target.value)}
                   className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
                 >
-                  <option value="All">All Groups</option>
-                  {groups.map(g => (
-                    <option key={g.id} value={g.name}>{g.name}</option>
+                  <option value="All">All Departments</option>
+                  {departments.map(d => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Leadership Status</label>
+                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Designation</label>
                 <select
-                  value={filterLeaderStatus}
-                  onChange={e => setFilterLeaderStatus(e.target.value)}
+                  value={filterDesig}
+                  onChange={e => setFilterDesig(e.target.value)}
                   className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
                 >
-                  <option value="All">All Leadership States</option>
-                  <option value="HasBatchLeader">Has Batch Leader</option>
-                  <option value="MissingBatchLeader">Missing Batch Leader</option>
-                  <option value="HasGroupLeader">Has Group Leader</option>
-                  <option value="MissingGroupLeader">Missing Group Leader</option>
+                  <option value="All">All Designations</option>
+                  {designations.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Directory Filter</label>
-                <button
-                  onClick={() => setJoinedStoreOnlyFilter(!joinedStoreOnlyFilter)}
-                  className={`w-full py-1.5 px-3 rounded-xl border text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
-                    joinedStoreOnlyFilter
-                      ? 'bg-[#C9952A] text-white border-[#C9952A] shadow-xs'
-                      : 'bg-white text-[#1E2D4E] border-[#e2dfd7] hover:bg-[#F9F7F4]'
-                  }`}
+                <label className="text-[10px] font-black text-[#555555] uppercase block mb-1">Assignment Status</label>
+                <select
+                  value={filterAssignmentStatus}
+                  onChange={e => setFilterAssignmentStatus(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-xs font-bold text-[#1E2D4E]"
                 >
-                  <Store className="w-3.5 h-3.5" />
-                  <span>{joinedStoreOnlyFilter ? 'Joined Store Only' : 'All Personnel'}</span>
-                </button>
+                  <option value="All">All Statuses</option>
+                  <option value="Unassigned">Unassigned Only</option>
+                  <option value="Assigned">Assigned Only</option>
+                </select>
               </div>
             </div>
           </div>
@@ -915,17 +1101,16 @@ export default function BatchPlan() {
                               </h3>
                               <button
                                 onClick={() =>
-                                  setLeaderAssignModal({
+                                  setEmployeeSelectorModal({
                                     open: true,
-                                    type: 'batch',
-                                    targetId: b.id,
-                                    currentLeaderAppNo: b.batch_leader_app_no,
-                                    title: `Assign Batch Leader for ${b.name}`
+                                    type: 'batch_leader',
+                                    targetBatchId: b.id,
+                                    title: `SELECT BATCH LEADER FOR ${b.name}`
                                   })
                                 }
-                                className="px-3 py-1.5 rounded-xl bg-[#1E2D4E] text-white hover:bg-[#162340] text-xs font-extrabold"
+                                className="px-3.5 py-1.5 rounded-xl bg-[#1E2D4E] text-white hover:bg-[#162340] text-xs font-extrabold"
                               >
-                                {bLeader ? 'Change Leader' : '+ Assign Batch Leader'}
+                                {bLeader ? 'Change Leader' : '+ Select Batch Leader'}
                               </button>
                             </div>
 
@@ -942,11 +1127,9 @@ export default function BatchPlan() {
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <h4 className="font-black text-[#1E2D4E] text-base">{bLeader.name}</h4>
-                                      {bLeader.isJoinedStore && (
-                                        <span className="px-2 py-0.5 rounded-md bg-[#C9952A]/20 text-[#C9952A] text-[10px] font-black">
-                                          Joined Store
-                                        </span>
-                                      )}
+                                      <span className="px-2 py-0.5 rounded-md bg-[#C9952A]/20 text-[#C9952A] text-[10px] font-black">
+                                        Joined Store
+                                      </span>
                                     </div>
                                     <div className="text-xs text-gray-600 font-bold mt-0.5">
                                       ID: {bLeader.app_no} · {bLeader.designation} ({bLeader.department})
@@ -971,7 +1154,11 @@ export default function BatchPlan() {
                                         open: true,
                                         title: 'Remove Batch Leader?',
                                         message: `Are you sure you want to remove ${bLeader.name} as Batch Leader? This will not delete the employee record.`,
-                                        onConfirm: () => handleConfirmLeaderAssign(null)
+                                        onConfirm: async () => {
+                                          await API.assignBatchLeader({ batchId: b.id, batchLeaderAppNo: null, leaderName: 'Unassigned' });
+                                          showToast('Batch Leader removed', 'success');
+                                          loadData();
+                                        }
                                       })
                                     }
                                     className="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-extrabold text-rose-700 hover:bg-rose-100"
@@ -986,17 +1173,16 @@ export default function BatchPlan() {
                                 <p className="text-xs font-bold text-gray-600">No Batch Leader assigned for {b.name}</p>
                                 <button
                                   onClick={() =>
-                                    setLeaderAssignModal({
+                                    setEmployeeSelectorModal({
                                       open: true,
-                                      type: 'batch',
-                                      targetId: b.id,
-                                      currentLeaderAppNo: null,
-                                      title: `Assign Batch Leader for ${b.name}`
+                                      type: 'batch_leader',
+                                      targetBatchId: b.id,
+                                      title: `SELECT BATCH LEADER FOR ${b.name}`
                                     })
                                   }
                                   className="mt-3 px-4 py-2 rounded-xl bg-[#C9952A] text-white text-xs font-black hover:bg-[#b08020]"
                                 >
-                                  + Assign Batch Leader
+                                  + Select Batch Leader
                                 </button>
                               </div>
                             )}
@@ -1052,7 +1238,7 @@ export default function BatchPlan() {
                                                 {gLeader.name.slice(0, 2).toUpperCase()}
                                               </div>
                                               <div>
-                                                <div className="font-extrabold text-xs text-[#1E2D4E] truncate max-w-[150px]">{gLeader.name}</div>
+                                                <div className="font-extrabold text-xs text-[#1E2D4E] truncate max-w-[140px]">{gLeader.name}</div>
                                                 <div className="text-[10px] text-gray-500 font-medium">ID: {gLeader.app_no}</div>
                                               </div>
                                             </div>
@@ -1061,17 +1247,16 @@ export default function BatchPlan() {
                                               <span className="text-xs font-extrabold text-rose-600">Leader Not Assigned</span>
                                               <button
                                                 onClick={() =>
-                                                  setLeaderAssignModal({
+                                                  setEmployeeSelectorModal({
                                                     open: true,
-                                                    type: 'group',
-                                                    targetId: g.id,
-                                                    currentLeaderAppNo: null,
-                                                    title: `Assign Group Leader for ${g.name}`
+                                                    type: 'group_leader',
+                                                    targetGroupId: g.id,
+                                                    title: `SELECT GROUP LEADER FOR ${g.name}`
                                                   })
                                                 }
                                                 className="text-[10px] font-black text-[#1E2D4E] underline"
                                               >
-                                                + Assign
+                                                + Select
                                               </button>
                                             </div>
                                           )}
@@ -1093,9 +1278,7 @@ export default function BatchPlan() {
                                       {/* Group Action buttons */}
                                       <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-1.5">
                                         <button
-                                          onClick={() => {
-                                            setSelectedGroupId(g.id);
-                                          }}
+                                          onClick={() => setSelectedGroupId(g.id)}
                                           className="flex-1 py-1.5 px-2 rounded-xl bg-[#1E2D4E] text-white hover:bg-[#162340] text-xs font-extrabold text-center"
                                         >
                                           Open Group
@@ -1106,21 +1289,23 @@ export default function BatchPlan() {
                                             setEditingGroup(g);
                                             setGroupModalOpen(true);
                                           }}
-                                          className="py-1.5 px-2.5 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] hover:bg-gray-50 text-xs font-extrabold"
+                                          className="py-1.5 px-2 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] hover:bg-gray-50 text-xs font-extrabold"
                                         >
                                           Edit
                                         </button>
 
                                         <button
                                           onClick={() =>
-                                            setAddMemberModal({
+                                            setEmployeeSelectorModal({
                                               open: true,
-                                              batchId: b.id,
-                                              groupId: g.id,
-                                              groupName: g.name
+                                              type: 'add_member',
+                                              targetBatchId: b.id,
+                                              targetGroupId: g.id,
+                                              targetGroupName: g.name,
+                                              title: `ADD EMPLOYEE TO ${g.name}`
                                             })
                                           }
-                                          className="py-1.5 px-2.5 rounded-xl bg-[#C9952A]/20 text-[#C9952A] hover:bg-[#C9952A] hover:text-white text-xs font-black"
+                                          className="py-1.5 px-2.5 rounded-xl bg-[#C9952A] text-white hover:bg-[#b08020] text-xs font-black"
                                         >
                                           + Add
                                         </button>
@@ -1170,11 +1355,13 @@ export default function BatchPlan() {
 
                                   <button
                                     onClick={() =>
-                                      setAddMemberModal({
+                                      setEmployeeSelectorModal({
                                         open: true,
-                                        batchId: b.id,
-                                        groupId: grp.id,
-                                        groupName: grp.name
+                                        type: 'add_member',
+                                        targetBatchId: b.id,
+                                        targetGroupId: grp.id,
+                                        targetGroupName: grp.name,
+                                        title: `ADD EMPLOYEE TO ${grp.name}`
                                       })
                                     }
                                     className="px-4 py-2 rounded-xl bg-[#C9952A] text-white hover:bg-[#b08020] text-xs font-black flex items-center gap-1.5"
@@ -1198,17 +1385,16 @@ export default function BatchPlan() {
 
                                   <button
                                     onClick={() =>
-                                      setLeaderAssignModal({
+                                      setEmployeeSelectorModal({
                                         open: true,
-                                        type: 'group',
-                                        targetId: grp.id,
-                                        currentLeaderAppNo: grp.group_leader_app_no,
-                                        title: `Assign Group Leader for ${grp.name}`
+                                        type: 'group_leader',
+                                        targetGroupId: grp.id,
+                                        title: `SELECT GROUP LEADER FOR ${grp.name}`
                                       })
                                     }
                                     className="px-3 py-1.5 rounded-xl bg-white border border-[#e2dfd7] text-xs font-extrabold text-[#1E2D4E] hover:bg-gray-50"
                                   >
-                                    {grpLeader ? 'Change Group Leader' : '+ Assign Leader'}
+                                    {grpLeader ? 'Change Group Leader' : '+ Select Leader'}
                                   </button>
                                 </div>
 
@@ -1242,11 +1428,9 @@ export default function BatchPlan() {
                                                   </div>
                                                   <div>
                                                     <div className="font-extrabold text-[#1E2D4E]">{cand.name}</div>
-                                                    {cand.isJoinedStore && (
-                                                      <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9.5px] font-black">
-                                                        Joined Store
-                                                      </span>
-                                                    )}
+                                                    <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9.5px] font-black">
+                                                      Joined Store
+                                                    </span>
                                                   </div>
                                                 </div>
                                               </td>
@@ -1356,7 +1540,7 @@ export default function BatchPlan() {
 
                               {/* Members & Capacity */}
                               <div className="mt-3 flex items-center justify-between text-xs">
-                                <span className="font-extrabold text-gray-600">Total Members</span>
+                                <span className="font-extrabold text-gray-600">Total Joined Members</span>
                                 <span className="font-black text-[#1E2D4E]">{mCount} / {b.capacity}</span>
                               </div>
                               <div className="w-full h-2 bg-gray-100 rounded-full mt-1 overflow-hidden">
@@ -1415,6 +1599,19 @@ export default function BatchPlan() {
                                 className="py-2 px-3 rounded-xl bg-white border border-[#e2dfd7] text-[#1E2D4E] hover:bg-gray-50 text-xs font-extrabold"
                               >
                                 Edit
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEmployeeSelectorModal({
+                                    open: true,
+                                    type: 'batch_leader',
+                                    targetBatchId: b.id,
+                                    title: `SELECT BATCH LEADER FOR ${b.name}`
+                                  });
+                                }}
+                                className="py-2 px-3 rounded-xl bg-[#C9952A]/20 text-[#C9952A] hover:bg-[#C9952A] hover:text-white text-xs font-black"
+                              >
+                                Change Leader
                               </button>
                             </div>
                           </div>
@@ -1497,11 +1694,9 @@ export default function BatchPlan() {
                                                 <span className="font-extrabold text-[#1E2D4E]">{cand?.name || gm.candidate_app_no}</span>
                                                 <span className="text-[10px] text-gray-500 font-bold ml-2">ID: {cand?.app_no} · {cand?.department || 'Staff'}</span>
                                               </div>
-                                              {cand?.isJoinedStore && (
-                                                <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9px] font-black">
-                                                  Joined Store
-                                                </span>
-                                              )}
+                                              <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9px] font-black">
+                                                Joined Store
+                                              </span>
                                             </div>
                                           );
                                         })
@@ -1523,25 +1718,32 @@ export default function BatchPlan() {
             </>
           )}
 
-          {/* TAB 2: UNASSIGNED MEMBERS POOL */}
+          {/* TAB 2: UNASSIGNED JOINED EMPLOYEES POOL (WITH BULK ASSIGNMENT) */}
           {activeTab === 'unassigned' && (
             <div className="card-glass p-6 bg-white space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#e2dfd7] pb-3">
                 <div>
-                  <h2 className="text-lg font-black text-[#1E2D4E]">UNASSIGNED MEMBERS DIRECTORY</h2>
-                  <p className="text-xs text-gray-500 font-medium">Employees & personnel not currently assigned to any group ({unassignedCandidates.length} Members)</p>
+                  <h2 className="text-lg font-black text-[#1E2D4E]">UNASSIGNED JOINED EMPLOYEES</h2>
+                  <p className="text-xs text-gray-500 font-medium">Joined Store Directory employees who currently have no Batch/Group assignment ({unassignedMembersCount} Employees)</p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setJoinedStoreOnlyFilter(!joinedStoreOnlyFilter)}
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-extrabold flex items-center gap-1.5 ${
-                      joinedStoreOnlyFilter ? 'bg-[#C9952A] text-white border-[#C9952A]' : 'bg-white text-[#1E2D4E] border-[#e2dfd7]'
-                    }`}
-                  >
-                    <Store className="w-3.5 h-3.5" />
-                    <span>{joinedStoreOnlyFilter ? 'Showing Joined Store Only' : 'Filter Joined Store'}</span>
-                  </button>
+                  {selectedAppNos.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (batches.length === 0) return;
+                        const firstBatch = batches[0];
+                        const firstGroup = groups.find(g => g.batch_id === firstBatch.id);
+                        setBulkTargetBatchId(firstBatch.id);
+                        setBulkTargetGroupId(firstGroup ? firstGroup.id : null);
+                        setBulkAssignModalOpen(true);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#C9952A] text-white hover:bg-[#b08020] text-xs font-black shadow-md flex items-center gap-1.5"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span>Assign Selected ({selectedAppNos.length})</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1549,73 +1751,105 @@ export default function BatchPlan() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#1E2D4E] text-white uppercase text-[10.5px] tracking-wider">
-                      <th className="p-3 rounded-tl-xl">Photo</th>
-                      <th className="p-3">Member Name</th>
-                      <th className="p-3">App No / Emp ID</th>
+                      <th className="p-3 rounded-tl-xl w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedAppNos.length > 0 && selectedAppNos.length === filteredCandidatesForSelector.filter(c => !assignedAppNoSet.has(c.app_no)).length}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              const unassignedApps = filteredCandidatesForSelector.filter(c => !assignedAppNoSet.has(c.app_no)).map(c => c.app_no);
+                              setSelectedAppNos(unassignedApps);
+                            } else {
+                              setSelectedAppNos([]);
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </th>
+                      <th className="p-3">Photo</th>
+                      <th className="p-3">Employee Details</th>
+                      <th className="p-3">Employee ID / App No</th>
                       <th className="p-3">Phone</th>
                       <th className="p-3">Department</th>
                       <th className="p-3">Designation</th>
-                      <th className="p-3">Store Status</th>
+                      <th className="p-3">Source Directory</th>
                       <th className="p-3 text-right rounded-tr-xl">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e2dfd7]">
-                    {unassignedCandidates.length > 0 ? (
-                      unassignedCandidates.map(c => (
-                        <tr key={c.id} className="hover:bg-[#F9F7F4] transition-colors">
-                          <td className="p-3">
-                            <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black flex items-center justify-center text-xs shadow-xs">
-                              {c.photo_url ? (
-                                <img src={API.fileUrl(c.photo_url) || ''} alt={c.name} className="w-full h-full object-cover rounded-xl" />
-                              ) : (
-                                c.name.slice(0, 2).toUpperCase()
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 font-extrabold text-[#1E2D4E]">
-                            <div>{c.name}</div>
-                            {c.isJoinedStore && (
+                    {candidates.filter(c => !assignedAppNoSet.has(c.app_no)).length > 0 ? (
+                      candidates.filter(c => !assignedAppNoSet.has(c.app_no)).map(c => {
+                        const isSelected = selectedAppNos.includes(c.app_no);
+                        return (
+                          <tr key={c.id} className={`hover:bg-[#F9F7F4] transition-colors ${isSelected ? 'bg-amber-50/60' : ''}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setSelectedAppNos([...selectedAppNos, c.app_no]);
+                                  } else {
+                                    setSelectedAppNos(selectedAppNos.filter(x => x !== c.app_no));
+                                  }
+                                }}
+                                className="rounded border-gray-300"
+                              />
+                            </td>
+                            <td className="p-3">
+                              <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black flex items-center justify-center text-xs shadow-xs">
+                                {c.photo_url ? (
+                                  <img src={API.fileUrl(c.photo_url) || ''} alt={c.name} className="w-full h-full object-cover rounded-xl" />
+                                ) : (
+                                  c.name.slice(0, 2).toUpperCase()
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 font-extrabold text-[#1E2D4E]">
+                              <div>{c.name}</div>
                               <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9.5px] font-black">
                                 Joined Store
                               </span>
-                            )}
-                          </td>
-                          <td className="p-3 font-bold text-gray-700">{c.app_no}</td>
-                          <td className="p-3 font-bold text-gray-600">{c.phone || 'N/A'}</td>
-                          <td className="p-3 font-bold text-gray-800">{c.department || 'General'}</td>
-                          <td className="p-3 font-bold text-gray-600">{c.designation || 'Staff'}</td>
-                          <td className="p-3">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800">
-                              Unassigned
-                            </span>
-                          </td>
-                          <td className="p-3 text-right">
-                            <button
-                              onClick={() => {
-                                if (batches.length === 0) {
-                                  showToast('Please create a batch first', 'error');
-                                  return;
-                                }
-                                const firstBatch = batches[0];
-                                const firstGroup = groups.find(g => g.batch_id === firstBatch.id);
-                                setAddMemberModal({
-                                  open: true,
-                                  batchId: firstBatch.id,
-                                  groupId: firstGroup ? firstGroup.id : null,
-                                  groupName: firstGroup ? firstGroup.name : firstBatch.name
-                                });
-                              }}
-                              className="px-3 py-1.5 rounded-xl bg-[#C9952A] text-white hover:bg-[#b08020] text-xs font-black shadow-xs"
-                            >
-                              + Assign to Group
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                            <td className="p-3 font-bold text-gray-700">{c.app_no}</td>
+                            <td className="p-3 font-bold text-gray-600">{c.phone || 'N/A'}</td>
+                            <td className="p-3 font-bold text-gray-800">{c.department || 'General'}</td>
+                            <td className="p-3 font-bold text-gray-600">{c.designation || 'Staff'}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#C9952A]/10 text-[#C9952A]">
+                                Joined Store Directory
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => {
+                                  if (batches.length === 0) {
+                                    showToast('Please create a batch first', 'error');
+                                    return;
+                                  }
+                                  const firstBatch = batches[0];
+                                  const firstGroup = groups.find(g => g.batch_id === firstBatch.id);
+                                  setEmployeeSelectorModal({
+                                    open: true,
+                                    type: 'add_member',
+                                    targetBatchId: firstBatch.id,
+                                    targetGroupId: firstGroup ? firstGroup.id : null,
+                                    targetGroupName: firstGroup ? firstGroup.name : firstBatch.name,
+                                    title: `ASSIGN ${c.name.toUpperCase()} TO BATCH / GROUP`
+                                  });
+                                }}
+                                className="px-3.5 py-1.5 rounded-xl bg-[#1E2D4E] text-white hover:bg-[#162340] text-xs font-black shadow-xs"
+                              >
+                                [ Assign ]
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={8} className="p-6 text-center text-gray-500 font-bold">
-                          All personnel are currently assigned to groups! No unassigned members found.
+                        <td colSpan={9} className="p-6 text-center text-gray-500 font-bold">
+                          All personnel in Joined Store Directory are assigned! No unassigned employees.
                         </td>
                       </tr>
                     )}
@@ -1716,7 +1950,7 @@ export default function BatchPlan() {
           {activeTab === 'activity' && (
             <div className="card-glass p-6 bg-white space-y-4">
               <div className="border-b border-[#e2dfd7] pb-3">
-                <h2 className="text-lg font-black text-[#1E2D4E]">RECENT SYSTEM CHANGES</h2>
+                <h2 className="text-lg font-black text-[#1E2D4E]">RECENT BATCH PLAN ACTIVITY</h2>
                 <p className="text-xs text-gray-500 font-medium">Real activity log of leadership assignments, group creations, member moves & updates</p>
               </div>
 
@@ -1747,9 +1981,281 @@ export default function BatchPlan() {
         </main>
       </div>
 
-      {/* --- MODALS --- */}
+      {/* --- CENTERED MODALS SYSTEM --- */}
 
-      {/* 1. CREATE / EDIT BATCH MODAL */}
+      {/* 1. MANDATORY SEARCHABLE JOINED STORE EMPLOYEE SELECTOR MODAL */}
+      {employeeSelectorModal.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3 shrink-0">
+              <div>
+                <h3 className="font-black text-lg text-[#1E2D4E] uppercase tracking-wider">{employeeSelectorModal.title}</h3>
+                <p className="text-xs text-[#C9952A] font-extrabold">Source Directory: JOINED STORE DIRECTORY ONLY</p>
+              </div>
+              <button
+                onClick={() => setEmployeeSelectorModal({ open: false, title: '', type: 'add_member' })}
+                className="p-1 text-gray-400 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Bar & Filters Header */}
+            <div className="space-y-2.5 bg-[#F9F7F4] p-3 rounded-xl border border-gray-200 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search joined employee by name, ID, phone, department, designation..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#1E2D4E]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase block mb-0.5">Department</label>
+                  <select
+                    value={filterDept}
+                    onChange={e => setFilterDept(e.target.value)}
+                    className="w-full p-1.5 rounded-lg border border-gray-300 font-bold bg-white text-xs"
+                  >
+                    <option value="All">All Departments</option>
+                    {departments.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase block mb-0.5">Designation</label>
+                  <select
+                    value={filterDesig}
+                    onChange={e => setFilterDesig(e.target.value)}
+                    className="w-full p-1.5 rounded-lg border border-gray-300 font-bold bg-white text-xs"
+                  >
+                    <option value="All">All Designations</option>
+                    {designations.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-500 uppercase block mb-0.5">Assignment Status</label>
+                  <select
+                    value={filterAssignmentStatus}
+                    onChange={e => setFilterAssignmentStatus(e.target.value as any)}
+                    className="w-full p-1.5 rounded-lg border border-gray-300 font-bold bg-white text-xs"
+                  >
+                    <option value="All">All Employees</option>
+                    <option value="Unassigned">Unassigned Only</option>
+                    <option value="Assigned">Assigned Only</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Results List */}
+            <div className="overflow-y-auto flex-1 divide-y divide-gray-100 border rounded-xl">
+              {filteredCandidatesForSelector.length > 0 ? (
+                filteredCandidatesForSelector.map(c => {
+                  const assignInfo = memberAssignmentMap.get(c.app_no);
+                  const isAssigned = !!assignInfo;
+
+                  return (
+                    <div key={c.id} className="p-3.5 flex items-center justify-between hover:bg-[#F9F7F4] text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-[#1E2D4E] text-[#C9952A] font-black flex items-center justify-center text-sm shadow-xs border border-[#C9952A]/30">
+                          {c.photo_url ? (
+                            <img src={API.fileUrl(c.photo_url) || ''} alt={c.name} className="w-full h-full object-cover rounded-2xl" />
+                          ) : (
+                            c.name.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-extrabold text-[#1E2D4E] text-sm">{c.name}</h4>
+                            <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9.5px] font-black">
+                              Joined Store
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-gray-600 font-bold mt-0.5">
+                            ID: {c.app_no} · Phone: {c.phone || 'N/A'}
+                          </div>
+                          <div className="text-[10.5px] text-gray-500 font-medium">
+                            {c.designation || 'Staff'} • {c.department || 'General'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {isAssigned ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                            Assigned to {assignInfo.batchName} / {assignInfo.groupName}
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Available
+                          </span>
+                        )}
+
+                        <button
+                          onClick={() => handleSelectEmployeeForRole(c)}
+                          className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs hover:bg-[#162340] shadow-xs"
+                        >
+                          [ Select / Add ]
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 text-center text-gray-500 font-bold">
+                  No Joined Store Directory employees found matching query.
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t shrink-0 flex items-center justify-between text-xs">
+              <span className="text-gray-500 font-bold">{filteredCandidatesForSelector.length} Eligible Employees Found</span>
+              <button
+                onClick={() => setEmployeeSelectorModal({ open: false, title: '', type: 'add_member' })}
+                className="px-4 py-1.5 rounded-xl bg-gray-100 text-gray-700 font-extrabold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. DUPLICATE ASSIGNMENT WARNING MODAL */}
+      {duplicateWarningModal.open && duplicateWarningModal.candidate && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-amber-300 space-y-4">
+            <div className="flex items-center gap-3 text-amber-600">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="font-black text-lg text-[#1E2D4E]">Employee Already Assigned</h3>
+            </div>
+
+            <p className="text-xs text-gray-700 font-bold">
+              <span className="text-[#1E2D4E] font-black">{duplicateWarningModal.candidate.name}</span> is already assigned to{' '}
+              <span className="text-[#C9952A] font-black">{duplicateWarningModal.existingBatchName} / {duplicateWarningModal.existingGroupName}</span>.
+            </p>
+
+            <div className="pt-4 border-t flex flex-col sm:flex-row items-center justify-end gap-2">
+              <button
+                onClick={() => setDuplicateWarningModal({ open: false, candidate: null, existingBatchName: '', existingGroupName: '' })}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-extrabold text-xs"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  const cand = duplicateWarningModal.candidate;
+                  setDuplicateWarningModal({ open: false, candidate: null, existingBatchName: '', existingGroupName: '' });
+                  if (cand) setMemberProfileModal({ open: true, candidate: cand });
+                }}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-white border border-[#1E2D4E] text-[#1E2D4E] font-extrabold text-xs"
+              >
+                View Assignment
+              </button>
+
+              <button
+                onClick={() => {
+                  const cand = duplicateWarningModal.candidate;
+                  const assign = cand ? memberAssignmentMap.get(cand.app_no) : null;
+                  setDuplicateWarningModal({ open: false, candidate: null, existingBatchName: '', existingGroupName: '' });
+                  if (cand && assign) {
+                    setMoveMemberModal({
+                      open: true,
+                      candidateAppNo: cand.app_no,
+                      memberName: cand.name,
+                      currentGroupId: assign.groupId,
+                      currentGroupName: assign.groupName,
+                      currentBatchId: assign.batchId
+                    });
+                  }
+                }}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs"
+              >
+                [ Move Employee ]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. BULK ASSIGNMENT MODAL */}
+      {bulkAssignModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-black text-lg text-[#1E2D4E]">Bulk Assign ({selectedAppNos.length} Employees)</h3>
+              <button onClick={() => setBulkAssignModalOpen(false)} className="p-1 text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="font-extrabold text-[#1E2D4E] block mb-1">Target Batch *</label>
+                <select
+                  value={bulkTargetBatchId || ''}
+                  onChange={e => {
+                    const bId = Number(e.target.value);
+                    setBulkTargetBatchId(bId);
+                    const firstG = groups.find(g => g.batch_id === bId);
+                    setBulkTargetGroupId(firstG ? firstG.id : null);
+                  }}
+                  className="w-full p-2.5 rounded-xl border border-gray-300 font-bold"
+                >
+                  {batches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.type})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="font-extrabold text-[#1E2D4E] block mb-1">Target Group *</label>
+                <select
+                  value={bulkTargetGroupId || ''}
+                  onChange={e => setBulkTargetGroupId(Number(e.target.value))}
+                  className="w-full p-2.5 rounded-xl border border-gray-300 font-bold"
+                >
+                  {groups
+                    .filter(g => g.batch_id === bulkTargetBatchId)
+                    .map(g => (
+                      <option key={g.id} value={g.id}>{g.name} ({groupMemberCountMap.get(g.id) || 0}/{g.max_members} Members)</option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="pt-4 border-t flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBulkAssignModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-extrabold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkAssignSubmit}
+                  className="px-5 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold hover:bg-[#162340]"
+                >
+                  [ Assign Selected ]
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. CREATE / EDIT BATCH MODAL */}
       {batchModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#e2dfd7]">
@@ -1837,7 +2343,7 @@ export default function BatchPlan() {
               </div>
 
               <div>
-                <label className="font-extrabold text-[#1E2D4E] block mb-1">Assign Batch Leader</label>
+                <label className="font-extrabold text-[#1E2D4E] block mb-1">Batch Leader (Joined Store Directory)</label>
                 <select
                   name="batchLeaderAppNo"
                   defaultValue={editingBatch?.batch_leader_app_no || ''}
@@ -1846,7 +2352,7 @@ export default function BatchPlan() {
                   <option value="">Unassigned</option>
                   {candidates.map(c => (
                     <option key={c.id} value={c.app_no}>
-                      {c.name} ({c.app_no} - {c.designation}) {c.isJoinedStore ? '[Joined Store]' : ''}
+                      {c.name} ({c.app_no} - {c.designation})
                     </option>
                   ))}
                 </select>
@@ -1872,7 +2378,7 @@ export default function BatchPlan() {
         </div>
       )}
 
-      {/* 2. CREATE / EDIT GROUP MODAL */}
+      {/* 5. CREATE / EDIT GROUP MODAL */}
       {groupModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#e2dfd7]">
@@ -1922,7 +2428,7 @@ export default function BatchPlan() {
               </div>
 
               <div>
-                <label className="font-extrabold text-[#1E2D4E] block mb-1">Assign Group Leader</label>
+                <label className="font-extrabold text-[#1E2D4E] block mb-1">Group Leader (Joined Store Directory)</label>
                 <select
                   name="groupLeaderAppNo"
                   defaultValue={editingGroup?.group_leader_app_no || ''}
@@ -1931,7 +2437,7 @@ export default function BatchPlan() {
                   <option value="">Unassigned</option>
                   {candidates.map(c => (
                     <option key={c.id} value={c.app_no}>
-                      {c.name} ({c.app_no} - {c.designation}) {c.isJoinedStore ? '[Joined Store]' : ''}
+                      {c.name} ({c.app_no} - {c.designation})
                     </option>
                   ))}
                 </select>
@@ -1967,162 +2473,12 @@ export default function BatchPlan() {
         </div>
       )}
 
-      {/* 3. LEADER ASSIGNMENT SEARCH MODAL */}
-      {leaderAssignModal.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-black text-lg text-[#1E2D4E]">{leaderAssignModal.title}</h3>
-              <button
-                onClick={() => setLeaderAssignModal({ open: false, type: 'batch', targetId: null, title: '' })}
-                className="p-1 text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search candidate by name, employee ID, phone, department..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 text-xs font-bold"
-                />
-              </div>
-
-              <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 border rounded-xl">
-                {candidates
-                  .filter(c => {
-                    if (!searchQuery.trim()) return true;
-                    const q = searchQuery.toLowerCase();
-                    return (
-                      (c.name || '').toLowerCase().includes(q) ||
-                      (c.app_no || '').toLowerCase().includes(q) ||
-                      (c.phone || '').toLowerCase().includes(q) ||
-                      (c.department || '').toLowerCase().includes(q) ||
-                      (c.designation || '').toLowerCase().includes(q)
-                    );
-                  })
-                  .map(c => (
-                    <div key={c.id} className="p-3 flex items-center justify-between hover:bg-gray-50 text-xs">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black flex items-center justify-center">
-                          {c.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-extrabold text-[#1E2D4E]">{c.name}</div>
-                          <div className="text-[10px] text-gray-500">
-                            ID: {c.app_no} · {c.designation} ({c.department})
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleConfirmLeaderAssign(c.app_no)}
-                        className="px-3 py-1.5 rounded-xl bg-[#C9952A] text-white font-extrabold text-xs hover:bg-[#b08020]"
-                      >
-                        Assign Leader
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. ADD MEMBER MODAL */}
-      {addMemberModal.open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="font-black text-lg text-[#1E2D4E]">Add Member to {addMemberModal.groupName}</h3>
-                <p className="text-xs text-gray-500 font-medium">Select unassigned personnel from Joined Store or main database</p>
-              </div>
-              <button
-                onClick={() => setAddMemberModal({ open: false, batchId: null, groupId: null, groupName: '' })}
-                className="p-1 text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search candidate by name, app no, department..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-300 text-xs font-bold"
-                  />
-                </div>
-
-                <button
-                  onClick={() => setJoinedStoreOnlyFilter(!joinedStoreOnlyFilter)}
-                  className={`px-3 py-2 rounded-xl border text-xs font-extrabold whitespace-nowrap ${
-                    joinedStoreOnlyFilter ? 'bg-[#C9952A] text-white border-[#C9952A]' : 'bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  Joined Store Only
-                </button>
-              </div>
-
-              <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 border rounded-xl">
-                {unassignedCandidates.length > 0 ? (
-                  unassignedCandidates.map(c => (
-                    <div key={c.id} className="p-3.5 flex items-center justify-between hover:bg-[#F9F7F4] text-xs">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black flex items-center justify-center">
-                          {c.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-extrabold text-[#1E2D4E] flex items-center gap-2">
-                            <span>{c.name}</span>
-                            {c.isJoinedStore && (
-                              <span className="px-1.5 py-0.2 rounded bg-[#C9952A]/20 text-[#C9952A] text-[9.5px] font-black">
-                                Joined Store
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-gray-500 font-semibold mt-0.5">
-                            App No: {c.app_no} · {c.designation} ({c.department})
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          handleAddMemberSubmit(c.app_no);
-                          setAddMemberModal({ open: false, batchId: null, groupId: null, groupName: '' });
-                        }}
-                        className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs hover:bg-[#162340]"
-                      >
-                        [ Add to Group ]
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-6 text-center text-gray-500 font-bold">No unassigned personnel found matching filters.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. MOVE MEMBER MODAL */}
+      {/* 6. MOVE MEMBER MODAL */}
       {moveMemberModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-black text-lg text-[#1E2D4E]">Move Member</h3>
+              <h3 className="font-black text-lg text-[#1E2D4E]">MOVE EMPLOYEE</h3>
               <button
                 onClick={() => setMoveMemberModal({ open: false, candidateAppNo: '', memberName: '', currentGroupId: 0, currentGroupName: '', currentBatchId: 0 })}
                 className="p-1 text-gray-400 hover:text-gray-700"
@@ -2134,11 +2490,11 @@ export default function BatchPlan() {
             <div className="space-y-4 text-xs">
               <p className="font-extrabold text-[#1E2D4E]">
                 Move <span className="text-[#C9952A]">{moveMemberModal.memberName}</span> from{' '}
-                <span className="underline">{moveMemberModal.currentGroupName}</span> to another group?
+                <span className="underline">{moveMemberModal.currentGroupName}</span> to destination:
               </p>
 
               <div>
-                <label className="font-extrabold text-gray-700 block mb-1">Target Group *</label>
+                <label className="font-extrabold text-gray-700 block mb-1">Select Destination Batch & Group *</label>
                 <select
                   id="targetGroupSelect"
                   className="w-full p-2.5 rounded-xl border border-gray-300 font-bold"
@@ -2171,7 +2527,7 @@ export default function BatchPlan() {
                   }}
                   className="px-5 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold hover:bg-[#162340]"
                 >
-                  [ Move Member ]
+                  [ Move Employee ]
                 </button>
               </div>
             </div>
@@ -2179,7 +2535,7 @@ export default function BatchPlan() {
         </div>
       )}
 
-      {/* 6. MEMBER PROFILE MODAL */}
+      {/* 7. MEMBER PROFILE MODAL */}
       {memberProfileModal.open && memberProfileModal.candidate && (() => {
         const c = memberProfileModal.candidate;
         const gm = groupMembers.find(m => m.candidate_app_no === c.app_no);
@@ -2192,7 +2548,7 @@ export default function BatchPlan() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="font-black text-lg text-[#1E2D4E]">Member Profile Details</h3>
+                <h3 className="font-black text-lg text-[#1E2D4E]">Employee Assignment Profile</h3>
                 <button onClick={() => setMemberProfileModal({ open: false, candidate: null })} className="p-1 text-gray-400 hover:text-gray-700">
                   <X className="w-5 h-5" />
                 </button>
@@ -2207,6 +2563,7 @@ export default function BatchPlan() {
                     <h4 className="font-black text-[#1E2D4E] text-base">{c.name}</h4>
                     <div className="text-xs font-bold text-gray-600">ID: {c.app_no}</div>
                     <div className="text-xs text-[#C9952A] font-extrabold mt-0.5">{c.designation} ({c.department})</div>
+                    <div className="text-[10px] text-emerald-700 font-extrabold">Source: Joined Store Directory</div>
                   </div>
                 </div>
 
@@ -2237,10 +2594,28 @@ export default function BatchPlan() {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t text-right">
+                <div className="pt-3 border-t flex items-center justify-end gap-2">
+                  {assignedGroup && (
+                    <button
+                      onClick={() => {
+                        setMemberProfileModal({ open: false, candidate: null });
+                        setMoveMemberModal({
+                          open: true,
+                          candidateAppNo: c.app_no,
+                          memberName: c.name,
+                          currentGroupId: assignedGroup.id,
+                          currentGroupName: assignedGroup.name,
+                          currentBatchId: assignedBatch ? assignedBatch.id : 0
+                        });
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold"
+                    >
+                      [ Move Employee ]
+                    </button>
+                  )}
                   <button
                     onClick={() => setMemberProfileModal({ open: false, candidate: null })}
-                    className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold"
+                    className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-extrabold"
                   >
                     Close
                   </button>
@@ -2251,7 +2626,7 @@ export default function BatchPlan() {
         );
       })()}
 
-      {/* 7. CONFIRMATION DIALOG MODAL */}
+      {/* 8. CONFIRMATION DIALOG MODAL */}
       {confirmModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-[#e2dfd7] space-y-4">
@@ -2270,7 +2645,7 @@ export default function BatchPlan() {
                   confirmModal.onConfirm();
                   setConfirmModal({ open: false, title: '', message: '', onConfirm: () => {} });
                 }}
-                className="px-4 py-2 rounded-xl bg-rose-600 text-white font-extrabold text-xs hover:bg-rose-700"
+                className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white font-extrabold text-xs hover:bg-[#162340]"
               >
                 Confirm
               </button>
