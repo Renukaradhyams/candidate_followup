@@ -190,8 +190,12 @@ export default function BatchPlan() {
       if (res && res.success !== false) {
         setBatches(res.batches || []);
         setGroups(res.groups || []);
-        setGroupMembers(res.groupMembers || []);
-        setCandidates(res.candidates || []);
+        const joinedStoreCandidates = (res.candidates || []).filter((c: any) => {
+          const s = (c.status || '').toLowerCase().trim();
+          const os = (c.offer_status || '').toLowerCase().trim();
+          return s.includes('store') || os.includes('store') || s === 'successfully joined store' || s === 'joined store' || c.isJoinedStore;
+        });
+        setCandidates(joinedStoreCandidates);
         setActivities(res.activities || []);
       }
     } catch (err: any) {

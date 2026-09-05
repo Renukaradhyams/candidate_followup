@@ -43,10 +43,12 @@ class BatchPlanController {
           FROM candidates c
           LEFT JOIN selection_offers so ON c.app_no = so.app_no
           LEFT JOIN section_allocations sa ON c.app_no = sa.app_no
-          WHERE LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store', 'joined', 'hired')
+          WHERE (LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store')
              OR LOWER(TRIM(c.status)) LIKE '%joined store%'
-             OR LOWER(TRIM(so.status)) IN ('successfully joined store', 'joined store', 'joined')
+             OR LOWER(TRIM(c.status)) LIKE '%store%')
+             OR (LOWER(TRIM(so.status)) IN ('successfully joined store', 'joined store')
              OR LOWER(TRIM(so.status)) LIKE '%joined store%'
+             OR LOWER(TRIM(so.status)) LIKE '%store%')
           GROUP BY c.app_no
           ORDER BY LOWER(c.name) ASC
         `);
@@ -67,14 +69,20 @@ class BatchPlanController {
         activities = [];
       }
 
-      // Format candidates with Joined Store labels
-      const candidateList = candidates.map(c => {
-        return {
-          ...c,
-          isJoinedStore: true,
-          storeStatusLabel: 'Joined Store'
-        };
-      });
+      // Format candidates with Joined Store labels ONLY for verified store-joined employees
+      const candidateList = candidates
+        .filter(c => {
+          const s = (c.status || '').toLowerCase().trim();
+          const os = (c.offer_status || '').toLowerCase().trim();
+          return s.includes('store') || os.includes('store') || s === 'successfully joined store' || s === 'joined store';
+        })
+        .map(c => {
+          return {
+            ...c,
+            isJoinedStore: true,
+            storeStatusLabel: 'Joined Store'
+          };
+        });
 
       return res.json({
         success: true,
