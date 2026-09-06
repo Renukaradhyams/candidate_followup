@@ -83,6 +83,38 @@ const fmtTs = (ts: string) => {
   } catch { return ts; }
 };
 
+const formatSalaryVal = (val: any): string => {
+  if (!val) return '—';
+  const str = String(val).trim();
+  if (!str || str === '0' || str === 'null' || str === 'undefined' || str === '—' || str.toLowerCase() === 'nan') return '—';
+
+  if (str.includes('|')) {
+    const parts = str.split('|');
+    const base = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
+    const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+    const total = base + inc;
+    if (total === 0) return '—';
+    return inc > 0 
+      ? `₹ ${base.toLocaleString('en-IN')} (+ ₹ ${inc.toLocaleString('en-IN')} Inc)` 
+      : `₹ ${base.toLocaleString('en-IN')}`;
+  }
+
+  if (str.includes('+')) {
+    const parts = str.split('+');
+    const base = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
+    const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+    const total = base + inc;
+    if (total === 0) return '—';
+    return inc > 0 
+      ? `₹ ${base.toLocaleString('en-IN')} (+ ₹ ${inc.toLocaleString('en-IN')} Inc)` 
+      : `₹ ${base.toLocaleString('en-IN')}`;
+  }
+
+  const num = parseFloat(str.replace(/[^0-9.]/g, ''));
+  if (isNaN(num) || num === 0) return '—';
+  return `₹ ${num.toLocaleString('en-IN')}`;
+};
+
 const daysUntil = (doj?: string) => {
   if (!doj) return null;
   const today = new Date();
@@ -527,7 +559,7 @@ export default function NotJoinedDeskPage() {
           'Department': e.department,
           'Section': e.section || 'General',
           'Designation': e.designation,
-          'Offered Salary': e.salary ? `₹ ${Number(e.salary).toLocaleString('en-IN')}` : '—',
+          'Offered Salary': formatSalaryVal(e.salary),
           'Store Joining Status': statusStr,
           'Scheduled DOJ': fmtDate(e.offeredDoj),
           'Call Status': e.callStatus,
@@ -1616,6 +1648,10 @@ export default function NotJoinedDeskPage() {
                 <div>
                   <span className="text-[10px] font-black uppercase text-[#777] block">Email</span>
                   <span className="font-bold text-[#1E2D4E] truncate block">{profileModalEmp.email || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase text-[#777] block">Offered Salary</span>
+                  <span className="font-bold text-[#1E2D4E]">{formatSalaryVal(profileModalEmp.salary)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-black uppercase text-[#777] block">Scheduled DOJ</span>
