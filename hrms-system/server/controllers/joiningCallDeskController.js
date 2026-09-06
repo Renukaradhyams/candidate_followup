@@ -567,7 +567,10 @@ class JoiningCallDeskController {
                COALESCE(sa.section, '') AS sa_section,
                so.est_doj AS offer_est_doj,
                so.actual_doj AS offer_actual_doj,
-               so.status AS offer_status
+               so.status AS offer_status,
+               so.salary AS offer_salary,
+               c.salary AS candidate_salary,
+               c.expected_salary
         FROM candidates c
         LEFT JOIN selection_offers so ON c.app_no = so.app_no
         LEFT JOIN employees emp ON c.app_no = emp.app_no
@@ -596,6 +599,7 @@ class JoiningCallDeskController {
       const employees = empRows.map(r => {
         const d = deskMap[r.app_no] || {};
         const offeredDoj = fmtDate(r.offered_doj || r.offer_est_doj || r.offer_actual_doj);
+        const salaryVal = r.offer_salary || r.candidate_salary || (r.expected_salary ? String(r.expected_salary) : '') || '';
         return {
           appNo:           r.app_no,
           name:            r.name || '',
@@ -607,6 +611,7 @@ class JoiningCallDeskController {
           designation:     normalizeDesignation(r.designation),
           candidateStatus: r.status || r.offer_status || 'Selected',
           offeredDoj,
+          salary:          salaryVal,
           photoUrl:        r.photo_url || '',
           callStatus:      d.call_status || 'Pending',
           dojConfirmation: d.doj_confirmation || 'Pending confirmation',

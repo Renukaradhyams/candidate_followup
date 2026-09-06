@@ -30,6 +30,7 @@ interface Employee {
   designation: string;
   candidateStatus: string;
   offeredDoj: string;
+  salary?: string;
   photoUrl: string;
   callStatus: CallStatus;
   dojConfirmation: DojConf;
@@ -526,6 +527,7 @@ export default function NotJoinedDeskPage() {
           'Department': e.department,
           'Section': e.section || 'General',
           'Designation': e.designation,
+          'Offered Salary': e.salary ? `₹ ${Number(e.salary).toLocaleString('en-IN')}` : '—',
           'Store Joining Status': statusStr,
           'Scheduled DOJ': fmtDate(e.offeredDoj),
           'Call Status': e.callStatus,

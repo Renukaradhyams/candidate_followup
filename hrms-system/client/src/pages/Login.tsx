@@ -38,7 +38,11 @@ export default function LoginPage() {
           token: res.data.token
         });
         showToast('Login successful', 'success');
-        navigate('/dashboard', { replace: true });
+        if (res.data.user.role === 'Batch Leader') {
+          navigate('/batch-attendance', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       } else {
         setErrorMsg(res.message || 'Incorrect username or password. Please try again.');
       }

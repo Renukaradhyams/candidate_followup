@@ -447,6 +447,9 @@ export const API = {
   async bulkAddMembers(payload: any) { return apiFetch('/batch-plan/bulk-add-members', { method: 'POST', body: JSON.stringify(payload) }); },
   async moveMemberGroup(payload: any) { return apiFetch('/batch-plan/move-member', { method: 'POST', body: JSON.stringify(payload) }); },
   async removeMemberFromGroup(payload: any) { return apiFetch('/batch-plan/remove-member', { method: 'POST', body: JSON.stringify(payload) }); },
+  async getBatchAttendance(batchId: number | string, dayNumber: number) { return apiFetch(`/batch-plan/attendance?batchId=${batchId}&dayNumber=${dayNumber}`); },
+  async saveBatchAttendance(payload: any) { return apiFetch('/batch-plan/attendance', { method: 'POST', body: JSON.stringify(payload) }); },
+  async getBatchAttendanceSummary(batchId: number | string) { return apiFetch(`/batch-plan/attendance/summary?batchId=${batchId}`); },
 
   // File URL Helper
   fileUrl(url: string | null | undefined): string | null {

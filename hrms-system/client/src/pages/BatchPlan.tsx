@@ -657,6 +657,14 @@ export default function BatchPlanPage() {
               </button>
 
               <button
+                onClick={() => navigate('/batch-attendance')}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <CheckSquare className="w-4 h-4 text-emerald-200" />
+                <span>Batch Attendance (20-Day) 📋</span>
+              </button>
+
+              <button
                 onClick={exportExcel}
                 className="px-3.5 py-2 rounded-xl bg-white border border-[#e2dfd7] text-xs font-extrabold text-[#1E2D4E] hover:bg-[#F9F7F4] flex items-center gap-1.5 shadow-xs"
               >

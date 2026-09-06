@@ -455,6 +455,116 @@ class BatchPlanController {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
+
+  // ─── 20-DAY BATCH ATTENDANCE SYSTEM ──────────────────────────────────────────
+
+  // GET /api/batch-plan/attendance
+  async getBatchAttendance(req, res) {
+    try {
+      const batchId = req.query.batchId;
+      const dayNumber = parseInt(req.query.dayNumber || '1', 10);
+      if (!batchId) {
+        return res.status(400).json({ success: false, error: 'batchId is required' });
+      }
+
+      const [rows] = await pool.query(`
+        SELECT * FROM batch_attendance
+        WHERE batch_id = ? AND day_number = ?
+      `, [batchId, dayNumber]);
+
+      const attendanceMap = {};
+      (rows || []).forEach(r => {
+        attendanceMap[r.candidate_app_no] = {
+          candidateAppNo:  r.candidate_app_no,
+          dayNumber:       r.day_number,
+          attendanceDate:  r.attendance_date,
+          morningStatus:   r.morning_status || 'Present',
+          morningRemarks:  r.morning_remarks || '',
+          afternoonStatus: r.afternoon_status || 'Present',
+          afternoonRemarks: r.afternoon_remarks || '',
+          markedBy:        r.marked_by || ''
+        };
+      });
+
+      return res.json({ success: true, attendanceMap, records: rows });
+    } catch (err) {
+      console.error('[getBatchAttendance Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // POST /api/batch-plan/attendance
+  async saveBatchAttendance(req, res) {
+    try {
+      const { batchId, dayNumber, attendanceDate, records } = req.body;
+      if (!batchId || !dayNumber || !Array.isArray(records)) {
+        return res.status(400).json({ success: false, error: 'batchId, dayNumber, and records array are required' });
+      }
+
+      const byUser = req.user?.fullName || req.user?.username || 'Batch Leader';
+      const attDate = attendanceDate || new Date().toISOString().slice(0, 10);
+
+      for (const item of records) {
+        if (!item.candidateAppNo) continue;
+        await pool.query(`
+          INSERT INTO batch_attendance (
+            batch_id, candidate_app_no, day_number, attendance_date,
+            morning_status, morning_remarks, afternoon_status, afternoon_remarks, marked_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            attendance_date = VALUES(attendance_date),
+            morning_status = VALUES(morning_status),
+            morning_remarks = VALUES(morning_remarks),
+            afternoon_status = VALUES(afternoon_status),
+            afternoon_remarks = VALUES(afternoon_remarks),
+            marked_by = VALUES(marked_by),
+            updated_at = NOW()
+        `, [
+          batchId,
+          item.candidateAppNo,
+          dayNumber,
+          attDate,
+          item.morningStatus || 'Present',
+          item.morningRemarks || null,
+          item.afternoonStatus || 'Present',
+          item.afternoonRemarks || null,
+          byUser
+        ]);
+      }
+
+      await pool.query(`
+        INSERT INTO batch_activity_logs (action_type, description, by_user)
+        VALUES (?, ?, ?)
+      `, ['Attendance Marked', `Recorded Day ${dayNumber} (${attDate}) attendance for ${records.length} members in Batch #${batchId}`, byUser]);
+
+      return res.json({ success: true, message: `Successfully saved Day ${dayNumber} attendance for ${records.length} members` });
+    } catch (err) {
+      console.error('[saveBatchAttendance Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // GET /api/batch-plan/attendance/summary
+  async getBatchAttendanceSummary(req, res) {
+    try {
+      const batchId = req.query.batchId;
+      if (!batchId) {
+        return res.status(400).json({ success: false, error: 'batchId is required' });
+      }
+
+      const [rows] = await pool.query(`
+        SELECT candidate_app_no, day_number, attendance_date, morning_status, afternoon_status
+        FROM batch_attendance
+        WHERE batch_id = ?
+        ORDER BY day_number ASC
+      `, [batchId]);
+
+      return res.json({ success: true, summary: rows || [] });
+    } catch (err) {
+      console.error('[getBatchAttendanceSummary Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
 }
 
 module.exports = new BatchPlanController();

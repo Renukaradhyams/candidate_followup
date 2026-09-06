@@ -183,6 +183,9 @@ router.post('/batch-plan/add-member', authenticate, batchPlanController.addMembe
 router.post('/batch-plan/bulk-add-members', authenticate, batchPlanController.bulkAddMembers);
 router.post('/batch-plan/move-member', authenticate, batchPlanController.moveMemberGroup);
 router.post('/batch-plan/remove-member', authenticate, batchPlanController.removeMemberFromGroup);
+router.get('/batch-plan/attendance', batchPlanController.getBatchAttendance);
+router.post('/batch-plan/attendance', authenticate, batchPlanController.saveBatchAttendance);
+router.get('/batch-plan/attendance/summary', batchPlanController.getBatchAttendanceSummary);
 
 router.post('/legacy', async (req, res) => {
   const { action } = req.body;

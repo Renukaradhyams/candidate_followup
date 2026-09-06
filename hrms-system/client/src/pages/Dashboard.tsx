@@ -99,6 +99,10 @@ export default function DashboardPage() {
       return;
     }
     const sess = Auth.get();
+    if (sess?.role === 'Batch Leader') {
+      navigate('/batch-attendance', { replace: true });
+      return;
+    }
     setSession(sess);
     loadData();
   }, [navigate, loadData]);

@@ -689,6 +689,24 @@ async function autoInitializeDatabase(pool) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
       `);
 
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS batch_attendance (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          batch_id INT NOT NULL,
+          candidate_app_no VARCHAR(50) NOT NULL,
+          day_number INT NOT NULL DEFAULT 1,
+          attendance_date DATE NOT NULL,
+          morning_status VARCHAR(30) DEFAULT 'Present',
+          morning_remarks TEXT NULL,
+          afternoon_status VARCHAR(30) DEFAULT 'Present',
+          afternoon_remarks TEXT NULL,
+          marked_by VARCHAR(150) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_batch_cand_day (batch_id, candidate_app_no, day_number)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+      `);
+
       // Seed Initial Batches if batch_plans is empty
       const [bpRows] = await connection.query(`SELECT COUNT(*) as cnt FROM batch_plans`);
       if (bpRows[0].cnt === 0) {
@@ -739,11 +757,19 @@ async function autoInitializeDatabase(pool) {
         logDebug(`[Auto DB Initializer] Seeded BSC Batch Plan initial batches (B*, B-Alpha, B-Beta) and 16 groups`);
       }
 
-      // Add default page visibility for batch_plan
+      // Add default page visibility for batch_plan and batch_attendance
       const bpVisibility = [
         ['HR_batch-plan', 'HR', 'batch_plan', true],
         ['Manager_batch-plan', 'Manager', 'batch_plan', true],
-        ['Admin_batch-plan', 'Admin', 'batch_plan', true]
+        ['Admin_batch-plan', 'Admin', 'batch_plan', true],
+        ['Super Admin_batch-plan', 'Super Admin', 'batch_plan', true],
+        ['Batch Leader_batch-plan', 'Batch Leader', 'batch_plan', true],
+
+        ['HR_batch-attendance', 'HR', 'batch_attendance', true],
+        ['Manager_batch-attendance', 'Manager', 'batch_attendance', true],
+        ['Admin_batch-attendance', 'Admin', 'batch_attendance', true],
+        ['Super Admin_batch-attendance', 'Super Admin', 'batch_attendance', true],
+        ['Batch Leader_batch-attendance', 'Batch Leader', 'batch_attendance', true]
       ];
       for (const [key, role, page, allowed] of bpVisibility) {
         await connection.query(
@@ -754,7 +780,18 @@ async function autoInitializeDatabase(pool) {
         );
       }
 
-      logDebug(`[Auto DB Initializer] Verified BSC Batch Plan database tables`);
+      // Seed default Batch Leader user account if missing
+      const [blCheck] = await connection.query(`SELECT id FROM users WHERE username = 'batchleader'`);
+      if (blCheck.length === 0) {
+        const hashedPass = await bcrypt.hash('admin123', 10);
+        await connection.query(
+          `INSERT INTO users (username, password, full_name, role, active) VALUES (?, ?, ?, ?, TRUE)`,
+          ['batchleader', hashedPass, 'Batch Leader Admin', 'Batch Leader']
+        );
+        logDebug(`[Auto DB Initializer] Seeded demo Batch Leader user account (batchleader / Password: admin123)`);
+      }
+
+      logDebug(`[Auto DB Initializer] Verified BSC Batch Plan database tables and attendance system`);
     } catch (e) {
       logDebug(`[Auto DB Initializer Warning for Batch Plan]:`, e.message);
     }

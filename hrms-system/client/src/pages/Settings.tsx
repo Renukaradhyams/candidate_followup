@@ -305,6 +305,7 @@ export default function SettingsPage() {
                     <option value="HR">HR Specialist</option>
                     <option value="Manager">Store Manager</option>
                     <option value="Admin">Administrator</option>
+                    <option value="Batch Leader">Batch Leader</option>
                     <option value="Recruiter">Recruiter</option>
                   </select>
                 </div>
@@ -343,6 +344,7 @@ export default function SettingsPage() {
                               <option value="Admin">Admin</option>
                               <option value="HR">HR</option>
                               <option value="Manager">Store Manager</option>
+                              <option value="Batch Leader">Batch Leader</option>
                               <option value="Recruiter">Recruiter</option>
                               <option value="Interviewer">Interviewer</option>
                             </select>
