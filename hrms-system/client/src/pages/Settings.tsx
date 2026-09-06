@@ -393,22 +393,22 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                {['HR', 'Manager', 'Recruiter', 'Interviewer'].map(roleName => (
+                {['HR', 'Manager', 'Batch Leader', 'Recruiter', 'Interviewer'].map(roleName => (
                   <div key={roleName} className="p-4 rounded-2xl border border-[#e2dfd7] bg-[#F9F7F4] space-y-3">
-                    <div className="font-black text-sm text-[#1E2D4E] border-b border-[#e2dfd7] pb-2 uppercase tracking-wider">{roleName} Access</div>
+                    <div className="font-black text-sm text-[#1E2D4E] border-b border-[#e2dfd7] pb-2 uppercase tracking-wider">{roleName} Access Matrix</div>
                     <div className="space-y-2">
-                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'exit', 'form', 'broadcast', 'settings'].map(pageKey => {
-                        const key = `${roleName.toLowerCase()}_${pageKey}`;
+                      {['dashboard', 'candidates', 'interview', 'offer', 'openings', 'onboarding', 'employees', 'joining_call_desk', 'not_joined', 'doj_planning', 'workforce_analytics', 'dept_hiring', 'section_allocation', 'batch_plan', 'batch_attendance', 'exit', 'form', 'broadcast', 'settings'].map(pageKey => {
+                        const key = `${roleName}_${pageKey}`;
                         const allowed = pageSettings[key] !== false;
 
                         return (
                           <label key={pageKey} className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#e2dfd7] cursor-pointer font-bold text-[#1E2D4E]">
-                            <span className="capitalize">{pageKey.replace('_', ' ')} Module</span>
+                            <span className="capitalize">{pageKey.replace(/_/g, ' ')} Module</span>
                             <input
                               type="checkbox"
                               checked={allowed}
                               onChange={(e) => setPageSettings({ ...pageSettings, [key]: e.target.checked })}
-                              className="accent-[#1E2D4E] rounded"
+                              className="accent-[#1E2D4E] rounded cursor-pointer"
                             />
                           </label>
                         );

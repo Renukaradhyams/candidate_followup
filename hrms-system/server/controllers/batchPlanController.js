@@ -502,10 +502,39 @@ class BatchPlanController {
       }
 
       const byUser = req.user?.fullName || req.user?.username || 'Batch Leader';
+      const userRole = (req.user?.role || '').trim();
+      const isBatchLeader = userRole === 'Batch Leader';
       const attDate = attendanceDate || new Date().toISOString().slice(0, 10);
+
+      // Check time cutoffs for Batch Leader role
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const curMins = now.getHours() * 60 + now.getMinutes();
+      const isMorningLocked = isBatchLeader && (attDate !== todayStr || curMins >= 12 * 60);
+      const isAfternoonLocked = isBatchLeader && (attDate !== todayStr || curMins >= 18 * 60 + 30);
+
+      if (isBatchLeader && attDate !== todayStr) {
+        return res.status(403).json({
+          success: false,
+          error: 'Batch Leaders can only update attendance for today. Past date attendance can only be updated by Admin.'
+        });
+      }
 
       for (const item of records) {
         if (!item.candidateAppNo) continue;
+
+        // Fetch existing attendance to preserve locked session values for Batch Leader
+        const [exist] = await pool.query(
+          `SELECT morning_status, morning_remarks, afternoon_status, afternoon_remarks FROM batch_attendance WHERE batch_id = ? AND candidate_app_no = ? AND day_number = ?`,
+          [batchId, item.candidateAppNo, dayNumber]
+        );
+        const prev = exist && exist.length > 0 ? exist[0] : null;
+
+        const finalMorningStatus = isMorningLocked && prev ? prev.morning_status : (item.morningStatus || 'Present');
+        const finalMorningRemarks = isMorningLocked && prev ? prev.morning_remarks : (item.morningRemarks || null);
+        const finalAfternoonStatus = isAfternoonLocked && prev ? prev.afternoon_status : (item.afternoonStatus || 'Present');
+        const finalAfternoonRemarks = isAfternoonLocked && prev ? prev.afternoon_remarks : (item.afternoonRemarks || null);
+
         await pool.query(`
           INSERT INTO batch_attendance (
             batch_id, candidate_app_no, day_number, attendance_date,
@@ -524,10 +553,10 @@ class BatchPlanController {
           item.candidateAppNo,
           dayNumber,
           attDate,
-          item.morningStatus || 'Present',
-          item.morningRemarks || null,
-          item.afternoonStatus || 'Present',
-          item.afternoonRemarks || null,
+          finalMorningStatus,
+          finalMorningRemarks,
+          finalAfternoonStatus,
+          finalAfternoonRemarks,
           byUser
         ]);
       }

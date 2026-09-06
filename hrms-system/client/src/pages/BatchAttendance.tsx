@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
@@ -26,7 +26,14 @@ import {
   ChevronRight,
   Sparkles,
   Download,
-  Info
+  Info,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  FolderTree,
+  LayoutGrid,
+  ListFilter,
+  Check
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -85,23 +92,16 @@ interface BatchMemberInfo {
 
 type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Half Day' | 'Leave';
 
-interface AttendanceRecord {
-  candidateAppNo: string;
-  dayNumber: number;
-  attendanceDate: string;
-  morningStatus: AttendanceStatus;
-  morningRemarks: string;
-  afternoonStatus: AttendanceStatus;
-  afternoonRemarks: string;
-  markedBy?: string;
-}
-
 export default function BatchAttendance() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Auto-save State
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [lastSavedTime, setLastSavedTime] = useState<string>('');
 
   // Core Data
   const [batches, setBatches] = useState<BatchPlan[]>([]);
@@ -114,6 +114,7 @@ export default function BatchAttendance() {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [activeTab, setActiveTab] = useState<'morning' | 'afternoon' | 'matrix'>('morning');
+  const [layoutMode, setLayoutMode] = useState<'group_wise' | 'all_members'>('group_wise');
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'All' | 'Batch Leader' | 'Group Leader' | 'Group Member'>('All');
 
@@ -138,6 +139,72 @@ export default function BatchAttendance() {
     const sess = Auth.get();
     setSession(sess);
   }, [navigate]);
+
+  // Is Batch Leader Role check
+  const isBatchLeaderRole = useMemo(() => {
+    return session?.role === 'Batch Leader';
+  }, [session]);
+
+  // Current Time Cutoff Lock logic for Batch Leader
+  // Morning cutoff: 12:00 PM (12:00:00)
+  // Afternoon cutoff: 6:30 PM (18:30:00)
+  const lockStatus = useMemo(() => {
+    if (!isBatchLeaderRole) {
+      return { isMorningLocked: false, isAfternoonLocked: false, isPastDateLocked: false, message: 'Admin / Manager Override Active — Unrestricted Edit' };
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    if (selectedDate < todayStr) {
+      return {
+        isMorningLocked: true,
+        isAfternoonLocked: true,
+        isPastDateLocked: true,
+        message: '🔒 Past date attendance is locked for Batch Leader. Contact System Admin to modify.'
+      };
+    }
+
+    if (selectedDate > todayStr) {
+      return {
+        isMorningLocked: true,
+        isAfternoonLocked: true,
+        isPastDateLocked: true,
+        message: '🔒 Future date attendance cannot be marked in advance.'
+      };
+    }
+
+    // Today's cutoff check
+    const now = new Date();
+    const curMinutes = now.getHours() * 60 + now.getMinutes();
+    const morningCutoffMins = 12 * 60; // 12:00 PM = 720 mins
+    const afternoonCutoffMins = 18 * 60 + 30; // 6:30 PM = 1110 mins
+
+    const morningLocked = curMinutes >= morningCutoffMins;
+    const afternoonLocked = curMinutes >= afternoonCutoffMins;
+
+    let msg = '';
+    if (morningLocked && afternoonLocked) {
+      msg = '🔒 Attendance closed for today (Morning cutoff 12:00 PM, Afternoon cutoff 6:30 PM passed). Admin override required.';
+    } else if (morningLocked) {
+      msg = '🔒 Morning session attendance closed at 12:00 PM. Afternoon session open until 6:30 PM.';
+    } else {
+      msg = '⏱️ Morning session open until 12:00 PM. Afternoon session open until 6:30 PM.';
+    }
+
+    return {
+      isMorningLocked: morningLocked,
+      isAfternoonLocked: afternoonLocked,
+      isPastDateLocked: false,
+      message: msg
+    };
+  }, [isBatchLeaderRole, selectedDate]);
+
+  // Is current session tab locked for current user
+  const isCurrentSessionLocked = useMemo(() => {
+    if (activeTab === 'morning') return lockStatus.isMorningLocked;
+    if (activeTab === 'afternoon') return lockStatus.isAfternoonLocked;
+    return false;
+  }, [activeTab, lockStatus]);
 
   // Load Batch Plan Structure
   const loadBatchStructure = useCallback(async () => {
@@ -175,8 +242,6 @@ export default function BatchAttendance() {
     if (!currentBatch) return [];
 
     const memberMap = new Map<string, BatchMemberInfo>();
-
-    // Helper to get candidate details
     const getCand = (appNo: string) => candidates.find(c => c.app_no === appNo);
 
     // 1. Batch Leader
@@ -192,7 +257,7 @@ export default function BatchAttendance() {
           designation: c.designation || '',
           photoUrl: c.photo_url,
           roleInBatch: 'Batch Leader',
-          groupName: 'Batch Core',
+          groupName: 'Batch Core Leadership',
           groupId: null
         });
       }
@@ -245,6 +310,32 @@ export default function BatchAttendance() {
 
     return Array.from(memberMap.values());
   }, [currentBatch, groups, groupMembers, candidates]);
+
+  // Grouped Members Map for Group-Wise Attendance List
+  const groupedMembersList = useMemo(() => {
+    const groupMap = new Map<string, { groupName: string; groupId: number | null; members: BatchMemberInfo[] }>();
+
+    // Initialize entries for all groups in batch
+    if (currentBatch) {
+      // Core Leadership group
+      groupMap.set('Batch Core Leadership', { groupName: 'Batch Core Leadership 👑', groupId: null, members: [] });
+      const batchGroupsList = groups.filter(g => g.batch_id === currentBatch.id);
+      batchGroupsList.forEach(g => {
+        groupMap.set(g.name, { groupName: g.name, groupId: g.id, members: [] });
+      });
+    }
+
+    fullBatchMembers.forEach(m => {
+      const gName = m.roleInBatch === 'Batch Leader' ? 'Batch Core Leadership' : m.groupName;
+      if (!groupMap.has(gName)) {
+        groupMap.set(gName, { groupName: gName, groupId: m.groupId, members: [] });
+      }
+      groupMap.get(gName)?.members.push(m);
+    });
+
+    // Filter out empty group sections
+    return Array.from(groupMap.values()).filter(g => g.members.length > 0);
+  }, [currentBatch, groups, fullBatchMembers]);
 
   // Load Attendance Records for Selected Batch & Selected Day
   const loadDayAttendance = useCallback(async () => {
@@ -307,13 +398,16 @@ export default function BatchAttendance() {
     }
   }, [activeTab, loadMatrixSummary]);
 
-  // Save Attendance to Backend
-  const handleSaveAttendance = async () => {
+  // Persist Attendance to Backend (Manual or Auto-save)
+  const saveAttendanceToServer = async (updatedState?: Record<string, any>, showToastMsg = true) => {
     if (!selectedBatchId) return;
+    const currentState = updatedState || attendanceState;
+
     try {
       setSaving(true);
+      setAutoSaveStatus('saving');
       const records = fullBatchMembers.map(m => {
-        const att = attendanceState[m.appNo] || {
+        const att = currentState[m.appNo] || {
           morningStatus: 'Present',
           morningRemarks: '',
           afternoonStatus: 'Present',
@@ -337,59 +431,46 @@ export default function BatchAttendance() {
 
       const res = await API.saveBatchAttendance(payload);
       if (res && res.success) {
-        showToast(`Day ${selectedDay} Attendance Saved! 🎉`, 'success');
-        loadDayAttendance();
+        setAutoSaveStatus('saved');
+        setLastSavedTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        if (showToastMsg) {
+          showToast(`Day ${selectedDay} Attendance Saved! 🎉`, 'success');
+        }
       } else {
+        setAutoSaveStatus('idle');
         showToast(res.error || 'Failed to save attendance', 'error');
       }
     } catch (err: any) {
+      setAutoSaveStatus('idle');
       showToast('Error saving attendance: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  // Bulk Actions
-  const handleMarkAllMorning = (status: AttendanceStatus) => {
-    setAttendanceState(prev => {
-      const next = { ...prev };
-      fullBatchMembers.forEach(m => {
-        next[m.appNo] = {
-          ...(next[m.appNo] || { morningRemarks: '', afternoonStatus: 'Present', afternoonRemarks: '' }),
-          morningStatus: status
-        };
-      });
-      return next;
-    });
-    showToast(`Marked all members as ${status} for Morning Session`, 'info');
-  };
-
-  const handleMarkAllAfternoon = (status: AttendanceStatus) => {
-    setAttendanceState(prev => {
-      const next = { ...prev };
-      fullBatchMembers.forEach(m => {
-        next[m.appNo] = {
-          ...(next[m.appNo] || { morningStatus: 'Present', morningRemarks: '', afternoonRemarks: '' }),
-          afternoonStatus: status
-        };
-      });
-      return next;
-    });
-    showToast(`Marked all members as ${status} for Afternoon Session`, 'info');
-  };
-
-  // Status Change Handlers for Individual Member
+  // Status Change Handlers for Individual Member WITH AUTO SAVE
   const handleStatusChange = (appNo: string, sessionType: 'morning' | 'afternoon', status: AttendanceStatus) => {
-    setAttendanceState(prev => ({
-      ...prev,
+    if (isCurrentSessionLocked) {
+      showToast(`Cannot change ${sessionType} session attendance. Cutoff time has passed or locked for Batch Leader.`, 'warn');
+      return;
+    }
+
+    const nextState = {
+      ...attendanceState,
       [appNo]: {
-        ...(prev[appNo] || { morningStatus: 'Present', morningRemarks: '', afternoonStatus: 'Present', afternoonRemarks: '' }),
+        ...(attendanceState[appNo] || { morningStatus: 'Present', morningRemarks: '', afternoonStatus: 'Present', afternoonRemarks: '' }),
         [sessionType === 'morning' ? 'morningStatus' : 'afternoonStatus']: status
       }
-    }));
+    };
+
+    setAttendanceState(nextState);
+    // AUTO SAVE IMMEDIATELY ON TOGGLE
+    saveAttendanceToServer(nextState, false);
   };
 
   const handleRemarksChange = (appNo: string, sessionType: 'morning' | 'afternoon', text: string) => {
+    if (isCurrentSessionLocked) return;
+
     setAttendanceState(prev => ({
       ...prev,
       [appNo]: {
@@ -397,6 +478,65 @@ export default function BatchAttendance() {
         [sessionType === 'morning' ? 'morningRemarks' : 'afternoonRemarks']: text
       }
     }));
+  };
+
+  // Bulk Actions WITH AUTO SAVE
+  const handleMarkAllMorning = (status: AttendanceStatus) => {
+    if (lockStatus.isMorningLocked) {
+      showToast('Morning Session is locked for Batch Leader. Cutoff time (12:00 PM) passed.', 'warn');
+      return;
+    }
+
+    const nextState: Record<string, any> = {};
+    fullBatchMembers.forEach(m => {
+      nextState[m.appNo] = {
+        ...(attendanceState[m.appNo] || { morningRemarks: '', afternoonStatus: 'Present', afternoonRemarks: '' }),
+        morningStatus: status
+      };
+    });
+
+    setAttendanceState(nextState);
+    saveAttendanceToServer(nextState, false);
+    showToast(`Marked all members as ${status} for Morning Session (Auto-saved)`, 'info');
+  };
+
+  const handleMarkAllAfternoon = (status: AttendanceStatus) => {
+    if (lockStatus.isAfternoonLocked) {
+      showToast('Afternoon Session is locked for Batch Leader. Cutoff time (6:30 PM) passed.', 'warn');
+      return;
+    }
+
+    const nextState: Record<string, any> = {};
+    fullBatchMembers.forEach(m => {
+      nextState[m.appNo] = {
+        ...(attendanceState[m.appNo] || { morningStatus: 'Present', morningRemarks: '', afternoonRemarks: '' }),
+        afternoonStatus: status
+      };
+    });
+
+    setAttendanceState(nextState);
+    saveAttendanceToServer(nextState, false);
+    showToast(`Marked all members as ${status} for Afternoon Session (Auto-saved)`, 'info');
+  };
+
+  // Bulk Mark for specific Group WITH AUTO SAVE
+  const handleMarkGroupSession = (groupMemberList: BatchMemberInfo[], sessionType: 'morning' | 'afternoon', status: AttendanceStatus) => {
+    if (isCurrentSessionLocked) {
+      showToast(`Session locked for Batch Leader. Cutoff time passed.`, 'warn');
+      return;
+    }
+
+    const nextState = { ...attendanceState };
+    groupMemberList.forEach(m => {
+      nextState[m.appNo] = {
+        ...(nextState[m.appNo] || { morningStatus: 'Present', morningRemarks: '', afternoonStatus: 'Present', afternoonRemarks: '' }),
+        [sessionType === 'morning' ? 'morningStatus' : 'afternoonStatus']: status
+      };
+    });
+
+    setAttendanceState(nextState);
+    saveAttendanceToServer(nextState, false);
+    showToast(`Group marked as ${status} for ${sessionType} session (Auto-saved)`, 'info');
   };
 
   // Filtered Members for Display
@@ -436,8 +576,6 @@ export default function BatchAttendance() {
   const handleExportMatrixExcel = async () => {
     try {
       showToast('Generating 20-Day Batch Attendance Excel Report...', 'info');
-      
-      // Fetch fresh matrix summary
       const res = await API.getBatchAttendanceSummary(selectedBatchId || 1);
       const allRecords = (res && res.summary) ? res.summary : [];
       const recordMap: Record<string, Record<number, { m: string; a: string }>> = {};
@@ -462,7 +600,7 @@ export default function BatchAttendance() {
         };
 
         let totalPresent = 0;
-        let totalSessions = 40; // 20 days x 2 sessions
+        let totalSessions = 40;
 
         for (let d = 1; d <= 20; d++) {
           const rec = recordMap[m.appNo]?.[d] || { m: '—', a: '—' };
@@ -519,6 +657,20 @@ export default function BatchAttendance() {
                       <Sparkles className="w-3 h-3 text-[#C9952A]" />
                       BATCH LEADER DESK
                     </span>
+
+                    {/* Auto Save Status Badge */}
+                    {autoSaveStatus === 'saving' && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 animate-pulse">
+                        <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
+                        Auto-saving...
+                      </span>
+                    )}
+                    {autoSaveStatus === 'saved' && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        Auto-saved {lastSavedTime ? `at ${lastSavedTime}` : ''}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-[#666] font-semibold mt-0.5">
                     Take and manage daily Morning &amp; Afternoon session attendance for the complete batch (Batch Leader, Group Leaders &amp; Group Members) for 20 days.
@@ -545,7 +697,7 @@ export default function BatchAttendance() {
               </div>
 
               <button
-                onClick={handleSaveAttendance}
+                onClick={() => saveAttendanceToServer(undefined, true)}
                 disabled={saving}
                 className="btn-primary text-xs py-2.5 px-4 flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
               >
@@ -553,6 +705,39 @@ export default function BatchAttendance() {
                 <span>{saving ? 'Saving...' : `Save Day ${selectedDay} Attendance`}</span>
               </button>
             </div>
+          </div>
+
+          {/* Time Cutoff Rules Banner */}
+          <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs font-bold shadow-xs ${
+            isCurrentSessionLocked
+              ? 'bg-rose-50/90 border-rose-300 text-rose-950'
+              : !isBatchLeaderRole
+              ? 'bg-indigo-50/90 border-indigo-200 text-indigo-950'
+              : 'bg-amber-50/90 border-amber-300 text-amber-950'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              {isCurrentSessionLocked ? (
+                <Lock className="w-5 h-5 text-rose-600 flex-shrink-0" />
+              ) : !isBatchLeaderRole ? (
+                <Unlock className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+              ) : (
+                <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              )}
+              <div>
+                <div className="font-extrabold uppercase tracking-wider text-[10.5px]">
+                  SESSION CUTOFF RULES: Morning Session (12:00 PM Cutoff) • Afternoon Session (6:30 PM Cutoff)
+                </div>
+                <div className="text-[11.5px] mt-0.5">
+                  {lockStatus.message}
+                </div>
+              </div>
+            </div>
+
+            {!isBatchLeaderRole && (
+              <span className="px-3 py-1 rounded-xl bg-indigo-600 text-white text-[10.5px] font-black uppercase tracking-wider flex-shrink-0 shadow-2xs">
+                Admin Mode Active
+              </span>
+            )}
           </div>
 
           {/* 20-Day Navigation Strip */}
@@ -595,7 +780,7 @@ export default function BatchAttendance() {
             </div>
           </div>
 
-          {/* Session Tabs & Controls */}
+          {/* Session Tabs & Layout Switcher */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
             {/* View Mode Tabs */}
             <div className="flex items-center p-1 rounded-2xl bg-[#E2DFD7]/60 border border-[#e2dfd7] w-full md:w-auto">
@@ -607,7 +792,8 @@ export default function BatchAttendance() {
                 `}
               >
                 <Sunrise className="w-4 h-4" />
-                <span>Morning Session 🌅</span>
+                <span>Morning Session 🌅 (Before 12 PM)</span>
+                {lockStatus.isMorningLocked && isBatchLeaderRole && <Lock className="w-3.5 h-3.5 text-amber-200" />}
               </button>
 
               <button
@@ -618,7 +804,8 @@ export default function BatchAttendance() {
                 `}
               >
                 <Sun className="w-4 h-4" />
-                <span>Afternoon Session ☀️</span>
+                <span>Afternoon Session ☀️ (Before 6:30 PM)</span>
+                {lockStatus.isAfternoonLocked && isBatchLeaderRole && <Lock className="w-3.5 h-3.5 text-indigo-200" />}
               </button>
 
               <button
@@ -633,22 +820,29 @@ export default function BatchAttendance() {
               </button>
             </div>
 
-            {/* Quick Session Bulk Action */}
+            {/* Layout Mode (Group Wise vs All Members) */}
             {activeTab !== 'matrix' && (
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                <span className="text-[11px] font-bold text-[#777] uppercase tracking-wider">Bulk Set:</span>
-                <button
-                  onClick={() => activeTab === 'morning' ? handleMarkAllMorning('Present') : handleMarkAllAfternoon('Present')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 transition-colors cursor-pointer border border-emerald-300"
-                >
-                  All Present ✅
-                </button>
-                <button
-                  onClick={() => activeTab === 'morning' ? handleMarkAllMorning('Absent') : handleMarkAllAfternoon('Absent')}
-                  className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold hover:bg-rose-200 transition-colors cursor-pointer border border-rose-300"
-                >
-                  All Absent ❌
-                </button>
+              <div className="flex items-center gap-2 justify-between md:justify-end">
+                <div className="flex items-center p-1 rounded-xl bg-white border border-[#e2dfd7] shadow-xs">
+                  <button
+                    onClick={() => setLayoutMode('group_wise')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      layoutMode === 'group_wise' ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#666] hover:text-[#1E2D4E]'
+                    }`}
+                  >
+                    <FolderTree className="w-3.5 h-3.5" />
+                    <span>Group-Wise List 📂</span>
+                  </button>
+                  <button
+                    onClick={() => setLayoutMode('all_members')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                      layoutMode === 'all_members' ? 'bg-[#1E2D4E] text-white shadow-xs' : 'text-[#666] hover:text-[#1E2D4E]'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Flat Roster View</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -711,7 +905,7 @@ export default function BatchAttendance() {
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
               <span className="text-[10px] font-black uppercase text-[#777] tracking-wider">Filter Role:</span>
               <select
                 value={roleFilter}
@@ -723,6 +917,25 @@ export default function BatchAttendance() {
                 <option value="Group Leader">⭐️ Group Leaders</option>
                 <option value="Group Member">👤 Group Members</option>
               </select>
+
+              {activeTab !== 'matrix' && (
+                <div className="flex items-center gap-1.5 border-l border-[#e2dfd7] pl-3">
+                  <button
+                    onClick={() => activeTab === 'morning' ? handleMarkAllMorning('Present') : handleMarkAllAfternoon('Present')}
+                    disabled={isCurrentSessionLocked}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold hover:bg-emerald-200 transition-colors cursor-pointer border border-emerald-300 disabled:opacity-40"
+                  >
+                    All Present ✅
+                  </button>
+                  <button
+                    onClick={() => activeTab === 'morning' ? handleMarkAllMorning('Absent') : handleMarkAllAfternoon('Absent')}
+                    disabled={isCurrentSessionLocked}
+                    className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold hover:bg-rose-200 transition-colors cursor-pointer border border-rose-300 disabled:opacity-40"
+                  >
+                    All Absent ❌
+                  </button>
+                </div>
+              )}
 
               {activeTab === 'matrix' && (
                 <button
@@ -736,8 +949,192 @@ export default function BatchAttendance() {
             </div>
           </div>
 
-          {/* TAB CONTENT 1 & 2: MORNING / AFTERNOON SESSION ATTENDANCE TABLE */}
-          {activeTab !== 'matrix' && (
+          {/* ATTENDANCE CONTENT: MORNING & AFTERNOON SESSION (GROUP WISE LIST VIEW) */}
+          {activeTab !== 'matrix' && layoutMode === 'group_wise' && (
+            <div className="space-y-6">
+              {groupedMembersList.map(groupSec => {
+                // Apply search/role filters to group members
+                const groupFilteredMembers = groupSec.members.filter(m => {
+                  if (roleFilter !== 'All' && m.roleInBatch !== roleFilter) return false;
+                  if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      m.name.toLowerCase().includes(q) ||
+                      m.appNo.toLowerCase().includes(q) ||
+                      m.department.toLowerCase().includes(q) ||
+                      m.designation.toLowerCase().includes(q)
+                    );
+                  }
+                  return true;
+                });
+
+                if (groupFilteredMembers.length === 0) return null;
+
+                // Group session stats
+                const groupPresentCount = groupFilteredMembers.filter(m => {
+                  const att = attendanceState[m.appNo];
+                  const status = activeTab === 'afternoon' ? att?.afternoonStatus : att?.morningStatus;
+                  return status === 'Present';
+                }).length;
+
+                return (
+                  <div key={groupSec.groupName} className="card-glass overflow-hidden border border-[#e2dfd7] shadow-sm">
+                    {/* Group Header Card */}
+                    <div className="p-4 bg-[#1E2D4E] text-white flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-[#C9952A] text-slate-900 font-black flex items-center justify-center text-xs shadow-md">
+                          <FolderTree className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-extrabold text-base leading-tight flex items-center gap-2">
+                            <span>{groupSec.groupName}</span>
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/10 text-[#C9952A] border border-white/20">
+                              {groupFilteredMembers.length} Members
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-white/70 font-semibold mt-0.5">
+                            Group Attendance Status: <strong className="text-emerald-400 font-black">{groupPresentCount} / {groupFilteredMembers.length} Present</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Group Level Quick Bulk Actions */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-white/70 uppercase">Group Set:</span>
+                        <button
+                          onClick={() => handleMarkGroupSession(groupFilteredMembers, activeTab === 'morning' ? 'morning' : 'afternoon', 'Present')}
+                          disabled={isCurrentSessionLocked}
+                          className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold shadow-2xs transition-colors disabled:opacity-40 cursor-pointer"
+                        >
+                          Mark Group Present ✅
+                        </button>
+                        <button
+                          onClick={() => handleMarkGroupSession(groupFilteredMembers, activeTab === 'morning' ? 'morning' : 'afternoon', 'Absent')}
+                          disabled={isCurrentSessionLocked}
+                          className="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-extrabold shadow-2xs transition-colors disabled:opacity-40 cursor-pointer"
+                        >
+                          Mark Group Absent ❌
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Group Members Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-[#e2dfd7] text-[10.5px] font-black uppercase text-[#777] bg-[#F9F7F4]">
+                            <th className="py-3 px-4">Member Name &amp; ID</th>
+                            <th className="py-3 px-4">Role</th>
+                            <th className="py-3 px-4">Department &amp; Designation</th>
+                            <th className="py-3 px-4">Attendance Status</th>
+                            <th className="py-3 px-4">Session Notes / Remarks</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#e2dfd7]/60 font-medium">
+                          {groupFilteredMembers.map(m => {
+                            const att = attendanceState[m.appNo] || {
+                              morningStatus: 'Present',
+                              morningRemarks: '',
+                              afternoonStatus: 'Present',
+                              afternoonRemarks: ''
+                            };
+
+                            const currentStatus = activeTab === 'morning' ? att.morningStatus : att.afternoonStatus;
+                            const currentRemarks = activeTab === 'morning' ? att.morningRemarks : att.afternoonRemarks;
+
+                            return (
+                              <tr key={m.appNo} className="hover:bg-black/5 transition-colors">
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black text-xs flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-[#C9952A]/30">
+                                      {m.photoUrl ? (
+                                        <img src={API.fileUrl(m.photoUrl) || ''} alt={m.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        m.name.slice(0, 2).toUpperCase()
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="font-extrabold text-[#1E2D4E] text-sm leading-tight">{m.name}</div>
+                                      <div className="text-[10.5px] text-[#777] font-mono font-bold mt-0.5">{m.appNo}</div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  {m.roleInBatch === 'Batch Leader' ? (
+                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit shadow-2xs">
+                                      <Crown className="w-3 h-3 text-amber-600" />
+                                      Batch Leader
+                                    </span>
+                                  ) : m.roleInBatch === 'Group Leader' ? (
+                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1 w-fit shadow-2xs">
+                                      <Star className="w-3 h-3 text-blue-600" />
+                                      Group Leader
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1 w-fit">
+                                      <User className="w-3 h-3 text-slate-500" />
+                                      Group Member
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  <div className="font-bold text-[#1E2D4E]">{m.department || '—'}</div>
+                                  <div className="text-[11px] text-[#C9952A] font-extrabold truncate">{m.designation || 'Staff'}</div>
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {(['Present', 'Absent', 'Late', 'Half Day', 'Leave'] as AttendanceStatus[]).map(st => {
+                                      const isActive = currentStatus === st;
+                                      let btnClass = 'bg-white text-[#555] border-[#e2dfd7] hover:bg-[#F9F7F4]';
+                                      if (isActive) {
+                                        if (st === 'Present') btnClass = 'bg-emerald-600 text-white border-emerald-700 shadow-xs';
+                                        else if (st === 'Absent') btnClass = 'bg-rose-600 text-white border-rose-700 shadow-xs';
+                                        else if (st === 'Late') btnClass = 'bg-amber-500 text-white border-amber-600 shadow-xs';
+                                        else if (st === 'Half Day') btnClass = 'bg-blue-600 text-white border-blue-700 shadow-xs';
+                                        else if (st === 'Leave') btnClass = 'bg-purple-600 text-white border-purple-700 shadow-xs';
+                                      }
+
+                                      return (
+                                        <button
+                                          key={st}
+                                          disabled={isCurrentSessionLocked}
+                                          onClick={() => handleStatusChange(m.appNo, activeTab === 'morning' ? 'morning' : 'afternoon', st)}
+                                          className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer disabled:opacity-40 ${btnClass}`}
+                                        >
+                                          {st}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+
+                                <td className="py-3.5 px-4">
+                                  <input
+                                    type="text"
+                                    disabled={isCurrentSessionLocked}
+                                    placeholder="Remarks / Reason..."
+                                    value={currentRemarks}
+                                    onChange={(e) => handleRemarksChange(m.appNo, activeTab === 'morning' ? 'morning' : 'afternoon', e.target.value)}
+                                    className="w-full text-xs p-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-[#1E2D4E] focus:outline-none focus:border-[#C9952A] disabled:opacity-50"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ATTENDANCE CONTENT: MORNING & AFTERNOON SESSION (FLAT ROSTER VIEW) */}
+          {activeTab !== 'matrix' && layoutMode === 'all_members' && (
             <div className="card-glass overflow-hidden border border-[#e2dfd7] shadow-sm">
               <div className="p-4 bg-[#1E2D4E] text-white flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -786,7 +1183,6 @@ export default function BatchAttendance() {
 
                         return (
                           <tr key={m.appNo} className="hover:bg-black/5 transition-colors">
-                            {/* Member Info */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#1E2D4E] text-[#C9952A] font-black text-xs flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs border border-[#C9952A]/30">
@@ -803,7 +1199,6 @@ export default function BatchAttendance() {
                               </div>
                             </td>
 
-                            {/* Batch Role Badge */}
                             <td className="py-3.5 px-4">
                               {m.roleInBatch === 'Batch Leader' ? (
                                 <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1 w-fit shadow-2xs">
@@ -823,18 +1218,15 @@ export default function BatchAttendance() {
                               )}
                             </td>
 
-                            {/* Group Name */}
                             <td className="py-3.5 px-4 font-extrabold text-[#1E2D4E]">
                               {m.groupName}
                             </td>
 
-                            {/* Dept & Designation */}
                             <td className="py-3.5 px-4">
                               <div className="font-bold text-[#1E2D4E]">{m.department || '—'}</div>
                               <div className="text-[11px] text-[#C9952A] font-extrabold truncate">{m.designation || 'Staff'}</div>
                             </td>
 
-                            {/* Attendance Status Picker */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {(['Present', 'Absent', 'Late', 'Half Day', 'Leave'] as AttendanceStatus[]).map(st => {
@@ -851,8 +1243,9 @@ export default function BatchAttendance() {
                                   return (
                                     <button
                                       key={st}
+                                      disabled={isCurrentSessionLocked}
                                       onClick={() => handleStatusChange(m.appNo, activeTab === 'morning' ? 'morning' : 'afternoon', st)}
-                                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer ${btnClass}`}
+                                      className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border transition-all cursor-pointer disabled:opacity-40 ${btnClass}`}
                                     >
                                       {st}
                                     </button>
@@ -861,14 +1254,14 @@ export default function BatchAttendance() {
                               </div>
                             </td>
 
-                            {/* Remarks Input */}
                             <td className="py-3.5 px-4">
                               <input
                                 type="text"
-                                placeholder="Remarks / Reason (Optional)..."
+                                disabled={isCurrentSessionLocked}
+                                placeholder="Remarks / Reason..."
                                 value={currentRemarks}
                                 onChange={(e) => handleRemarksChange(m.appNo, activeTab === 'morning' ? 'morning' : 'afternoon', e.target.value)}
-                                className="w-full text-xs p-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-[#1E2D4E] focus:outline-none focus:border-[#C9952A]"
+                                className="w-full text-xs p-2 rounded-xl border border-[#e2dfd7] bg-[#F9F7F4] text-[#1E2D4E] focus:outline-none focus:border-[#C9952A] disabled:opacity-50"
                               />
                             </td>
                           </tr>
@@ -925,7 +1318,6 @@ export default function BatchAttendance() {
                     </thead>
                     <tbody className="divide-y divide-[#e2dfd7]/60 font-medium">
                       {filteredMembers.map(m => {
-                        // Filter records for candidate
                         const candRecords = matrixData.filter((r: any) => r.candidate_app_no === m.appNo);
                         const dayMap: Record<number, { m: string; a: string }> = {};
                         candRecords.forEach((r: any) => {
