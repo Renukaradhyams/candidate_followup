@@ -94,9 +94,7 @@ const formatSalaryVal = (val: any): string => {
     const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
     const total = base + inc;
     if (total === 0) return '—';
-    return inc > 0 
-      ? `₹ ${base.toLocaleString('en-IN')} (+ ₹ ${inc.toLocaleString('en-IN')} Inc)` 
-      : `₹ ${base.toLocaleString('en-IN')}`;
+    return `₹ ${total.toLocaleString('en-IN')}`;
   }
 
   if (str.includes('+')) {
@@ -105,9 +103,7 @@ const formatSalaryVal = (val: any): string => {
     const inc = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
     const total = base + inc;
     if (total === 0) return '—';
-    return inc > 0 
-      ? `₹ ${base.toLocaleString('en-IN')} (+ ₹ ${inc.toLocaleString('en-IN')} Inc)` 
-      : `₹ ${base.toLocaleString('en-IN')}`;
+    return `₹ ${total.toLocaleString('en-IN')}`;
   }
 
   const num = parseFloat(str.replace(/[^0-9.]/g, ''));
