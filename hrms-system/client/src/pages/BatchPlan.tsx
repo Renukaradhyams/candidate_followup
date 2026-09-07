@@ -288,20 +288,44 @@ export default function BatchPlanPage() {
     }
   };
 
+  const handleToggleBatchStatus = async (batchId: number, batchName: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'Inactive' ? 'Active' : 'Inactive';
+    const actionName = newStatus === 'Inactive' ? 'deactivate' : 'reactivate';
+    setConfirmModal({
+      open: true,
+      title: `${newStatus === 'Inactive' ? 'Deactivate' : 'Reactivate'} Batch?`,
+      message: `Are you sure you want to ${actionName} Batch "${batchName}"? Group member assignments will be preserved.`,
+      onConfirm: async () => {
+        try {
+          const res = await API.updateBatch(batchId, { status: newStatus });
+          if (res && res.success !== false) {
+            showToast(`Batch "${batchName}" is now ${newStatus}`, 'success');
+            loadData();
+          }
+        } catch (err: any) {
+          showToast(err.message || `Failed to ${actionName} batch`, 'error');
+        }
+      }
+    });
+  };
+
   const handleDeleteBatch = async (batchId: number, batchName: string) => {
     setConfirmModal({
       open: true,
-      title: 'Deactivate Batch?',
-      message: `Are you sure you want to deactivate Batch "${batchName}"? Group member assignments will be preserved safely.`,
+      title: 'Delete Batch Permanently?',
+      message: `Are you sure you want to permanently delete Batch "${batchName}"? All group structures in this batch will be deleted and assigned members will become UNASSIGNED.`,
       onConfirm: async () => {
         try {
           const res = await API.deleteBatch(batchId);
           if (res && res.success !== false) {
-            showToast(res.message || `Batch "${batchName}" deactivated`, 'success');
+            showToast(res.message || `Batch "${batchName}" deleted successfully`, 'success');
+            if (selectedBatchId === batchId) {
+              setSelectedBatchId(null);
+            }
             loadData();
           }
         } catch (err: any) {
-          showToast(err.message || 'Failed to deactivate batch', 'error');
+          showToast(err.message || 'Failed to delete batch', 'error');
         }
       }
     });
@@ -1105,7 +1129,8 @@ export default function BatchPlanPage() {
                           onCreateGroup={bId => setEditGroupModalState({ open: true, group: null, selectedBatchId: bId })}
                           onViewHierarchy={() => setViewMode('hierarchy')}
                           onViewUnassigned={() => setActiveTab('unassigned')}
-                          onDeactivateBatch={(bId, bName) => handleDeleteBatch(bId, bName)}
+                          onToggleStatusBatch={(bId, bName, curStatus) => handleToggleBatchStatus(bId, bName, curStatus)}
+                          onDeleteBatch={(bId, bName) => handleDeleteBatch(bId, bName)}
                         />
                       ))}
                     </div>

@@ -101,12 +101,13 @@ class BatchPlanController {
   // POST /api/batch-plan/batches
   async createBatch(req, res) {
     try {
-      const { batchCode, name, type, description, capacity, batchLeaderAppNo, status } = req.body;
+      const { batchCode, batch_code, name, type, description, capacity, batchLeaderAppNo, status } = req.body;
       if (!name) {
         return res.status(400).json({ success: false, error: 'Batch Name is required' });
       }
 
-      const code = batchCode || `B-${name.replace(/\s+/g, '-').toUpperCase()}`;
+      const inputCode = batchCode || batch_code;
+      const code = inputCode ? inputCode.trim() : `B-${name.replace(/\s+/g, '-').toUpperCase()}`;
       const cap = parseInt(capacity, 10) || 80;
       const byUser = req.user?.fullName || req.user?.username || 'Admin';
 
@@ -131,12 +132,15 @@ class BatchPlanController {
   async updateBatch(req, res) {
     try {
       const batchId = req.params.id;
-      const { name, type, description, capacity, batchLeaderAppNo, status } = req.body;
+      const { batchCode, batch_code, name, type, description, capacity, batchLeaderAppNo, status } = req.body;
+      const inputCode = batchCode || batch_code;
+      const code = inputCode ? inputCode.trim() : null;
       const byUser = req.user?.fullName || req.user?.username || 'Admin';
 
       await pool.query(`
         UPDATE batch_plans 
-        SET name = COALESCE(?, name),
+        SET batch_code = COALESCE(?, batch_code),
+            name = COALESCE(?, name),
             type = COALESCE(?, type),
             description = COALESCE(?, description),
             capacity = COALESCE(?, capacity),
@@ -144,7 +148,7 @@ class BatchPlanController {
             status = COALESCE(?, status),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `, [name, type, description, capacity, batchLeaderAppNo !== undefined ? batchLeaderAppNo : null, status, batchId]);
+      `, [code, name, type, description, capacity, batchLeaderAppNo !== undefined ? batchLeaderAppNo : null, status, batchId]);
 
       await pool.query(`
         INSERT INTO batch_activity_logs (action_type, description, by_user)
@@ -158,31 +162,25 @@ class BatchPlanController {
     }
   }
 
-  // DELETE /api/batch-plan/batches/:id (Deactivate or delete batch safely)
+  // DELETE /api/batch-plan/batches/:id (Permanently delete batch and unassign members)
   async deleteBatch(req, res) {
     try {
       const batchId = req.params.id;
       const byUser = req.user?.fullName || req.user?.username || 'Admin';
 
-      // Check if batch has members or groups
-      const [gRows] = await pool.query(`SELECT COUNT(*) as cnt FROM batch_groups WHERE batch_id = ?`, [batchId]);
-      const [mRows] = await pool.query(`SELECT COUNT(*) as cnt FROM batch_group_members WHERE batch_id = ?`, [batchId]);
+      // 1. Remove member assignments for this batch
+      await pool.query(`DELETE FROM batch_group_members WHERE batch_id = ?`, [batchId]);
 
-      if (gRows[0].cnt > 0 || mRows[0].cnt > 0) {
-        // Deactivate batch instead of hard deletion to protect group assignments
-        await pool.query(`UPDATE batch_plans SET status = 'Inactive' WHERE id = ?`, [batchId]);
-        await pool.query(`
-          INSERT INTO batch_activity_logs (action_type, description, by_user)
-          VALUES (?, ?, ?)
-        `, ['Deactivate Batch', `Batch ID ${batchId} deactivated`, byUser]);
-        return res.json({ success: true, message: 'Batch deactivated successfully' });
-      }
+      // 2. Remove groups associated with this batch
+      await pool.query(`DELETE FROM batch_groups WHERE batch_id = ?`, [batchId]);
 
+      // 3. Delete the batch plan itself
       await pool.query(`DELETE FROM batch_plans WHERE id = ?`, [batchId]);
+
       await pool.query(`
         INSERT INTO batch_activity_logs (action_type, description, by_user)
         VALUES (?, ?, ?)
-      `, ['Delete Batch', `Batch ID ${batchId} deleted`, byUser]);
+      `, ['Delete Batch', `Batch ID ${batchId} and its group structures deleted (members set to UNASSIGNED)`, byUser]);
 
       return res.json({ success: true, message: 'Batch deleted successfully' });
     } catch (err) {
@@ -253,19 +251,22 @@ class BatchPlanController {
   async updateGroup(req, res) {
     try {
       const groupId = req.params.id;
-      const { name, groupLeaderAppNo, maxMembers, description, status } = req.body;
+      const { groupCode, group_code, name, groupLeaderAppNo, maxMembers, description, status } = req.body;
+      const inputCode = groupCode || group_code;
+      const code = inputCode ? inputCode.trim() : null;
       const byUser = req.user?.fullName || req.user?.username || 'Admin';
 
       await pool.query(`
         UPDATE batch_groups
-        SET name = COALESCE(?, name),
+        SET group_code = COALESCE(?, group_code),
+            name = COALESCE(?, name),
             group_leader_app_no = ?,
             max_members = COALESCE(?, max_members),
             description = COALESCE(?, description),
             status = COALESCE(?, status),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `, [name, groupLeaderAppNo !== undefined ? groupLeaderAppNo : null, maxMembers, description, status, groupId]);
+      `, [code, name, groupLeaderAppNo !== undefined ? groupLeaderAppNo : null, maxMembers, description, status, groupId]);
 
       await pool.query(`
         INSERT INTO batch_activity_logs (action_type, description, by_user)

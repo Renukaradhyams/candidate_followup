@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Edit3, Plus, MoreVertical, Award, Users, FolderTree, AlertTriangle, UserPlus, Trash2 } from 'lucide-react';
+import { Layers, Edit3, Plus, MoreVertical, Award, Users, FolderTree, AlertTriangle, UserPlus, Trash2, Power } from 'lucide-react';
 import { BatchPlan, Candidate, BatchGroup } from './types';
 import { API } from '../../services/api';
 
@@ -15,7 +15,9 @@ interface BatchCardProps {
   onCreateGroup: (batchId: number) => void;
   onViewHierarchy: () => void;
   onViewUnassigned: () => void;
-  onDeactivateBatch: (batchId: number, batchName: string) => void;
+  onDeactivateBatch?: (batchId: number, batchName: string) => void;
+  onToggleStatusBatch?: (batchId: number, batchName: string, currentStatus: string) => void;
+  onDeleteBatch?: (batchId: number, batchName: string) => void;
 }
 
 export default function BatchCard({
@@ -30,20 +32,26 @@ export default function BatchCard({
   onCreateGroup,
   onViewHierarchy,
   onViewUnassigned,
-  onDeactivateBatch
+  onDeactivateBatch,
+  onToggleStatusBatch,
+  onDeleteBatch
 }: BatchCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const isInactive = batch.status === 'Inactive';
 
   return (
-    <div className="border border-[#e2dfd7] rounded-3xl p-5 bg-white hover:shadow-xl transition-all flex flex-col justify-between space-y-4">
+    <div className={`border rounded-3xl p-5 bg-white hover:shadow-xl transition-all flex flex-col justify-between space-y-4 ${isInactive ? 'border-slate-300 opacity-90' : 'border-[#e2dfd7]'}`}>
       <div>
         {/* TOP BANNER */}
         <div className="flex items-start justify-between border-b border-gray-100 pb-3">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xl font-black text-[#1E2D4E] tracking-tight">{batch.name}</h3>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#1E2D4E]/10 text-[#1E2D4E]">
                 {batch.batch_code}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${isInactive ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800'}`}>
+                {batch.status || 'Active'}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-0.5">{batch.type} Batch • Capacity: {batch.capacity}</p>
@@ -60,7 +68,7 @@ export default function BatchCard({
             {dropdownOpen && (
               <div
                 onMouseLeave={() => setDropdownOpen(false)}
-                className="absolute right-0 top-9 w-52 bg-white rounded-2xl shadow-xl border border-[#e2dfd7] z-20 py-2 text-xs font-bold text-[#1E2D4E] animate-fade-in space-y-0.5"
+                className="absolute right-0 top-9 w-56 bg-white rounded-2xl shadow-xl border border-[#e2dfd7] z-20 py-2 text-xs font-bold text-[#1E2D4E] animate-fade-in space-y-0.5"
               >
                 <button
                   onClick={() => { setDropdownOpen(false); onAssignBatchLeader(batch.id, batch.name); }}
@@ -92,11 +100,32 @@ export default function BatchCard({
                 </button>
                 <div className="border-t border-slate-100 my-1" />
                 <button
-                  onClick={() => { setDropdownOpen(false); onDeactivateBatch(batch.id, batch.name); }}
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    if (onToggleStatusBatch) {
+                      onToggleStatusBatch(batch.id, batch.name, batch.status);
+                    } else if (onDeactivateBatch) {
+                      onDeactivateBatch(batch.id, batch.name);
+                    }
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-amber-50 text-amber-800 flex items-center gap-2"
+                >
+                  <Power className="w-4 h-4 text-amber-600" />
+                  <span>{isInactive ? 'Reactivate Batch' : 'Deactivate Batch'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    if (onDeleteBatch) {
+                      onDeleteBatch(batch.id, batch.name);
+                    } else if (onDeactivateBatch) {
+                      onDeactivateBatch(batch.id, batch.name);
+                    }
+                  }}
                   className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-700 flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4 text-rose-600" />
-                  <span>Deactivate Batch</span>
+                  <span>Delete Batch</span>
                 </button>
               </div>
             )}
