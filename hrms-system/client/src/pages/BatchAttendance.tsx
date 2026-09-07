@@ -145,9 +145,9 @@ export default function BatchAttendance() {
     return session?.role === 'Batch Leader';
   }, [session]);
 
-  // Current Time Cutoff Lock logic for Batch Leader
-  // Morning cutoff: 12:00 PM (12:00:00)
-  // Afternoon cutoff: 6:30 PM (18:30:00)
+  // Current Time Window Lock logic for Batch Leader
+  // Morning window: 10:00 AM (600 mins) to 12:00 PM (720 mins)
+  // Afternoon window: 2:00 PM (840 mins) to 6:30 PM (1110 mins)
   const lockStatus = useMemo(() => {
     if (!isBatchLeaderRole) {
       return { isMorningLocked: false, isAfternoonLocked: false, isPastDateLocked: false, message: 'Admin / Manager Override Active — Unrestricted Edit' };
@@ -173,22 +173,28 @@ export default function BatchAttendance() {
       };
     }
 
-    // Today's cutoff check
+    // Today's window check
     const now = new Date();
     const curMinutes = now.getHours() * 60 + now.getMinutes();
-    const morningCutoffMins = 12 * 60; // 12:00 PM = 720 mins
-    const afternoonCutoffMins = 18 * 60 + 30; // 6:30 PM = 1110 mins
+    const morningStartMins = 10 * 60; // 10:00 AM = 600 mins
+    const morningEndMins = 12 * 60; // 12:00 PM = 720 mins
+    const afternoonStartMins = 14 * 60; // 2:00 PM = 840 mins
+    const afternoonEndMins = 18 * 60 + 30; // 6:30 PM = 1110 mins
 
-    const morningLocked = curMinutes >= morningCutoffMins;
-    const afternoonLocked = curMinutes >= afternoonCutoffMins;
+    const morningLocked = curMinutes < morningStartMins || curMinutes > morningEndMins;
+    const afternoonLocked = curMinutes < afternoonStartMins || curMinutes > afternoonEndMins;
 
     let msg = '';
-    if (morningLocked && afternoonLocked) {
-      msg = '🔒 Attendance closed for today (Morning cutoff 12:00 PM, Afternoon cutoff 6:30 PM passed). Admin override required.';
-    } else if (morningLocked) {
-      msg = '🔒 Morning session attendance closed at 12:00 PM. Afternoon session open until 6:30 PM.';
+    if (curMinutes < morningStartMins) {
+      msg = '⏱️ Morning session attendance opens at 10:00 AM (10:00 AM - 12:00 PM window). Afternoon session opens at 2:00 PM.';
+    } else if (curMinutes <= morningEndMins) {
+      msg = '✅ Morning session attendance is OPEN (10:00 AM - 12:00 PM). Afternoon session opens at 2:00 PM.';
+    } else if (curMinutes < afternoonStartMins) {
+      msg = '🔒 Morning session closed at 12:00 PM. Afternoon session will open at 2:00 PM (2:00 PM - 6:30 PM window).';
+    } else if (curMinutes <= afternoonEndMins) {
+      msg = '✅ Afternoon session attendance is OPEN (2:00 PM - 6:30 PM). Morning session is closed.';
     } else {
-      msg = '⏱️ Morning session open until 12:00 PM. Afternoon session open until 6:30 PM.';
+      msg = '🔒 Attendance closed for today (Morning window 10:00 AM - 12:00 PM, Afternoon window 2:00 PM - 6:30 PM passed). Admin override required.';
     }
 
     return {
@@ -483,7 +489,7 @@ export default function BatchAttendance() {
   // Bulk Actions WITH AUTO SAVE
   const handleMarkAllMorning = (status: AttendanceStatus) => {
     if (lockStatus.isMorningLocked) {
-      showToast('Morning Session is locked for Batch Leader. Cutoff time (12:00 PM) passed.', 'warn');
+      showToast('Morning Session is locked for Batch Leader. Enabled window: 10:00 AM - 12:00 PM.', 'warn');
       return;
     }
 
@@ -502,7 +508,7 @@ export default function BatchAttendance() {
 
   const handleMarkAllAfternoon = (status: AttendanceStatus) => {
     if (lockStatus.isAfternoonLocked) {
-      showToast('Afternoon Session is locked for Batch Leader. Cutoff time (6:30 PM) passed.', 'warn');
+      showToast('Afternoon Session is locked for Batch Leader. Enabled window: 2:00 PM - 6:30 PM.', 'warn');
       return;
     }
 
@@ -725,7 +731,7 @@ export default function BatchAttendance() {
               )}
               <div>
                 <div className="font-extrabold uppercase tracking-wider text-[10.5px]">
-                  SESSION CUTOFF RULES: Morning Session (12:00 PM Cutoff) • Afternoon Session (6:30 PM Cutoff)
+                  SESSION WINDOW RULES: Morning Session (10:00 AM - 12:00 PM) • Afternoon Session (2:00 PM - 6:30 PM) | Admin: Anytime
                 </div>
                 <div className="text-[11.5px] mt-0.5">
                   {lockStatus.message}
@@ -792,7 +798,7 @@ export default function BatchAttendance() {
                 `}
               >
                 <Sunrise className="w-4 h-4" />
-                <span>Morning Session 🌅 (Before 12 PM)</span>
+                <span>Morning Session 🌅 (10:00 AM - 12:00 PM)</span>
                 {lockStatus.isMorningLocked && isBatchLeaderRole && <Lock className="w-3.5 h-3.5 text-amber-200" />}
               </button>
 
@@ -804,7 +810,7 @@ export default function BatchAttendance() {
                 `}
               >
                 <Sun className="w-4 h-4" />
-                <span>Afternoon Session ☀️ (Before 6:30 PM)</span>
+                <span>Afternoon Session ☀️ (2:00 PM - 6:30 PM)</span>
                 {lockStatus.isAfternoonLocked && isBatchLeaderRole && <Lock className="w-3.5 h-3.5 text-indigo-200" />}
               </button>
 

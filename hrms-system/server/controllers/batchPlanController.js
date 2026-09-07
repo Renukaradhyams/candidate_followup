@@ -508,16 +508,19 @@ class BatchPlanController {
       const attDate = attendanceDate || new Date().toISOString().slice(0, 10);
 
       // Check time cutoffs for Batch Leader role
+      // Morning window: 10:00 AM (600 mins) to 12:00 PM (720 mins)
+      // Afternoon window: 2:00 PM (840 mins) to 6:30 PM (1110 mins)
       const todayStr = new Date().toISOString().slice(0, 10);
       const now = new Date();
       const curMins = now.getHours() * 60 + now.getMinutes();
-      const isMorningLocked = isBatchLeader && (attDate !== todayStr || curMins >= 12 * 60);
-      const isAfternoonLocked = isBatchLeader && (attDate !== todayStr || curMins >= 18 * 60 + 30);
+
+      const isMorningLocked = isBatchLeader && (attDate !== todayStr || curMins < 10 * 60 || curMins > 12 * 60);
+      const isAfternoonLocked = isBatchLeader && (attDate !== todayStr || curMins < 14 * 60 || curMins > 18 * 60 + 30);
 
       if (isBatchLeader && attDate !== todayStr) {
         return res.status(403).json({
           success: false,
-          error: 'Batch Leaders can only update attendance for today. Past date attendance can only be updated by Admin.'
+          error: 'Batch Leaders can only update attendance for today. Past and future date attendance can only be updated by Admin.'
         });
       }
 
@@ -531,10 +534,10 @@ class BatchPlanController {
         );
         const prev = exist && exist.length > 0 ? exist[0] : null;
 
-        const finalMorningStatus = isMorningLocked && prev ? prev.morning_status : (item.morningStatus || 'Present');
-        const finalMorningRemarks = isMorningLocked && prev ? prev.morning_remarks : (item.morningRemarks || null);
-        const finalAfternoonStatus = isAfternoonLocked && prev ? prev.afternoon_status : (item.afternoonStatus || 'Present');
-        const finalAfternoonRemarks = isAfternoonLocked && prev ? prev.afternoon_remarks : (item.afternoonRemarks || null);
+        const finalMorningStatus = isMorningLocked ? (prev ? prev.morning_status : 'Present') : (item.morningStatus || 'Present');
+        const finalMorningRemarks = isMorningLocked ? (prev ? prev.morning_remarks : null) : (item.morningRemarks || null);
+        const finalAfternoonStatus = isAfternoonLocked ? (prev ? prev.afternoon_status : 'Present') : (item.afternoonStatus || 'Present');
+        const finalAfternoonRemarks = isAfternoonLocked ? (prev ? prev.afternoon_remarks : null) : (item.afternoonRemarks || null);
 
         await pool.query(`
           INSERT INTO batch_attendance (
