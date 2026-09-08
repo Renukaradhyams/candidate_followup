@@ -269,11 +269,46 @@ export default function BatchAttendance() {
     }
   }, [selectedBatchId]);
 
+  // Helper to calculate or find date corresponding to a given day (Day 1..20)
+  // Day 1 = 2026-09-07
+  // Day 2 = 2026-09-08 (Today)
+  // Day N = 2026-09-07 + (N - 1) days
+  const getDateForDay = useCallback((day: number, records: any[] = matrixData) => {
+    const rec = records.find(r => r.day_number === day && r.attendance_date);
+    if (rec && rec.attendance_date) {
+      return typeof rec.attendance_date === 'string'
+        ? rec.attendance_date.slice(0, 10)
+        : new Date(rec.attendance_date).toISOString().slice(0, 10);
+    }
+
+    const baseDate = new Date('2026-09-07T00:00:00');
+    baseDate.setDate(baseDate.getDate() + (day - 1));
+    const year = baseDate.getFullYear();
+    const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const d = String(baseDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${d}`;
+  }, [matrixData]);
+
+  const handleSelectDay = (day: number) => {
+    setSelectedDay(day);
+    const targetDate = getDateForDay(day);
+    setSelectedDate(targetDate);
+  };
+
+  const handleDateChange = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    for (let day = 1; day <= 20; day++) {
+      if (getDateForDay(day) === dateStr) {
+        setSelectedDay(day);
+        break;
+      }
+    }
+  };
+
   // Auto-detect Today's Date & Today's Attendance Day Sheet (Day 1..20)
   const autoDetectTodaySheet = useCallback(async (batchId: number) => {
     try {
       const todayStr = getTodayStr();
-      setSelectedDate(todayStr);
 
       const res = await API.getBatchAttendanceSummary(batchId);
       if (res && res.success && Array.isArray(res.summary)) {
@@ -291,25 +326,26 @@ export default function BatchAttendance() {
 
         if (todayRecord && todayRecord.day_number) {
           setSelectedDay(todayRecord.day_number);
+          setSelectedDate(todayStr);
           return;
         }
 
-        // 2. If no record for today yet, find max day_number recorded so far in this batch
-        let maxDay = 0;
-        summary.forEach(r => {
-          if (r.day_number && r.day_number > maxDay) {
-            maxDay = r.day_number;
+        // 2. Otherwise find day matching todayStr via formula (Day 1 = 07-09-2026, Day 2 = 08-09-2026)
+        let foundDay = 1;
+        for (let d = 1; d <= 20; d++) {
+          if (getDateForDay(d, summary) === todayStr) {
+            foundDay = d;
+            break;
           }
-        });
+        }
 
-        // Next day sheet for today is maxDay + 1 (capped at 20)
-        const nextDay = Math.min(maxDay + 1, 20);
-        setSelectedDay(nextDay > 0 ? nextDay : 1);
+        setSelectedDay(foundDay);
+        setSelectedDate(todayStr);
       }
     } catch (err) {
       console.error('Error auto-detecting today sheet:', err);
     }
-  }, []);
+  }, [getDateForDay]);
 
   useEffect(() => {
     if (selectedBatchId) {
@@ -843,7 +879,7 @@ export default function BatchAttendance() {
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className="px-2.5 py-1 rounded-xl border border-[#e2dfd7] bg-white text-xs font-bold text-[#1E2D4E] focus:outline-none focus:border-[#C9952A]"
                 />
               </div>
@@ -851,21 +887,27 @@ export default function BatchAttendance() {
 
             {/* 20 Day Pills */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {Array.from({ length: 20 }, (_, i) => i + 1).map(day => (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  className={`
-                    px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex flex-col items-center min-w-[65px] border
-                    ${selectedDay === day
-                      ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-md ring-2 ring-[#C9952A]'
-                      : 'bg-white text-[#555] border-[#e2dfd7] hover:bg-[#F9F7F4]'}
-                  `}
-                >
-                  <span className="text-[9.5px] uppercase tracking-wider text-[#C9952A]">DAY</span>
-                  <span className="text-sm leading-tight">{day}</span>
-                </button>
-              ))}
+              {Array.from({ length: 20 }, (_, i) => i + 1).map(day => {
+                const dayDateStr = getDateForDay(day);
+                const dateParts = dayDateStr.split('-');
+                const displayDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}` : dayDateStr;
+
+                return (
+                  <button
+                    key={day}
+                    onClick={() => handleSelectDay(day)}
+                    className={`
+                      px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex flex-col items-center min-w-[85px] border
+                      ${selectedDay === day
+                        ? 'bg-[#1E2D4E] text-white border-[#1E2D4E] shadow-md ring-2 ring-[#C9952A]'
+                        : 'bg-white text-[#555] border-[#e2dfd7] hover:bg-[#F9F7F4]'}
+                    `}
+                  >
+                    <span className="text-[9px] uppercase tracking-wider text-[#C9952A]">DAY {String(day).padStart(2, '0')}</span>
+                    <span className="text-[11px] leading-tight font-extrabold">{displayDate}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
