@@ -269,25 +269,18 @@ export default function BatchAttendance() {
     }
   }, [selectedBatchId]);
 
-  // Helper to calculate or find date corresponding to a given day (Day 1..20)
-  // Day 1 = 2026-09-07
-  // Day 2 = 2026-09-08 (Today)
+  // Helper to calculate date corresponding to a given day (Day 1..20)
+  // Day 01 = 2026-09-07 (07-09-2026)
+  // Day 02 = 2026-09-08 (08-09-2026 - Today)
   // Day N = 2026-09-07 + (N - 1) days
-  const getDateForDay = useCallback((day: number, records: any[] = matrixData) => {
-    const rec = records.find(r => r.day_number === day && r.attendance_date);
-    if (rec && rec.attendance_date) {
-      return typeof rec.attendance_date === 'string'
-        ? rec.attendance_date.slice(0, 10)
-        : new Date(rec.attendance_date).toISOString().slice(0, 10);
-    }
-
-    const baseDate = new Date('2026-09-07T00:00:00');
+  const getDateForDay = useCallback((day: number) => {
+    const baseDate = new Date(2026, 8, 7); // 7th Sept 2026 (Month index 8 = September)
     baseDate.setDate(baseDate.getDate() + (day - 1));
     const year = baseDate.getFullYear();
     const month = String(baseDate.getMonth() + 1).padStart(2, '0');
     const d = String(baseDate.getDate()).padStart(2, '0');
     return `${year}-${month}-${d}`;
-  }, [matrixData]);
+  }, []);
 
   const handleSelectDay = (day: number) => {
     setSelectedDay(day);
@@ -312,36 +305,20 @@ export default function BatchAttendance() {
 
       const res = await API.getBatchAttendanceSummary(batchId);
       if (res && res.success && Array.isArray(res.summary)) {
-        const summary: any[] = res.summary;
-        setMatrixData(summary);
-
-        // 1. Check if an attendance record already exists for today's date in this batch
-        const todayRecord = summary.find(r => {
-          if (!r.attendance_date) return false;
-          const dStr = typeof r.attendance_date === 'string'
-            ? r.attendance_date.slice(0, 10)
-            : new Date(r.attendance_date).toISOString().slice(0, 10);
-          return dStr === todayStr;
-        });
-
-        if (todayRecord && todayRecord.day_number) {
-          setSelectedDay(todayRecord.day_number);
-          setSelectedDate(todayStr);
-          return;
-        }
-
-        // 2. Otherwise find day matching todayStr via formula (Day 1 = 07-09-2026, Day 2 = 08-09-2026)
-        let foundDay = 1;
-        for (let d = 1; d <= 20; d++) {
-          if (getDateForDay(d, summary) === todayStr) {
-            foundDay = d;
-            break;
-          }
-        }
-
-        setSelectedDay(foundDay);
-        setSelectedDate(todayStr);
+        setMatrixData(res.summary);
       }
+
+      // Find day number corresponding to today's date (Day 1 = 07-09-2026, Day 2 = 08-09-2026)
+      let foundDay = 1;
+      for (let d = 1; d <= 20; d++) {
+        if (getDateForDay(d) === todayStr) {
+          foundDay = d;
+          break;
+        }
+      }
+
+      setSelectedDay(foundDay);
+      setSelectedDate(todayStr);
     } catch (err) {
       console.error('Error auto-detecting today sheet:', err);
     }
