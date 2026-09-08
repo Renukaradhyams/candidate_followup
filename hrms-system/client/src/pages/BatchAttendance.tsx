@@ -92,6 +92,15 @@ interface BatchMemberInfo {
 
 type AttendanceStatus = 'Present' | 'Absent' | 'Late' | 'Half Day' | 'Leave';
 
+// Local YYYY-MM-DD Date helper
+const getTodayStr = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function BatchAttendance() {
   const navigate = useNavigate();
   const [session, setSession] = useState<UserSession | null>(null);
@@ -112,7 +121,7 @@ export default function BatchAttendance() {
   // Selected State
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(1);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayStr());
   const [activeTab, setActiveTab] = useState<'morning' | 'afternoon' | 'matrix'>('morning');
   const [layoutMode, setLayoutMode] = useState<'group_wise' | 'all_members'>('group_wise');
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,7 +162,7 @@ export default function BatchAttendance() {
       return { isMorningLocked: false, isAfternoonLocked: false, isPastDateLocked: false, message: 'Admin / Manager Override Active — Unrestricted Edit' };
     }
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getTodayStr();
 
     if (selectedDate < todayStr) {
       return {
@@ -218,13 +227,39 @@ export default function BatchAttendance() {
       setLoading(true);
       const res = await API.getBatchPlanData();
       if (res && res.success !== false) {
-        setBatches(res.batches || []);
+        const bList: BatchPlan[] = res.batches || [];
+        const cList: Candidate[] = res.candidates || [];
+
+        setBatches(bList);
         setGroups(res.groups || []);
         setGroupMembers(res.groupMembers || []);
-        setCandidates(res.candidates || []);
+        setCandidates(cList);
 
-        if (res.batches && res.batches.length > 0 && !selectedBatchId) {
-          setSelectedBatchId(res.batches[0].id);
+        if (bList.length > 0 && !selectedBatchId) {
+          let defaultBatchId = bList[0].id;
+
+          const sess = Auth.get();
+          if (sess) {
+            const userCand = cList.find(c =>
+              (c.app_no && c.app_no.toLowerCase() === (sess.username || '').toLowerCase()) ||
+              (c.name && sess.fullName && c.name.toLowerCase() === sess.fullName.toLowerCase()) ||
+              (c.name && sess.displayName && c.name.toLowerCase() === sess.displayName.toLowerCase())
+            );
+
+            const userAppNo = userCand?.app_no || sess.username;
+
+            const leaderBatch = bList.find(b =>
+              b.batch_leader_app_no &&
+              (b.batch_leader_app_no === userAppNo ||
+               (userCand && b.batch_leader_app_no === userCand.app_no))
+            );
+
+            if (leaderBatch) {
+              defaultBatchId = leaderBatch.id;
+            }
+          }
+
+          setSelectedBatchId(defaultBatchId);
         }
       }
     } catch (err: any) {
@@ -233,6 +268,54 @@ export default function BatchAttendance() {
       setLoading(false);
     }
   }, [selectedBatchId]);
+
+  // Auto-detect Today's Date & Today's Attendance Day Sheet (Day 1..20)
+  const autoDetectTodaySheet = useCallback(async (batchId: number) => {
+    try {
+      const todayStr = getTodayStr();
+      setSelectedDate(todayStr);
+
+      const res = await API.getBatchAttendanceSummary(batchId);
+      if (res && res.success && Array.isArray(res.summary)) {
+        const summary: any[] = res.summary;
+        setMatrixData(summary);
+
+        // 1. Check if an attendance record already exists for today's date in this batch
+        const todayRecord = summary.find(r => {
+          if (!r.attendance_date) return false;
+          const dStr = typeof r.attendance_date === 'string'
+            ? r.attendance_date.slice(0, 10)
+            : new Date(r.attendance_date).toISOString().slice(0, 10);
+          return dStr === todayStr;
+        });
+
+        if (todayRecord && todayRecord.day_number) {
+          setSelectedDay(todayRecord.day_number);
+          return;
+        }
+
+        // 2. If no record for today yet, find max day_number recorded so far in this batch
+        let maxDay = 0;
+        summary.forEach(r => {
+          if (r.day_number && r.day_number > maxDay) {
+            maxDay = r.day_number;
+          }
+        });
+
+        // Next day sheet for today is maxDay + 1 (capped at 20)
+        const nextDay = Math.min(maxDay + 1, 20);
+        setSelectedDay(nextDay > 0 ? nextDay : 1);
+      }
+    } catch (err) {
+      console.error('Error auto-detecting today sheet:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedBatchId) {
+      autoDetectTodaySheet(selectedBatchId);
+    }
+  }, [selectedBatchId, autoDetectTodaySheet]);
 
   useEffect(() => {
     loadBatchStructure();
