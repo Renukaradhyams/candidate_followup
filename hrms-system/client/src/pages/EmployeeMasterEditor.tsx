@@ -92,10 +92,7 @@ export default function EmployeeMasterEditorPage() {
            !emp.phone?.trim() ||
            !emp.dob ||
            !emp.department ||
-           !emp.desig ||
-           !emp.panNumber?.trim() ||
-           !emp.bankAccountNo?.trim() ||
-           !emp.bankIfsc?.trim();
+           !emp.desig;
   }, []);
 
   /* ── Data loading (ONLY Joined Store Employees) ── */
@@ -231,9 +228,6 @@ export default function EmployeeMasterEditorPage() {
     if (!form.department)            missing.push({ field: 'Department',      tab: 'official', key: 'department' });
     if (!form.desig)                 missing.push({ field: 'Designation',     tab: 'official', key: 'desig' });
     if (!form.salary)                missing.push({ field: 'Monthly Salary',  tab: 'banking',  key: 'salary' });
-    if (!form.panNumber?.trim())     missing.push({ field: 'PAN Card No',     tab: 'banking',  key: 'panNumber' });
-    if (!form.bankAccountNo?.trim()) missing.push({ field: 'Bank Account No', tab: 'banking',  key: 'bankAccountNo' });
-    if (!form.bankIfsc?.trim())      missing.push({ field: 'Bank IFSC Code',  tab: 'banking',  key: 'bankIfsc' });
     return missing;
   }, [form]);
 
@@ -1031,10 +1025,10 @@ export default function EmployeeMasterEditorPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {F('Bank Name *', <input type="text" value={form.bankName} onChange={e => setForm({ ...form, bankName: e.target.value })} placeholder="e.g. State Bank of India, HDFC Bank..." className={inp} />)}
-                    {F('Bank Account Number *', <input type="text" value={form.bankAccountNo} onChange={e => setForm({ ...form, bankAccountNo: e.target.value })} placeholder="Account Number" className={inp + ' font-mono'} />)}
-                    {F('Bank IFSC Code *', <input type="text" value={form.bankIfsc} onChange={e => setForm({ ...form, bankIfsc: e.target.value.toUpperCase() })} placeholder="e.g. SBIN0001234" className={inp + ' font-mono uppercase'} />)}
-                    {F('PAN Card Number *', <input type="text" value={form.panNumber} onChange={e => setForm({ ...form, panNumber: e.target.value.toUpperCase() })} placeholder="e.g. ABCDE1234F" maxLength={10} className={inp + ' font-mono uppercase'} />)}
+                    {F('Bank Name', <input type="text" value={form.bankName} onChange={e => setForm({ ...form, bankName: e.target.value })} placeholder="e.g. State Bank of India, HDFC Bank..." className={inp} />)}
+                    {F('Bank Account Number', <input type="text" value={form.bankAccountNo} onChange={e => setForm({ ...form, bankAccountNo: e.target.value })} placeholder="Account Number" className={inp + ' font-mono'} />)}
+                    {F('Bank IFSC Code', <input type="text" value={form.bankIfsc} onChange={e => setForm({ ...form, bankIfsc: e.target.value.toUpperCase() })} placeholder="e.g. SBIN0001234" className={inp + ' font-mono uppercase'} />)}
+                    {F('PAN Card Number', <input type="text" value={form.panNumber} onChange={e => setForm({ ...form, panNumber: e.target.value.toUpperCase() })} placeholder="e.g. ABCDE1234F" maxLength={10} className={inp + ' font-mono uppercase'} />)}
                     {F('PF UAN (Universal Account Number)', <input type="text" value={form.uanNumber} onChange={e => setForm({ ...form, uanNumber: e.target.value })} placeholder="12-digit UAN" maxLength={12} className={inp + ' font-mono'} />)}
                     {F('ESI IP (Insurance Number)', <input type="text" value={form.esiNumber} onChange={e => setForm({ ...form, esiNumber: e.target.value })} placeholder="ESI IP Number" className={inp + ' font-mono'} />)}
                   </div>
