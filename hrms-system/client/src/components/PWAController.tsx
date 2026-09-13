@@ -107,11 +107,19 @@ export default function PWAController() {
       });
     }
 
+    // 5. Build Chunk Preload & Deployment Update Listener
+    const handlePreloadError = () => {
+      console.log('[PWA] New build deployment chunk update detected. Auto-reloading page...');
+      window.location.reload();
+    };
+    window.addEventListener('vite:preloadError', handlePreloadError);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('vite:preloadError', handlePreloadError);
     };
   }, []);
 

@@ -8,7 +8,7 @@
  *   manifest, and JS/CSS bundles required for standalone PWA launching and performance.
  * ============================================================================== */
 
-const CACHE_NAME = 'bsc-crm-shell-v1.0.1';
+const CACHE_NAME = 'bsc-crm-shell-v1.0.2';
 
 // Core static assets required for App Shell startup
 const STATIC_ASSETS = [
