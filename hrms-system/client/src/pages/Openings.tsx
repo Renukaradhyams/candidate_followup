@@ -147,6 +147,8 @@ export default function OpeningsPage() {
                   <th className="py-3 px-4">Designation Role</th>
                   <th className="py-3 px-4">Required Openings</th>
                   <th className="py-3 px-4">Already Hired</th>
+                  <th className="py-3 px-4">Joined to Store</th>
+                  <th className="py-3 px-4">Not Joined Store</th>
                   <th className="py-3 px-4">Still Needed</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -155,6 +157,8 @@ export default function OpeningsPage() {
                 {openings.map((op, idx) => {
                   const isEditing = editMode[op.designation] !== undefined;
                   const reqCount = isEditing ? editMode[op.designation] : op.required;
+                  const joinedStoreCount = op.joined_store ?? op.joinedStore ?? 0;
+                  const notJoinedStoreCount = op.not_joined_store ?? op.notJoinedStore ?? Math.max(0, op.hired - joinedStoreCount);
                   const stillNeeded = Math.max(0, reqCount - op.hired);
                   
                   return (
@@ -176,7 +180,15 @@ export default function OpeningsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-lg font-black text-emerald-600">{op.hired}</span>
-                        <div className="text-[10px] text-emerald-700/60 font-bold uppercase mt-0.5">Selected / Joined</div>
+                        <div className="text-[10px] text-emerald-700/60 font-bold uppercase mt-0.5">Selected / Hired</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-lg font-black text-blue-600">{joinedStoreCount}</span>
+                        <div className="text-[10px] text-blue-700/60 font-bold uppercase mt-0.5">Onboarded</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-lg font-black text-purple-600">{notJoinedStoreCount}</span>
+                        <div className="text-[10px] text-purple-700/60 font-bold uppercase mt-0.5">Pending Store</div>
                       </td>
                       <td className="py-4 px-4">
                         <span className={`text-lg font-black ${stillNeeded > 0 ? 'text-amber-600' : 'text-[#888888]'}`}>
@@ -231,10 +243,12 @@ export default function OpeningsPage() {
                 {openings.length > 0 && (() => {
                   const totalRequired = openings.reduce((acc, op) => acc + ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required), 0);
                   const totalHired = openings.reduce((acc, op) => acc + op.hired, 0);
+                  const totalJoinedStore = openings.reduce((acc, op) => acc + (op.joined_store ?? op.joinedStore ?? 0), 0);
+                  const totalNotJoinedStore = openings.reduce((acc, op) => acc + (op.not_joined_store ?? op.notJoinedStore ?? Math.max(0, op.hired - (op.joined_store ?? op.joinedStore ?? 0))), 0);
                   const totalStillNeeded = openings.reduce((acc, op) => acc + Math.max(0, ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required) - op.hired), 0);
                   return (
                     <tr className="bg-[#1E2D4E]/10 border-t-2 border-[#1E2D4E] font-black text-sm text-[#1E2D4E]">
-                      <td className="py-4 px-4 font-black uppercase text-xs tracking-wider">
+                      <td colSpan={2} className="py-4 px-4 font-black uppercase text-xs tracking-wider">
                         Total Manpower Summary
                       </td>
                       <td className="py-4 px-4">
@@ -244,6 +258,14 @@ export default function OpeningsPage() {
                       <td className="py-4 px-4">
                         <span className="text-xl font-black text-emerald-700">{totalHired}</span>
                         <div className="text-[10px] text-emerald-800/70 font-bold uppercase mt-0.5">Total Hired</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-xl font-black text-blue-700">{totalJoinedStore}</span>
+                        <div className="text-[10px] text-blue-800/70 font-bold uppercase mt-0.5">Joined Store</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-xl font-black text-purple-700">{totalNotJoinedStore}</span>
+                        <div className="text-[10px] text-purple-800/70 font-bold uppercase mt-0.5">Not Joined Store</div>
                       </td>
                       <td className="py-4 px-4">
                         <span className={`text-xl font-black ${totalStillNeeded > 0 ? 'text-amber-700' : 'text-[#888888]'}`}>
@@ -259,7 +281,7 @@ export default function OpeningsPage() {
                 })()}
                 {openings.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-[#888888]">
+                    <td colSpan={8} className="py-8 text-center text-[#888888]">
                       No active designations found. Click "Add New Role / Designation" to create one.
                     </td>
                   </tr>

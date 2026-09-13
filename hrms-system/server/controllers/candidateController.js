@@ -192,8 +192,16 @@ class CandidateController {
       });
 
       // Count hired candidates (status: Joined, Hired OR Joined in offer desk)
+      // Also calculate how many have joined the store vs not joined store yet
       const [hiredRows] = await db.query(
-        `SELECT c.designation, COUNT(*) as cnt 
+        `SELECT c.designation, 
+                COUNT(DISTINCT c.app_no) as cnt,
+                COUNT(DISTINCT CASE 
+                      WHEN LOWER(TRIM(c.status)) IN ('successfully joined store', 'joined store') 
+                        OR LOWER(TRIM(c.status)) LIKE '%joined store%'
+                        OR LOWER(TRIM(so.status)) IN ('successfully joined store', 'joined store')
+                        OR LOWER(TRIM(so.status)) LIKE '%joined store%'
+                      THEN c.app_no ELSE NULL END) as joined_store_cnt
          FROM candidates c
          LEFT JOIN selection_offers so ON c.app_no = so.app_no
          WHERE LOWER(TRIM(c.status)) IN ('joined', 'hired', 'successfully joined store', 'joined store') 
@@ -204,7 +212,14 @@ class CandidateController {
       hiredRows.forEach(r => {
         if (r.designation) {
           const key = r.designation.trim().toLowerCase();
-          hiredMap[key] = (hiredMap[key] || 0) + r.cnt;
+          const hiredCount = Number(r.cnt) || 0;
+          const joinedStoreCount = Number(r.joined_store_cnt) || 0;
+          const notJoinedStoreCount = Math.max(0, hiredCount - joinedStoreCount);
+          hiredMap[key] = {
+            hired: hiredCount,
+            joined_store: joinedStoreCount,
+            not_joined_store: notJoinedStoreCount
+          };
         }
       });
 
@@ -218,11 +233,18 @@ class CandidateController {
       const openings = Array.from(desigSet).map(desigName => {
         const key = desigName.trim().toLowerCase();
         const required = reqMap[key] || 0;
-        const hired = hiredMap[key] || 0;
+        const stats = hiredMap[key] || { hired: 0, joined_store: 0, not_joined_store: 0 };
+        const hired = stats.hired;
+        const joined_store = stats.joined_store;
+        const not_joined_store = stats.not_joined_store;
         return {
           designation: desigName,
           required,
           hired,
+          joined_store,
+          joinedStore: joined_store,
+          not_joined_store,
+          notJoinedStore: not_joined_store,
           remaining: Math.max(0, required - hired)
         };
       });
