@@ -4,7 +4,8 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
-import { Users, Plus, Save, Trash2, X, Edit3 } from 'lucide-react';
+import { Users, Plus, Save, Trash2, X, Edit3, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function OpeningsPage() {
   const navigate = useNavigate();
@@ -103,6 +104,68 @@ export default function OpeningsPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (!openings || openings.length === 0) {
+      showToast('No openings data to export', 'error');
+      return;
+    }
+
+    const rows = openings.map((op, idx) => {
+      const isEditing = editMode[op.designation] !== undefined;
+      const reqCount = isEditing ? editMode[op.designation] : op.required;
+      const joinedStoreCount = op.joined_store ?? op.joinedStore ?? 0;
+      const notJoinedStoreCount = op.not_joined_store ?? op.notJoinedStore ?? Math.max(0, op.hired - joinedStoreCount);
+      const stillNeeded = Math.max(0, reqCount - op.hired);
+
+      return {
+        'SL. NO': idx + 1,
+        'Designation Role': op.designation || '',
+        'Required Openings': reqCount,
+        'Already Hired': op.hired || 0,
+        'Joined to Store': joinedStoreCount,
+        'Not Joined Store': notJoinedStoreCount,
+        'Still Needed': stillNeeded
+      };
+    });
+
+    // Total summary row
+    const totalRequired = openings.reduce((acc, op) => acc + ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required), 0);
+    const totalHired = openings.reduce((acc, op) => acc + (op.hired || 0), 0);
+    const totalJoinedStore = openings.reduce((acc, op) => acc + (op.joined_store ?? op.joinedStore ?? 0), 0);
+    const totalNotJoinedStore = openings.reduce((acc, op) => acc + (op.not_joined_store ?? op.notJoinedStore ?? Math.max(0, (op.hired || 0) - (op.joined_store ?? op.joinedStore ?? 0))), 0);
+    const totalStillNeeded = openings.reduce((acc, op) => acc + Math.max(0, ((editMode[op.designation] !== undefined) ? editMode[op.designation] : op.required) - (op.hired || 0)), 0);
+
+    rows.push({
+      'SL. NO': 'TOTAL',
+      'Designation Role': 'Total Manpower Summary',
+      'Required Openings': totalRequired,
+      'Already Hired': totalHired,
+      'Joined to Store': totalJoinedStore,
+      'Not Joined Store': totalNotJoinedStore,
+      'Still Needed': totalStillNeeded
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Set column widths for nice formatting
+    ws['!cols'] = [
+      { wch: 8 },  // SL. NO
+      { wch: 30 }, // Designation Role
+      { wch: 20 }, // Required Openings
+      { wch: 16 }, // Already Hired
+      { wch: 18 }, // Joined to Store
+      { wch: 18 }, // Not Joined Store
+      { wch: 16 }  // Still Needed
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Manpower_Planning');
+
+    const fileName = `BSC_Manpower_Planning_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast('Exported Manpower Planning Report successfully!', 'success');
+  };
+
   const isAdmin = session?.role === 'Admin' || session?.role === 'Super Admin';
 
   return (
@@ -128,15 +191,25 @@ export default function OpeningsPage() {
               <p className="text-sm text-[#666666] mt-1">Define manpower requisitions for each role and track fulfillment across the company.</p>
             </div>
 
-            {isAdmin && (
-            <button
-              onClick={() => setAddModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-2 shadow-md transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add New Role / Designation</span>
-            </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportExcel}
+                className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-2 shadow-md transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Sheets (.xlsx)</span>
+              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => setAddModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-[#1E2D4E] text-white text-xs font-bold hover:bg-[#162340] flex items-center gap-2 shadow-md transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add New Role / Designation</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="card-glass p-4 overflow-x-auto">
