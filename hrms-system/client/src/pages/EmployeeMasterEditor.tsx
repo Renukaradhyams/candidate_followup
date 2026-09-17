@@ -395,13 +395,29 @@ function formatGreythrDate(val: any): string {
   return s;
 }
 
+function capitalizeWord(word: string): string {
+  if (!word) return '';
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+function formatCapitalizedName(name: string): string {
+  if (!name) return '';
+  return name
+    .trim()
+    .split(/\s+/)
+    .map(w => capitalizeWord(w))
+    .join(' ');
+}
+
 function splitCandidateName(fullName: string) {
-  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: '', middle: '', last: '' };
-  if (parts.length === 1) return { first: parts[0], middle: '', last: '' };
-  if (parts.length === 2) return { first: parts[0], middle: '', last: parts[1] };
-  if (parts.length === 3) return { first: parts[0], middle: parts[1], last: parts[2] };
+  const formatted = formatCapitalizedName(fullName);
+  const parts = formatted.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { fullName: '', first: '', middle: '', last: '' };
+  if (parts.length === 1) return { fullName: formatted, first: parts[0], middle: '', last: '' };
+  if (parts.length === 2) return { fullName: formatted, first: parts[0], middle: '', last: parts[1] };
+  if (parts.length === 3) return { fullName: formatted, first: parts[0], middle: parts[1], last: parts[2] };
   return {
+    fullName: formatted,
     first: parts[0],
     middle: parts.slice(1, -1).join(' '),
     last: parts[parts.length - 1]
@@ -446,25 +462,43 @@ function parseCandidateAddress(addrStr: string) {
     const sheet2Rows: any[][] = [GREYTHR_SHEET2_HEADERS];
 
     exportList.forEach(emp => {
-      const { first, middle, last } = splitCandidateName(emp.name);
+      const { fullName: formattedName, first, middle, last } = splitCandidateName(emp.name);
       const doj = formatGreythrDate(emp.offeredDoj || emp.actualDoj || emp.estDoj);
       const dob = formatGreythrDate(emp.dob);
       const addr = parseCandidateAddress(emp.permanentAddress || emp.address);
 
+      // Parse salary and incentive
+      let baseVal = 0;
+      let incVal = 0;
       let baseSalary = '';
       const s = String(emp.salary || '').trim();
       if (s.includes('|')) {
-        baseSalary = s.split('|')[0].trim();
+        const parts = s.split('|');
+        baseVal = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
+        incVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+        baseSalary = parts[0].trim();
       } else if (s.includes('+')) {
-        baseSalary = s.split('+')[0].replace(/[^0-9.]/g, '').trim();
+        const parts = s.split('+');
+        baseVal = parseFloat(parts[0].replace(/[^0-9.]/g, '')) || 0;
+        incVal = parseFloat(parts[1].replace(/[^0-9.]/g, '')) || 0;
+        baseSalary = parts[0].replace(/[^0-9.]/g, '').trim();
       } else {
+        baseVal = parseFloat(s.replace(/[^0-9.]/g, '')) || 0;
         baseSalary = s.replace(/[^0-9.]/g, '') || s;
       }
 
+      if (incVal === 0 && emp.incentive) {
+        incVal = parseFloat(String(emp.incentive).replace(/[^0-9.]/g, '')) || 0;
+      }
+
+      const totalVal = baseVal + incVal;
+      const finalSalary = totalVal > 0 ? totalVal : (baseVal > 0 ? baseVal : (parseFloat(baseSalary) || baseSalary || ''));
+      const fullDa = incVal > 0 ? incVal : '';
+
       const genderVal = (emp.gender || '').toUpperCase().startsWith('F') ? 'F' : 'M';
-      const statusVal = 'Confirmed';
-      const isPfEligible = (emp.uanNumber || (parseFloat(baseSalary) || 0) <= 15000) ? 'yes' : 'no';
-      const isEsiEligible = (emp.esiNumber || (parseFloat(baseSalary) || 0) <= 21000) ? 'yes' : 'no';
+      const statusVal = 'Probation';
+      const isPfEligible = (emp.uanNumber || (baseVal > 0 ? baseVal : (parseFloat(baseSalary) || 0)) <= 15000) ? 'yes' : 'no';
+      const isEsiEligible = (emp.esiNumber || (baseVal > 0 ? baseVal : (parseFloat(baseSalary) || 0)) <= 21000) ? 'yes' : 'no';
 
       // Clean mobile number (numeric digits only)
       const cleanMobile = emp.phone ? (Number(String(emp.phone).replace(/[^0-9]/g, '').slice(-10)) || emp.phone) : '';
@@ -472,7 +506,7 @@ function parseCandidateAddress(addrStr: string) {
       // Sheet 0 (68 columns)
       sheet0Rows.push([
         emp.appNo || '',                          // Employee Number
-        emp.name || '',                           // Name
+        formattedName,                            // Name
         doj,                                      // Joining Date
         dob,                                      // Date Of Birth
         dob,                                      // Birthday
@@ -505,7 +539,7 @@ function parseCandidateAddress(addrStr: string) {
         '',                                       // Background Verification Completed On
         '',                                       // Agency Name
         '',                                       // Background Check Remarks
-        emp.emergencyContact || first || '',      // Emergency Contact Name
+        emp.emergencyContact ? formatCapitalizedName(emp.emergencyContact) : (first || ''), // Emergency Contact Name
         emp.emergencyPhone || emp.phone || '',    // Emergency Contact Number
         emp.bankAccountNo || '',                  // Bank Account Number
         emp.bankIfsc || '',                       // IFSC Code
@@ -514,7 +548,7 @@ function parseCandidateAddress(addrStr: string) {
         emp.branch || '',                         // Bank Branch
         'Cheque/Cash/DD/Bank Transfer',           // Salary Payment Mode
         'Bangalore',                              // DD Payable At 
-        emp.name || '',                           // Name As Per Bank Records
+        formattedName,                            // Name As Per Bank Records
         '',                                       // IBAN
         isPfEligible,                             // Is employee eligible for PF?
         emp.uanNumber || '',                      // PF Number
@@ -527,12 +561,12 @@ function parseCandidateAddress(addrStr: string) {
         emp.esiNumber || '',                      // ESI Number
         '0',                                      // Is employee covered under LWF?
         '',                                       // Aadhaar Card Enrolment No
-        emp.name || '',                           // Name (As on Aadhaar Card)
+        formattedName,                            // Name (As on Aadhaar Card)
         emp.aadhaarNumber || '',                  // Aadhaar Card Number 
         emp.uanNumber || '',                      // Universal Account Number
         emp.phone || '',                          // Mobile Number
         'India',                                  // Country Of Origin
-        emp.name || '',                           // Name As Per PRAN
+        formattedName,                            // Name As Per PRAN
         '',                                       // PRAN Number 
         emp.section || '',                        // Section
         emp.branch || '',                         // Location
@@ -544,7 +578,7 @@ function parseCandidateAddress(addrStr: string) {
       // Sheet 1 (16 columns)
       sheet1Rows.push([
         emp.appNo || '',                          // Employee No
-        emp.name || '',                           // Contact name
+        formattedName,                            // Contact name
         addr.addr1 || '',                         // Contact Address1
         addr.addr2 || '',                         // Contact Address2
         addr.addr3 || '',                         // Contact Address3
@@ -561,14 +595,14 @@ function parseCandidateAddress(addrStr: string) {
         ''                                        // Contact Extn No
       ]);
 
-      // Sheet 2 (9 columns)
+      // Sheet 2 (9 columns) - 3rd sheet
       sheet2Rows.push([
         emp.appNo || '',                          // Employee Number
         doj,                                      // Effective Date
         emp.remarks || '',                        // Employee Remarks
         '',                                       // Notes
-        baseSalary ? (parseFloat(baseSalary) || baseSalary) : '', // FULL BASIC
-        '',                                       // FULL DA
+        finalSalary,                              // FULL BASIC (final salary / total)
+        fullDa,                                   // FULL DA (incentives)
         '',                                       // FULL HRA
         '',                                       // MINIMUM PAY
         1                                         // Is Arrear Calculation Required
