@@ -319,61 +319,274 @@ export default function EmployeeMasterEditorPage() {
     }));
   };
 
-  /* ── greytHR Excel export ── */
+/* ── greytHR Bulk Upload Format Definitions (matches GREYTHR_FINAL_DOC.xlsx) ── */
+const GREYTHR_SHEET0_HEADERS = [
+  "Employee Number","Name","Joining Date","Date Of Birth","Birthday","Employee Status",
+  "Employee Reference Number","Gender","confirmdate","Nick Name","Extension Number",
+  "First Name","Middle Name","Last Name","Email Address","Personal Email Address",
+  "PAN Number","Marital Status","Marriage Date","Blood Group","Manager's Employee No",
+  "Father's Name","spousename","ipaddress","Login User Name","Probation Period",
+  "Notice Period","Is Physical Challanged","Is International Employee",
+  "Background Check Status","Background Verification Indicator",
+  "Background Verification Completed On","Agency Name","Background Check Remarks",
+  "Emergency Contact Name","Emergency Contact Number","Bank Account Number","IFSC Code",
+  "Bank Account Type","Bank Name","Bank Branch","Salary Payment Mode","DD Payable At ",
+  "Name As Per Bank Records","IBAN","Is employee eligible for PF?","PF Number",
+  "PF Scheme","PF Joining Date","Is employee eligible for excess EPF contribution?",
+  "Is employee eligible for excess EPS contribution?","Is existing member of EPS?",
+  "Is employee eligible for ESI?","ESI Number","Is employee covered under LWF?",
+  "Aadhaar Card Enrolment No","Name (As on Aadhaar Card)","Aadhaar Card Number ",
+  "Universal Account Number","Mobile Number","Country Of Origin","Name As Per PRAN",
+  "PRAN Number ","Section","Location","Division","Designation","Employee Number Series"
+];
+
+const GREYTHR_SHEET1_HEADERS = [
+  "Employee No","Contact name","Contact Address1","Contact Address2","Contact Address3",
+  "Contact City","Contact District","Contact State","Contact Country","Contact Pin",
+  "Contact Phone1","Contact Phone2","Contact Fax","Contact Mobile","Contact Email","Contact Extn No"
+];
+
+const GREYTHR_SHEET2_HEADERS = [
+  "Employee Number","Effective Date","Employee Remarks","Notes","FULL BASIC",
+  "FULL DA","FULL HRA","MINIMUM PAY","Is Arrear Calculation Required"
+];
+
+const GREYTHR_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatGreythrDate(val: any): string {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (!s || s === '—' || s === '-') return '';
+
+  // Already in DD-MMM-YYYY format (e.g. 01-May-2005)
+  if (/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(s)) return s;
+
+  // YYYY-MM-DD
+  let match = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (match) {
+    const y = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10) - 1;
+    const d = parseInt(match[3], 10);
+    if (m >= 0 && m < 12 && d >= 1 && d <= 31) {
+      return `${String(d).padStart(2, '0')}-${GREYTHR_MONTHS[m]}-${y}`;
+    }
+  }
+
+  // DD-MM-YYYY or DD/MM/YYYY
+  match = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (match) {
+    const d = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10) - 1;
+    const y = parseInt(match[3], 10);
+    if (m >= 0 && m < 12 && d >= 1 && d <= 31) {
+      return `${String(d).padStart(2, '0')}-${GREYTHR_MONTHS[m]}-${y}`;
+    }
+  }
+
+  // Fallback to JS Date
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    const d = String(dt.getDate()).padStart(2, '0');
+    const m = GREYTHR_MONTHS[dt.getMonth()];
+    const y = dt.getFullYear();
+    return `${d}-${m}-${y}`;
+  }
+
+  return s;
+}
+
+function splitCandidateName(fullName: string) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: '', middle: '', last: '' };
+  if (parts.length === 1) return { first: parts[0], middle: '', last: '' };
+  if (parts.length === 2) return { first: parts[0], middle: '', last: parts[1] };
+  if (parts.length === 3) return { first: parts[0], middle: parts[1], last: parts[2] };
+  return {
+    first: parts[0],
+    middle: parts.slice(1, -1).join(' '),
+    last: parts[parts.length - 1]
+  };
+}
+
+function parseCandidateAddress(addrStr: string) {
+  if (!addrStr) return { addr1: '', addr2: '', addr3: '', pin: '', city: 'Bangalore', state: 'Karnataka' };
+  const s = String(addrStr).trim();
+
+  let pin: any = '';
+  const pinMatch = s.match(/\b([1-9]\d{5})\b/);
+  if (pinMatch) pin = Number(pinMatch[1]);
+
+  let city = 'Bangalore';
+  let state = 'Karnataka';
+  if (/bangalore|bengaluru/i.test(s)) city = 'Bangalore';
+  else if (/mysore|mysuru/i.test(s)) city = 'Mysore';
+  else if (/hubli|dharwad/i.test(s)) city = 'Hubli';
+  else if (/mangalore|mangaluru/i.test(s)) city = 'Mangalore';
+  else if (/chennai/i.test(s)) { city = 'Chennai'; state = 'Tamil Nadu'; }
+  else if (/hyderabad/i.test(s)) { city = 'Hyderabad'; state = 'Telangana'; }
+
+  const parts = s.split(/[\r\n,]+/).map(p => p.trim()).filter(Boolean);
+  const addr1 = parts[0] || s;
+  const addr2 = parts[1] || '';
+  const addr3 = parts.slice(2).join(', ') || '';
+
+  return { addr1, addr2, addr3, pin, city, state };
+}
+
+  /* ── greytHR Excel export (Exact 3-sheet format matching GREYTHR_FINAL_DOC.xlsx) ── */
   const handleExportGreythrExcel = () => {
-    if (employees.length === 0) { showToast('No employees to export', 'error'); return; }
-    const rows = employees.map(emp => {
-      let base = '', inc = '';
+    const exportList = isFiltered ? filteredEmployees : employees;
+    if (exportList.length === 0) {
+      showToast(isFiltered ? 'No matching employees to export' : 'No employees to export', 'error');
+      return;
+    }
+
+    const sheet0Rows: any[][] = [GREYTHR_SHEET0_HEADERS];
+    const sheet1Rows: any[][] = [GREYTHR_SHEET1_HEADERS];
+    const sheet2Rows: any[][] = [GREYTHR_SHEET2_HEADERS];
+
+    exportList.forEach(emp => {
+      const { first, middle, last } = splitCandidateName(emp.name);
+      const doj = formatGreythrDate(emp.offeredDoj || emp.actualDoj || emp.estDoj);
+      const dob = formatGreythrDate(emp.dob);
+      const addr = parseCandidateAddress(emp.permanentAddress || emp.address);
+
+      let baseSalary = '';
       const s = String(emp.salary || '').trim();
-      if (s.includes('|')) { const p = s.split('|'); base = p[0]; inc = p[1]||''; }
-      else { base = s.replace(/[^0-9.]/g,'') || s; }
-      return {
-        'Employee Number': emp.appNo || '',
-        'Employee Name': emp.name || '',
-        'Gender': (emp.gender || 'MALE').toUpperCase(),
-        'Date of Birth': emp.dob || '',
-        'Date of Joining': emp.offeredDoj || emp.actualDoj || emp.estDoj || '',
-        'Department': emp.department || '',
-        'Section': emp.section || '',
-        'Designation': emp.desig || emp.designation || '',
-        'Branch / Location': emp.branch || 'Main Branch',
-        'Reporting Manager': emp.reportingManager || '',
-        'Employee Status': emp.status || 'Joined',
-        'Base Monthly Salary': base, 'Monthly Incentive': inc,
-        'Bank Account Number': emp.bankAccountNo || '',
-        'Bank Name': emp.bankName || '',
-        'Bank IFSC Code': emp.bankIfsc || '',
-        'PAN Number': emp.panNumber || '',
-        'Aadhaar Number': emp.aadhaarNumber || '',
-        'UAN Number': emp.uanNumber || '',
-        'ESI Number': emp.esiNumber || '',
-        'Mobile Phone': emp.phone || '',
-        'Email Address': emp.email || '',
-        'Present Address': emp.address || '',
-        'Permanent Address': emp.permanentAddress || emp.address || '',
-        'Blood Group': emp.bloodGroup || '',
-        'Marital Status': emp.maritalStatus || 'Single',
-        'Religion': emp.religion || 'Hindu',
-        'Caste': emp.caste || '',
-        'Father Name': emp.fatherDetails || '',
-        'Mother Name': emp.motherDetails || '',
-        'Emergency Contact Person': emp.emergencyContact || '',
-        'Emergency Phone': emp.emergencyPhone || '',
-        'Highest Qualification': emp.qualification || '',
-        'Total Experience': emp.experience || '',
-        'Prior Retail Exp': emp.retailExperience || emp.retail_experience || '',
-        'Previous Company': emp.previousCompany || emp.previous_company || '',
-        'Previous Designation': emp.previousDesignation || emp.previous_designation || '',
-        'greytHR Onboarding Status': parseBool(emp.greythrReady) ? 'READY' : 'NOT READY',
-        'greytHR Sync Status': parseBool(emp.greythrSynced) ? 'SYNCED' : 'PENDING',
-        'Export Timestamp': new Date().toLocaleString('en-IN'),
-      };
+      if (s.includes('|')) {
+        baseSalary = s.split('|')[0].trim();
+      } else if (s.includes('+')) {
+        baseSalary = s.split('+')[0].replace(/[^0-9.]/g, '').trim();
+      } else {
+        baseSalary = s.replace(/[^0-9.]/g, '') || s;
+      }
+
+      const genderVal = (emp.gender || '').toUpperCase().startsWith('F') ? 'F' : 'M';
+      const statusVal = 'Confirmed';
+      const isPfEligible = (emp.uanNumber || (parseFloat(baseSalary) || 0) <= 15000) ? 'yes' : 'no';
+      const isEsiEligible = (emp.esiNumber || (parseFloat(baseSalary) || 0) <= 21000) ? 'yes' : 'no';
+
+      // Clean mobile number (numeric digits only)
+      const cleanMobile = emp.phone ? (Number(String(emp.phone).replace(/[^0-9]/g, '').slice(-10)) || emp.phone) : '';
+
+      // Sheet 0 (68 columns)
+      sheet0Rows.push([
+        emp.appNo || '',                          // Employee Number
+        emp.name || '',                           // Name
+        doj,                                      // Joining Date
+        dob,                                      // Date Of Birth
+        dob,                                      // Birthday
+        statusVal,                                // Employee Status
+        emp.appNo || '',                          // Employee Reference Number
+        genderVal,                                // Gender
+        doj,                                      // confirmdate
+        first,                                    // Nick Name
+        '',                                       // Extension Number
+        first,                                    // First Name
+        middle,                                   // Middle Name
+        last,                                     // Last Name
+        emp.email || '',                          // Email Address
+        emp.email || '',                          // Personal Email Address
+        emp.panNumber || '',                      // PAN Number
+        emp.maritalStatus || 'Single',            // Marital Status
+        '',                                       // Marriage Date
+        emp.bloodGroup || '',                     // Blood Group
+        emp.reportingManager || '',               // Manager's Employee No
+        emp.fatherDetails || '',                  // Father's Name
+        '',                                       // spousename
+        '',                                       // ipaddress
+        first || emp.appNo || '',                 // Login User Name
+        '',                                       // Probation Period
+        emp.noticePeriod || '',                   // Notice Period
+        '0',                                      // Is Physical Challanged
+        '0',                                      // Is International Employee
+        'Pending',                                // Background Check Status
+        'Under Review',                           // Background Verification Indicator
+        '',                                       // Background Verification Completed On
+        '',                                       // Agency Name
+        '',                                       // Background Check Remarks
+        emp.emergencyContact || first || '',      // Emergency Contact Name
+        emp.emergencyPhone || emp.phone || '',    // Emergency Contact Number
+        emp.bankAccountNo || '',                  // Bank Account Number
+        emp.bankIfsc || '',                       // IFSC Code
+        'Savings',                                // Bank Account Type
+        emp.bankName || '',                       // Bank Name
+        emp.branch || '',                         // Bank Branch
+        'Cheque/Cash/DD/Bank Transfer',           // Salary Payment Mode
+        'Bangalore',                              // DD Payable At 
+        emp.name || '',                           // Name As Per Bank Records
+        '',                                       // IBAN
+        isPfEligible,                             // Is employee eligible for PF?
+        emp.uanNumber || '',                      // PF Number
+        'Govt. Scheme',                           // PF Scheme
+        doj,                                      // PF Joining Date
+        '1',                                      // Is employee eligible for excess EPF contribution?
+        '1',                                      // Is employee eligible for excess EPS contribution?
+        '1',                                      // Is existing member of EPS?
+        isEsiEligible,                            // Is employee eligible for ESI?
+        emp.esiNumber || '',                      // ESI Number
+        '0',                                      // Is employee covered under LWF?
+        '',                                       // Aadhaar Card Enrolment No
+        emp.name || '',                           // Name (As on Aadhaar Card)
+        emp.aadhaarNumber || '',                  // Aadhaar Card Number 
+        emp.uanNumber || '',                      // Universal Account Number
+        emp.phone || '',                          // Mobile Number
+        'India',                                  // Country Of Origin
+        emp.name || '',                           // Name As Per PRAN
+        '',                                       // PRAN Number 
+        emp.section || '',                        // Section
+        emp.branch || '',                         // Location
+        emp.department || '',                     // Division
+        emp.desig || emp.designation || '',       // Designation
+        'Temporary Employees'                     // Employee Number Series
+      ]);
+
+      // Sheet 1 (16 columns)
+      sheet1Rows.push([
+        emp.appNo || '',                          // Employee No
+        emp.name || '',                           // Contact name
+        addr.addr1 || '',                         // Contact Address1
+        addr.addr2 || '',                         // Contact Address2
+        addr.addr3 || '',                         // Contact Address3
+        addr.city || 'Bangalore',                 // Contact City
+        addr.city || 'Bangalore',                 // Contact District
+        addr.state || 'Karnataka',                // Contact State
+        'India',                                  // Contact Country
+        addr.pin || '',                           // Contact Pin
+        emp.phone || '',                          // Contact Phone1
+        emp.altPhone || '',                       // Contact Phone2
+        '',                                       // Contact Fax
+        cleanMobile,                              // Contact Mobile
+        emp.email || '',                          // Contact Email
+        ''                                        // Contact Extn No
+      ]);
+
+      // Sheet 2 (9 columns)
+      sheet2Rows.push([
+        emp.appNo || '',                          // Employee Number
+        doj,                                      // Effective Date
+        emp.remarks || '',                        // Employee Remarks
+        '',                                       // Notes
+        baseSalary ? (parseFloat(baseSalary) || baseSalary) : '', // FULL BASIC
+        '',                                       // FULL DA
+        '',                                       // FULL HRA
+        '',                                       // MINIMUM PAY
+        1                                         // Is Arrear Calculation Required
+      ]);
     });
-    const ws = XLSX.utils.json_to_sheet(rows);
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'greytHR_Employee_Master');
-    XLSX.writeFile(wb, `greytHR_BSC_Employees_Master_${new Date().toISOString().slice(0,10)}.xlsx`);
-    showToast(`Exported ${rows.length} records for greytHR! 🚀`, 'success');
+    const ws0 = XLSX.utils.aoa_to_sheet(sheet0Rows);
+    const ws1 = XLSX.utils.aoa_to_sheet(sheet1Rows);
+    const ws2 = XLSX.utils.aoa_to_sheet(sheet2Rows);
+
+    XLSX.utils.book_append_sheet(wb, ws0, 'Sheet0');
+    XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Sheet2');
+
+    const fileName = `GREYTHR_BSC_Employees_Master_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    showToast(`Exported ${exportList.length} records in greytHR 3-sheet format! 🚀`, 'success');
   };
 
   /* ── Stats Calculations (4 Primary KPIs, NO document percentages) ── */
