@@ -348,7 +348,7 @@ const GREYTHR_SHEET1_HEADERS = [
 
 const GREYTHR_SHEET2_HEADERS = [
   "Employee Number","Effective Date","Employee Remarks","Notes","FULL BASIC",
-  "FULL DA","FULL HRA","MINIMUM PAY","Is Arrear Calculation Required"
+  "FULL DA","FULL HRA","FIXED INCENTIVE","MINIMUM PAY","Is Arrear Calculation Required"
 ];
 
 const GREYTHR_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -493,7 +493,7 @@ function parseCandidateAddress(addrStr: string) {
 
       const totalVal = baseVal + incVal;
       const finalSalary = totalVal > 0 ? totalVal : (baseVal > 0 ? baseVal : (parseFloat(baseSalary) || baseSalary || ''));
-      const fullDa = incVal > 0 ? incVal : '';
+      const fixedIncentive = incVal > 0 ? incVal : '';
 
       const genderVal = (emp.gender || '').toUpperCase().startsWith('F') ? 'F' : 'M';
       const statusVal = 'Probation';
@@ -577,7 +577,7 @@ function parseCandidateAddress(addrStr: string) {
 
       // Sheet 1 (16 columns)
       sheet1Rows.push([
-        emp.appNo || '',                          // Employee No
+        emp.appNo || '',                          // Employee Number
         formattedName,                            // Contact name
         addr.addr1 || '',                         // Contact Address1
         addr.addr2 || '',                         // Contact Address2
@@ -595,15 +595,16 @@ function parseCandidateAddress(addrStr: string) {
         ''                                        // Contact Extn No
       ]);
 
-      // Sheet 2 (9 columns) - 3rd sheet
+      // Sheet 2 (10 columns) - 3rd sheet
       sheet2Rows.push([
         emp.appNo || '',                          // Employee Number
         doj,                                      // Effective Date
         emp.remarks || '',                        // Employee Remarks
         '',                                       // Notes
-        finalSalary,                              // FULL BASIC (final salary / total)
-        fullDa,                                   // FULL DA (incentives)
-        '',                                       // FULL HRA
+        finalSalary,                              // FULL BASIC (final salary / total monthly gross package)
+        '',                                       // FULL DA (empty)
+        '',                                       // FULL HRA (empty)
+        fixedIncentive,                           // FIXED INCENTIVE (monthly incentive)
         '',                                       // MINIMUM PAY
         1                                         // Is Arrear Calculation Required
       ]);
