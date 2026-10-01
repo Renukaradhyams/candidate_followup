@@ -121,6 +121,8 @@ router.post('/settings/designations/delete', authenticate, authorize('Admin', 'S
 router.get('/settings/questions', settingsController.getAllInterviewQuestions);
 router.post('/settings/questions/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addInterviewQuestion);
 router.post('/settings/questions/delete', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteInterviewQuestion);
+router.post('/settings/change-employee-number', authenticate, authorize('Admin', 'Super Admin'), settingsController.changeEmployeeNumber);
+router.post('/settings/bulk-change-employee-number', authenticate, authorize('Admin', 'Super Admin'), settingsController.bulkChangeEmployeeNumber);
 
 // ── Broadcast Routes ─────────────────────────────────────────
 router.get('/broadcasts', broadcastController.getBroadcasts);
@@ -255,7 +257,9 @@ router.post('/legacy', async (req, res) => {
     addDepartmentSection: deptHiringController.addDepartmentSection,
     editDepartmentSection: deptHiringController.editDepartmentSection,
     deleteDepartmentSection: deptHiringController.deleteDepartmentSection,
-    getDeletionLogs: candidateController.getDeletionLogs
+    getDeletionLogs: candidateController.getDeletionLogs,
+    changeEmployeeNumber: settingsController.changeEmployeeNumber,
+    bulkChangeEmployeeNumber: settingsController.bulkChangeEmployeeNumber
   };
 
   if (dispatchMap[action]) {

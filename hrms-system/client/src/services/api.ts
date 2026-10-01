@@ -370,6 +370,12 @@ export const API = {
   async getPublicDesignations() { return API.call('getPublicDesignations'); },
   async addDesignation(name: string) { return apiFetch('/settings/designations/add', { method: 'POST', body: JSON.stringify({ name }) }); },
   async deleteDesignation(name: string) { return apiFetch('/settings/designations/delete', { method: 'POST', body: JSON.stringify({ name }) }); },
+  async changeEmployeeNumber(payload: { oldAppNo: string; newAppNo: string; reason?: string }) {
+    return apiFetch('/settings/change-employee-number', { method: 'POST', body: JSON.stringify(payload) });
+  },
+  async bulkChangeEmployeeNumber(changes: Array<{ oldAppNo: string; newAppNo: string; reason?: string }>) {
+    return apiFetch('/settings/bulk-change-employee-number', { method: 'POST', body: JSON.stringify({ changes }) });
+  },
 
   // Broadcasts
   async getBroadcasts() { return apiFetch('/broadcasts'); },

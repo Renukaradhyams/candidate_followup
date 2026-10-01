@@ -291,6 +291,222 @@ const deleteInterviewQuestion = async (req, res) => {
   }
 };
 
+const changeEmployeeNumber = async (req, res) => {
+  try {
+    const { oldAppNo, newAppNo } = req.body;
+    if (!oldAppNo || !newAppNo) {
+      return errorRes(res, 'Both existing and new employee numbers are required', [], 400);
+    }
+    const cleanOld = String(oldAppNo).trim();
+    const cleanNew = String(newAppNo).trim();
+    if (!cleanOld || !cleanNew) {
+      return errorRes(res, 'Employee numbers cannot be empty', [], 400);
+    }
+    if (cleanOld === cleanNew) {
+      return errorRes(res, 'New employee number must be different from existing employee number', [], 400);
+    }
+
+    // Check if oldAppNo exists
+    const [candRows] = await db.query(
+      `SELECT id, app_no, name FROM candidates WHERE TRIM(app_no) = ?`,
+      [cleanOld]
+    );
+    if (!candRows || candRows.length === 0) {
+      return errorRes(res, `Existing employee number "${cleanOld}" was not found`, [], 404);
+    }
+    const candName = candRows[0].name;
+
+    // Check if newAppNo already exists
+    const [existingRows] = await db.query(
+      `SELECT id, app_no, name FROM candidates WHERE TRIM(app_no) = ?`,
+      [cleanNew]
+    );
+    if (existingRows && existingRows.length > 0) {
+      return errorRes(res, `New employee number "${cleanNew}" is already assigned to ${existingRows[0].name}`, [], 409);
+    }
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
+      const updateTables = [
+        { table: 'candidates', col: 'app_no' },
+        { table: 'employees', col: 'app_no' },
+        { table: 'selection_offers', col: 'app_no' },
+        { table: 'section_allocations', col: 'app_no' },
+        { table: 'joining_call_desk', col: 'app_no' },
+        { table: 'joining_call_history', col: 'app_no' },
+        { table: 'interview_schedules', col: 'app_no' },
+        { table: 'candidate_activities', col: 'app_no' },
+        { table: 'interview_tokens', col: 'app_no' },
+        { table: 'hr_evaluations', col: 'app_no' },
+        { table: 'selected_candidates', col: 'app_no' },
+        { table: 'rejected_candidates', col: 'app_no' },
+        { table: 'employee_documents', col: 'app_no' },
+        { table: 'batch_group_members', col: 'candidate_app_no' },
+        { table: 'batch_attendance', col: 'candidate_app_no' },
+        { table: 'audit_logs', col: 'candidate_app_no' },
+        { table: 'batch_plans', col: 'batch_leader_app_no' },
+        { table: 'batch_plans', col: 'group_leader_app_no' }
+      ];
+
+      for (const item of updateTables) {
+        try {
+          await connection.query(
+            `UPDATE \`${item.table}\` SET \`${item.col}\` = ? WHERE TRIM(\`${item.col}\`) = ?`,
+            [cleanNew, cleanOld]
+          );
+        } catch (err) {}
+      }
+
+      await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+      await connection.commit();
+
+      await logAction(
+        req.user ? req.user.username : 'Admin',
+        'CHANGE_EMPLOYEE_NUMBER',
+        'SETTINGS',
+        { oldAppNo: cleanOld, newAppNo: cleanNew, name: candName }
+      );
+
+      return res.json({
+        success: true,
+        message: `Employee number updated from "${cleanOld}" to "${cleanNew}" for ${candName}`,
+        oldAppNo: cleanOld,
+        newAppNo: cleanNew,
+        name: candName
+      });
+    } catch (err) {
+      await connection.rollback();
+      try { await connection.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
+      return errorRes(res, 'Failed to update employee number: ' + err.message, [err.message], 500);
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    return errorRes(res, 'Error processing employee number change: ' + err.message, [err.message], 500);
+  }
+};
+
+const bulkChangeEmployeeNumber = async (req, res) => {
+  try {
+    const { changes } = req.body;
+    if (!Array.isArray(changes) || changes.length === 0) {
+      return errorRes(res, 'No changes provided for bulk update', [], 400);
+    }
+
+    const results = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of changes) {
+      const cleanOld = String(item.oldAppNo || item.existingAppNo || '').trim();
+      const cleanNew = String(item.newAppNo || '').trim();
+
+      if (!cleanOld || !cleanNew) {
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, success: false, error: 'Both existing and new numbers required' });
+        failCount++;
+        continue;
+      }
+      if (cleanOld === cleanNew) {
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, success: false, error: 'New number is identical to existing number' });
+        failCount++;
+        continue;
+      }
+
+      // Check old exists
+      const [candRows] = await db.query(
+        `SELECT id, app_no, name FROM candidates WHERE TRIM(app_no) = ?`,
+        [cleanOld]
+      );
+      if (!candRows || candRows.length === 0) {
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, success: false, error: `Employee "${cleanOld}" not found` });
+        failCount++;
+        continue;
+      }
+      const candName = candRows[0].name;
+
+      // Check new does not exist
+      const [existingRows] = await db.query(
+        `SELECT id, app_no, name FROM candidates WHERE TRIM(app_no) = ?`,
+        [cleanNew]
+      );
+      if (existingRows && existingRows.length > 0) {
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, name: candName, success: false, error: `New number "${cleanNew}" already used by ${existingRows[0].name}` });
+        failCount++;
+        continue;
+      }
+
+      const connection = await db.getConnection();
+      try {
+        await connection.beginTransaction();
+        await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+
+        const updateTables = [
+          { table: 'candidates', col: 'app_no' },
+          { table: 'employees', col: 'app_no' },
+          { table: 'selection_offers', col: 'app_no' },
+          { table: 'section_allocations', col: 'app_no' },
+          { table: 'joining_call_desk', col: 'app_no' },
+          { table: 'joining_call_history', col: 'app_no' },
+          { table: 'interview_schedules', col: 'app_no' },
+          { table: 'candidate_activities', col: 'app_no' },
+          { table: 'interview_tokens', col: 'app_no' },
+          { table: 'hr_evaluations', col: 'app_no' },
+          { table: 'selected_candidates', col: 'app_no' },
+          { table: 'rejected_candidates', col: 'app_no' },
+          { table: 'employee_documents', col: 'app_no' },
+          { table: 'batch_group_members', col: 'candidate_app_no' },
+          { table: 'batch_attendance', col: 'candidate_app_no' },
+          { table: 'audit_logs', col: 'candidate_app_no' },
+          { table: 'batch_plans', col: 'batch_leader_app_no' },
+          { table: 'batch_plans', col: 'group_leader_app_no' }
+        ];
+
+        for (const t of updateTables) {
+          try {
+            await connection.query(
+              `UPDATE \`${t.table}\` SET \`${t.col}\` = ? WHERE TRIM(\`${t.col}\`) = ?`,
+              [cleanNew, cleanOld]
+            );
+          } catch (e) {}
+        }
+
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+        await connection.commit();
+
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, name: candName, success: true });
+        successCount++;
+      } catch (err) {
+        await connection.rollback();
+        try { await connection.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) {}
+        results.push({ oldAppNo: cleanOld, newAppNo: cleanNew, name: candName, success: false, error: err.message });
+        failCount++;
+      } finally {
+        connection.release();
+      }
+    }
+
+    await logAction(
+      req.user ? req.user.username : 'Admin',
+      'BULK_CHANGE_EMPLOYEE_NUMBER',
+      'SETTINGS',
+      { total: changes.length, successCount, failCount }
+    );
+
+    return res.json({
+      success: true,
+      total: changes.length,
+      successCount,
+      failCount,
+      results
+    });
+  } catch (err) {
+    return errorRes(res, 'Error processing bulk employee number change: ' + err.message, [err.message], 500);
+  }
+};
+
 module.exports = {
   getUsers,
   addUser,
@@ -303,5 +519,7 @@ module.exports = {
   deleteDesignation,
   getAllInterviewQuestions,
   addInterviewQuestion,
-  deleteInterviewQuestion
+  deleteInterviewQuestion,
+  changeEmployeeNumber,
+  bulkChangeEmployeeNumber
 };
