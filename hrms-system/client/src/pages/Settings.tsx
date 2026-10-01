@@ -6,7 +6,7 @@ import ToastContainer, { showToast } from '../components/Toast';
 import { API, Auth, UserSession } from '../services/api';
 import { 
   Settings, Users, Eye, EyeOff, HelpCircle, Tag, Plus, Trash2, Key, Shield, Check, X, RefreshCw,
-  ArrowRightLeft, ArrowRight, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, Search, Info
+  ArrowRightLeft, ArrowRight, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, Search, Info, Hash
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
