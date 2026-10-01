@@ -465,7 +465,6 @@ function parseCandidateAddress(addrStr: string) {
       const { fullName: formattedName, first, middle, last } = splitCandidateName(emp.name);
       const doj = formatGreythrDate(emp.offeredDoj || emp.actualDoj || emp.estDoj);
       const dob = formatGreythrDate(emp.dob);
-      const addr = parseCandidateAddress(emp.permanentAddress || emp.address);
 
       // Parse salary and incentive
       let baseVal = 0;
@@ -575,23 +574,23 @@ function parseCandidateAddress(addrStr: string) {
         'Temporary Employees'                     // Employee Number Series
       ]);
 
-      // Sheet 1 (16 columns)
+      // Sheet 1 (16 columns) - Second sheet: Only Employee No filled, all remaining contact columns left completely blank
       sheet1Rows.push([
-        emp.appNo || '',                          // Employee Number
-        formattedName,                            // Contact name
-        addr.addr1 || '',                         // Contact Address1
-        addr.addr2 || '',                         // Contact Address2
-        addr.addr3 || '',                         // Contact Address3
-        addr.city || 'Bangalore',                 // Contact City
-        addr.city || 'Bangalore',                 // Contact District
-        addr.state || 'Karnataka',                // Contact State
-        'India',                                  // Contact Country
-        addr.pin || '',                           // Contact Pin
-        emp.phone || '',                          // Contact Phone1
-        emp.altPhone || '',                       // Contact Phone2
+        emp.appNo || '',                          // Employee No
+        '',                                       // Contact name
+        '',                                       // Contact Address1
+        '',                                       // Contact Address2
+        '',                                       // Contact Address3
+        '',                                       // Contact City
+        '',                                       // Contact District
+        '',                                       // Contact State
+        '',                                       // Contact Country
+        '',                                       // Contact Pin
+        '',                                       // Contact Phone1
+        '',                                       // Contact Phone2
         '',                                       // Contact Fax
-        cleanMobile,                              // Contact Mobile
-        emp.email || '',                          // Contact Email
+        '',                                       // Contact Mobile
+        '',                                       // Contact Email
         ''                                        // Contact Extn No
       ]);
 
