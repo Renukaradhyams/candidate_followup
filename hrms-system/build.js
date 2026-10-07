@@ -25,6 +25,22 @@ if (fs.existsSync(src)) {
         console.log('[Build] Copied PWA public assets to dist/ & client/dist/');
     }
     console.log('[Build] Copied client build to dist/');
+
+    // Sync to root dist & index.html for direct web server access
+    try {
+        const rootDist = path.join(__dirname, '..', 'dist');
+        const rootIndex = path.join(__dirname, '..', 'index.html');
+        if (fs.existsSync(rootDist)) {
+            fs.rmSync(rootDist, { recursive: true, force: true });
+        }
+        fs.cpSync(dist, rootDist, { recursive: true });
+        if (fs.existsSync(path.join(dist, 'index.html'))) {
+            fs.copyFileSync(path.join(dist, 'index.html'), rootIndex);
+        }
+        console.log('[Build] Synced build to root dist/ and root index.html');
+    } catch (e) {
+        console.warn('[Build] Note: Root dist sync:', e.message);
+    }
 } else {
     console.warn('[Build] Warning: Client build directory not found at:', src);
 }

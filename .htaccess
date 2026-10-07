@@ -27,25 +27,18 @@ Options -Indexes +SymLinksIfOwnerMatch
     SecRequestBodyAccess Off
 </IfModule>
 
-# Completely Disable LiteSpeed Web Server Anti-Bot / Anti-DDoS Challenge & Captcha Filters & Prevent Premature Aborts
+# LiteSpeed Web Server Tuning: Prevent premature timeouts (408) and process aborts
 <IfModule LiteSpeed>
     CacheLookup off
     SetEnv verifycaptcha off
-    SetEnv reaptcha off
-    SetEnv no-security off
-    SetEnv nolog off
-    SetEnv noabort 1
-    SetEnv nbytes 0
-    SetEnv LSAPI_MAX_EXEC_TIME 300
-    SetEnv LSAPI_AVOID_FORK 1
     RewriteEngine On
-    RewriteRule .* - [E=verifycaptcha:off,E=noabort:1,E=nbytes:0,E=connection:keep-alive]
+    RewriteRule .* - [E=noabort:1,E=noconntimeout:1]
 </IfModule>
 
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule .* - [E=noabort:1,E=nbytes:0,E=dontlog:1,E=connection:keep-alive,E=verifycaptcha:off]
+    RewriteRule .* - [E=noabort:1,E=noconntimeout:1]
 
     # Cleanly return 200 OK for HTTP OPTIONS Preflight CORS requests from mobile browsers
     RewriteCond %{REQUEST_METHOD} OPTIONS
@@ -53,6 +46,11 @@ Options -Indexes +SymLinksIfOwnerMatch
 
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+    # Map static assets and PWA files to hrms-system/dist if requested from root
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteCond %{DOCUMENT_ROOT}/hrms-system/dist%{REQUEST_URI} -f
+    RewriteRule ^assets/(.*)$ hrms-system/dist/assets/$1 [L]
 
     # Serve existing physical files or folders directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -64,6 +62,8 @@ Options -Indexes +SymLinksIfOwnerMatch
     RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|pdf|doc|docx|woff|woff2|json|webmanifest)$ [NC]
 
     # Fallback all client SPA routes (e.g. /login, /candidates, /candidate-entry) to index.html
+    RewriteCond %{DOCUMENT_ROOT}/hrms-system/dist/index.html -f
+    RewriteRule ^ hrms-system/dist/index.html [L]
     RewriteRule ^ index.html [L]
 </IfModule>
 

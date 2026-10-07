@@ -485,8 +485,12 @@ autoInitializeDatabase(pool)
 // ── START SERVER ──────────────────────────────────────────────────────────────
 // Passenger (PassengerAppType=node) REQUIRES app.listen(PORT) to be called.
 // Passenger sets PORT via its preload-timestamp.js script before this file runs.
-// The listen() call is what signals to Passenger that the app is ready.
 const server = http.createServer(app);
+
+// LiteSpeed / Reverse Proxy Keep-Alive and Request Timeout Tuning (prevents 408 & connection drops)
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+server.requestTimeout = 300000;
 
 const io = new Server(server, {
   cors: {
