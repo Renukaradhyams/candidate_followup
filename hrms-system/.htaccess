@@ -38,6 +38,7 @@ Options -Indexes +SymLinksIfOwnerMatch
 # Enable CGI Authorization Pass-Through & React SPA Fallback Rewriting (Fixes 404 on page refresh)
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
     RewriteRule .* - [E=noabort:1,E=noconntimeout:1]
 
     # Cleanly return 200 OK for HTTP OPTIONS Preflight CORS requests from mobile browsers
@@ -47,16 +48,29 @@ Options -Indexes +SymLinksIfOwnerMatch
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
+    # Map static assets to dist/assets if not found at root
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteCond %{DOCUMENT_ROOT}/dist%{REQUEST_URI} -f
+    RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
+
+    # Map uploads to hrms-system/uploads if physically present there
+    RewriteCond %{REQUEST_URI} ^/uploads/(.*)$
+    RewriteCond %{DOCUMENT_ROOT}/hrms-system/uploads/%1 -f
+    RewriteRule ^uploads/(.*)$ hrms-system/uploads/$1 [L]
+
     # Serve existing physical files or folders directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Exclude API, Uploads, Assets, PWA assets, and static files from SPA rewrite
-    RewriteCond %{REQUEST_URI} !^/(api|uploads|assets|health|db-status|manifest\.json|sw\.js) [NC]
-    RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|pdf|doc|docx|woff|woff2|json|webmanifest)$ [NC]
+    # Exclude API and server status endpoints from SPA rewrite
+    RewriteCond %{REQUEST_URI} !^/(api|health|db-status) [NC]
 
     # Fallback all client SPA routes (e.g. /login, /candidates, /candidate-entry) to dist/index.html or index.html
+    RewriteCond %{DOCUMENT_ROOT}/index.html -f
+    RewriteRule ^ index.html [L]
+    RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+    RewriteRule ^ dist/index.html [L]
     RewriteCond %{DOCUMENT_ROOT}/hrms-system/dist/index.html -f
     RewriteRule ^ dist/index.html [L]
     RewriteRule ^ index.html [L]

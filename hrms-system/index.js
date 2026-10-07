@@ -124,18 +124,51 @@ app.get([
   '/sw.js',
   '/favicon.ico',
   '/favicon.png',
+  '/favicon-16x16.png',
   '/favicon-32x32.png',
   '/logo.png',
+  '/logo192.png',
+  '/logo512.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/pwa-maskable-512x512.png',
-  '/apple-touch-icon.png'
+  '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/apple-touch-icon-120x120.png',
+  '/apple-touch-icon-152x152.png',
+  '/apple-touch-icon-180x180.png',
+  '/robots.txt',
+  '/sitemap.xml'
 ], (req, res) => {
   const fileName = path.basename(req.path);
+
+  if (fileName === 'robots.txt') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    return res.send('User-agent: *\nAllow: /\n');
+  }
+
+  if (fileName === 'sitemap.xml') {
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    return res.send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://aradhyanextgenlabs.space/</loc></url></urlset>');
+  }
+
+  // Map requested alias to actual file names
+  let targetFile = fileName;
+  if (fileName === 'site.webmanifest') targetFile = 'manifest.json';
+  if (fileName === 'favicon.png' || fileName === 'favicon-16x16.png') targetFile = 'favicon-32x32.png';
+  if (fileName.startsWith('apple-touch-icon')) targetFile = 'apple-touch-icon.png';
+  if (fileName === 'logo192.png') targetFile = 'pwa-192x192.png';
+  if (fileName === 'logo512.png') targetFile = 'pwa-512x512.png';
+
   const possiblePaths = [
+    path.join(APP_ROOT, '..', fileName),
+    path.join(APP_ROOT, '..', targetFile),
     path.join(APP_ROOT, 'dist', fileName),
+    path.join(APP_ROOT, 'dist', targetFile),
     path.join(APP_ROOT, 'client', 'dist', fileName),
+    path.join(APP_ROOT, 'client', 'dist', targetFile),
     path.join(APP_ROOT, 'client', 'public', fileName),
+    path.join(APP_ROOT, 'client', 'public', targetFile),
     path.join(APP_ROOT, 'Main_logo.png')
   ];
 
@@ -248,6 +281,15 @@ app.get(['/uploads/*', '/candidate-resumes/*', '/candidate-photos/*', '/employee
         }
       } catch (e) {}
     }
+  }
+
+  // Graceful fallback for missing candidate photos (prevents broken image icons and 404 errors in UI)
+  const ext = path.extname(fileName).toLowerCase();
+  if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && (fileName.toLowerCase().includes('photo') || rawPath.includes('candidate-photos'))) {
+    const avatarSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" fill="#E2DFD7"/><circle cx="50" cy="40" r="20" fill="#1E2D4E" opacity="0.35"/><path d="M20,90 Q50,60 80,90 Z" fill="#1E2D4E" opacity="0.35"/></svg>`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(avatarSvg);
   }
 
   next();
@@ -398,69 +440,90 @@ app.get('/api/fix-db-schema', async (req, res) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
+// Mount both route sets on both prefixes so all REST & legacy endpoints work under /api and /api/v1
 app.use('/api/v1', v1Routes);
+app.use('/api/v1', legacyRoutes);
+app.use('/api', v1Routes);
 app.use('/api', legacyRoutes);
 
 // ── Frontend SPA ──────────────────────────────────────────────────────────────
-let distDir = path.join(APP_ROOT, 'dist');
-if (!fs.existsSync(distDir) && fs.existsSync(path.join(APP_ROOT, 'client', 'dist'))) {
-  distDir = path.join(APP_ROOT, 'client', 'dist');
-}
+const possibleDistDirs = [
+  path.join(APP_ROOT, 'dist'),
+  path.join(APP_ROOT, '..', 'dist'),
+  path.join(APP_ROOT, 'client', 'dist'),
+  path.join(APP_ROOT, '..')
+];
 
-if (fs.existsSync(distDir)) {
-  try {
-    fs.chmodSync(distDir, 0o755);
-    const indexPath = path.join(distDir, 'index.html');
-    if (fs.existsSync(indexPath)) fs.chmodSync(indexPath, 0o644);
-    const assetsDir = path.join(distDir, 'assets');
-    if (fs.existsSync(assetsDir)) {
-      fs.chmodSync(assetsDir, 0o755);
-      fs.readdirSync(assetsDir).forEach(file => {
-        try { fs.chmodSync(path.join(assetsDir, file), 0o644); } catch(e) {}
-      });
+let distDir = possibleDistDirs.find(d => fs.existsSync(path.join(d, 'index.html'))) || path.join(APP_ROOT, 'dist');
+
+possibleDistDirs.forEach(d => {
+  if (fs.existsSync(d)) {
+    try { fs.chmodSync(d, 0o755); } catch(e) {}
+    app.use(express.static(d));
+  }
+});
+
+console.log(`[Boot] Serving frontend from: ${distDir}`);
+
+// Assets Fallback: Never return index.html (text/html) for CSS / JS asset requests!
+app.get('/assets/*', (req, res, next) => {
+  const assetSubPath = req.path.replace(/^\/assets[\/\\]/, '');
+  const searchDirs = [
+    path.join(distDir, 'assets'),
+    path.join(APP_ROOT, 'dist', 'assets'),
+    path.join(APP_ROOT, '..', 'assets'),
+    path.join(APP_ROOT, '..', 'dist', 'assets'),
+    path.join(APP_ROOT, 'client', 'dist', 'assets')
+  ];
+
+  for (const dir of searchDirs) {
+    if (fs.existsSync(dir)) {
+      const direct = path.join(dir, assetSubPath);
+      if (fs.existsSync(direct) && fs.statSync(direct).isFile()) {
+        try { fs.chmodSync(direct, 0o644); } catch(e) {}
+        return res.sendFile(direct);
+      }
     }
-  } catch (e) {}
+  }
 
-  console.log(`[Boot] Serving frontend from: ${distDir}`);
-  app.use(express.static(distDir));
-
-  // Assets Fallback: Never return index.html (text/html) for CSS / JS asset requests!
-  app.get('/assets/*', (req, res, next) => {
-    const assetPath = path.join(distDir, req.path);
-    if (fs.existsSync(assetPath) && fs.statSync(assetPath).isFile()) {
-      try { fs.chmodSync(assetPath, 0o644); } catch(e) {}
-      return res.sendFile(assetPath);
-    }
-    const ext = path.extname(req.path).toLowerCase();
-    const assetsFolder = path.join(distDir, 'assets');
-    if (fs.existsSync(assetsFolder)) {
-      const files = fs.readdirSync(assetsFolder);
+  const ext = path.extname(req.path).toLowerCase();
+  for (const dir of searchDirs) {
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir);
       const match = files.find(f => path.extname(f).toLowerCase() === ext);
       if (match) {
-        const fullMatchPath = path.join(assetsFolder, match);
+        const fullMatchPath = path.join(dir, match);
         try { fs.chmodSync(fullMatchPath, 0o644); } catch(e) {}
         return res.sendFile(fullMatchPath);
       }
     }
-    return res.status(404).send('Asset file not found');
-  });
+  }
+  return res.status(404).send('Asset file not found');
+});
 
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets') ||
-        req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.endsWith('.ico') || req.path.endsWith('.png') || req.path.endsWith('.svg') ||
-        req.path.endsWith('.json') || req.path.endsWith('.webmanifest') || req.path === '/manifest.json' || req.path === '/sw.js' ||
-        req.path === '/health' || req.path === '/db-status') return next();
-    
-    const fallback = path.join(distDir, 'index.html');
-    if (fs.existsSync(fallback)) {
-      try { fs.chmodSync(fallback, 0o644); } catch(e) {}
-      return res.sendFile(fallback);
+// Single Page Application (SPA) Client Routes Fallback
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/assets') ||
+      req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.endsWith('.ico') || req.path.endsWith('.png') || req.path.endsWith('.svg') ||
+      req.path.endsWith('.json') || req.path.endsWith('.webmanifest') || req.path === '/manifest.json' || req.path === '/sw.js' ||
+      req.path === '/health' || req.path === '/db-status') return next();
+  
+  const possibleIndexHtml = [
+    path.join(distDir, 'index.html'),
+    path.join(APP_ROOT, '..', 'index.html'),
+    path.join(APP_ROOT, 'dist', 'index.html'),
+    path.join(APP_ROOT, '..', 'dist', 'index.html'),
+    path.join(APP_ROOT, 'client', 'dist', 'index.html')
+  ];
+
+  for (const idx of possibleIndexHtml) {
+    if (fs.existsSync(idx) && fs.statSync(idx).isFile()) {
+      try { fs.chmodSync(idx, 0o644); } catch(e) {}
+      return res.sendFile(idx);
     }
-    return next();
-  });
-} else {
-  console.warn('[Boot] No dist/ folder found.');
-}
+  }
+  return next();
+});
 
 // ── Error Handlers ────────────────────────────────────────────────────────────
 app.use('/api/*', (req, res) => errorRes(res, `Not found: ${req.originalUrl}`, [], 404));

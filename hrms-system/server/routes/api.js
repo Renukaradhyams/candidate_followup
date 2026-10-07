@@ -111,15 +111,22 @@ router.post('/exit/complete', exitController.completeExit);
 
 // ── Settings Routes ──────────────────────────────────────────
 router.get('/settings/users', settingsController.getUsers);
+router.post('/settings/users', authenticate, authorize('Admin', 'Super Admin'), settingsController.addUser);
 router.post('/settings/users/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addUser);
+router.put('/settings/users', authenticate, authorize('Admin', 'Super Admin'), settingsController.updateUser);
 router.post('/settings/users/update', authenticate, authorize('Admin', 'Super Admin'), settingsController.updateUser);
 router.get('/settings/page-visibility', settingsController.getPageSettings);
 router.post('/settings/page-visibility', authenticate, authorize('Admin', 'Super Admin'), settingsController.savePageSettings);
+router.put('/settings/page-visibility', authenticate, authorize('Admin', 'Super Admin'), settingsController.savePageSettings);
 router.get('/settings/designations', settingsController.getDesignations);
+router.post('/settings/designations', authenticate, authorize('Admin', 'Super Admin'), settingsController.addDesignation);
 router.post('/settings/designations/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addDesignation);
+router.delete('/settings/designations', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteDesignation);
 router.post('/settings/designations/delete', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteDesignation);
 router.get('/settings/questions', settingsController.getAllInterviewQuestions);
+router.post('/settings/questions', authenticate, authorize('Admin', 'Super Admin'), settingsController.addInterviewQuestion);
 router.post('/settings/questions/add', authenticate, authorize('Admin', 'Super Admin'), settingsController.addInterviewQuestion);
+router.delete('/settings/questions', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteInterviewQuestion);
 router.post('/settings/questions/delete', authenticate, authorize('Admin', 'Super Admin'), settingsController.deleteInterviewQuestion);
 router.post('/settings/change-employee-number', authenticate, authorize('Admin', 'Super Admin'), settingsController.changeEmployeeNumber);
 router.post('/settings/bulk-change-employee-number', authenticate, authorize('Admin', 'Super Admin'), settingsController.bulkChangeEmployeeNumber);
