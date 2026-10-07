@@ -24,7 +24,7 @@
     "express-rate-limit": "^7.3.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "latest",
+    "multer": "2.4.0",
     "socket.io": "^4.7.5",
     "lucide-react": "^0.436.0",
     "react-is": "^18.3.1",
